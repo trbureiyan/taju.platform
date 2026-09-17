@@ -1,6 +1,6 @@
 # AGENTS
 
-taju.platform | Plataforma web MERN para Taju Studio, estudio creativo de artículos personalizados para eventos.
+taju.platform | Plataforma web MERN para TaJú, taller de corte y grabado láser en Neiva (Huila) que produce papelería y objetos personalizados para celebraciones y eventos.
 React 18 + TypeScript + Tailwind (client), Node.js 20 LTS + Express.js + TypeScript (server), MongoDB Atlas + Mongoose, Cloudinary, JWT en memoria.
 
 ---
@@ -77,6 +77,8 @@ When assigned a task:
 - Si el cambio modifica una instrucción, un riesgo, un comando o una descripción de arquitectura, actualizar la documentación en el mismo commit.
 - Si tras la revisión no se necesita ninguna edición, registrar esa decisión en el resumen del cambio. No dejar instrucciones contradictorias.
 
+Los documentos de marca en `docs/branding/` son normativos y versionados. Un agente no los edita por iniciativa propia. Si una decisión de implementación contradice lo escrito ahí, la decisión está mal, no el documento. Si el documento está genuinamente equivocado, señalarlo y esperar confirmación antes de tocarlo.
+
 ---
 
 ## Current Risk Areas
@@ -97,21 +99,83 @@ Document known landmines here. Be specific: name the files, describe the behavio
 
 ---
 
+## Domain Language
+
+El dominio se nombra en español y el término es **idéntico** en el modelo de Mongoose, la ruta de Express, el tipo de TypeScript y el texto de interfaz. No hay capa de traducción entre backend y frontend. Si aparece una, es un error de diseño, no una decisión.
+
+### Catálogo
+
+Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
+
+| Familia | Incluye |
+|---|---|
+| `toppers` | Cake toppers en MDF y acrílico |
+| `superficies` | Blondas de MDF grabadas, bases |
+| `senaletica` | Letreros, banners, letras en vinilo, números |
+| `papeleria` | Invitaciones, tarjetas tipo VIP, llaveros, cajas, vasos |
+
+### Estados de pedido
+
+Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos.
+
+```ts
+type EstadoPedido =
+  | 'recibido'
+  | 'en_revision'
+  | 'confirmado'
+  | 'en_produccion'
+  | 'listo_para_entrega'
+  | 'entregado';
+```
+
+Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa, nunca se escribe suelta en un componente.
+
+### Vocabulario de especificación
+
+`diametro` y `altura` en centímetros, enteros. `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaEntrega`, `nota`.
+
+Los campos del formulario replican el vocabulario que el negocio ya usa con sus clientes. No inventar terminología nueva donde existe una compartida.
+
+### Dos audiencias
+
+El catálogo sirve a cliente final (unidad, alta carga emocional, necesita acompañamiento en la especificación) y a cliente profesional (volumen, escalas de precio por cantidad, necesita repetir pedidos rápido). Los productos de la familia `superficies` tienen precio por escala y cantidad mínima. Cualquier componente de precio debe soportar ambos modelos.
+
+---
+
 ## Design Patterns and Component Reuse
 
 ### Visual system
 
-| Token | Value | Usage |
-|---|---|---|
-| `--background` | `{TODO: branding}` | Fondo de página |
-| `--foreground` | `{TODO: branding}` | Texto primario |
-| `--accent` | `{TODO: branding}` | CTAs, elementos interactivos |
-| `--muted` | `{TODO: branding}` | Texto secundario, etiquetas |
-| `--admin-surface` | `{TODO: branding}` | Superficie del panel Taller |
+Fuente única de verdad: `docs/branding/04-tokens-de-diseno.md`. Los valores viven en `client/src/styles/tokens.css` como custom properties y `tailwind.config.ts` los consume por referencia (`var(--…)`), sin duplicarlos.
 
-Fonts: `{TODO: branding}` para headings, `{TODO: branding}` para UI y cuerpo.
+**No copiar valores de tokens a este archivo.** Duplicar la tabla aquí garantiza que se desincronice del CSS. Para cualquier valor concreto, leer el archivo de tokens.
 
-Configurar los tokens como colores personalizados en `tailwind.config.ts` bajo la clave `theme.extend.colors`. No usar valores hexadecimales hardcodeados fuera de ese archivo.
+Arquitectura de dos capas: primitivas (`--amarillo-500`, `--space-4`) y semánticas (`--accion-fondo`, `--texto-principal`). **Los componentes consumen solo la capa semántica.** Si un componente necesita una primitiva, falta un token semántico: crearlo, no usar la primitiva.
+
+Invariantes verificables:
+
+| Regla | Verificación |
+|---|---|
+| Texto sobre color de marca siempre en tinta, nunca blanco | `--texto-sobre-acento` apunta a `--tinta-900`. No usar `text-white` sobre `bg-accion` ni `bg-contexto` |
+| No usar la paleta cruda de Tailwind | `grep -rE "(bg\|text\|border)-(yellow\|gray\|slate\|cyan\|red\|green\|blue)-[0-9]"` debe dar vacío |
+| No usar hexadecimales literales | `grep -rE "#[0-9a-fA-F]{6}"` en `client/src` debe dar vacío fuera de `tokens.css` |
+| Espaciado solo de la escala base 4 | Valores admitidos: 1, 2, 3, 4, 6, 8, 12, 16, 24. Nada arbitrario |
+| Objetivo táctil mínimo 44px | Botones y campos usan `--boton-alto` / `--campo-alto` |
+| Foco visible en todo elemento interactivo | Resuelto globalmente en `:focus-visible`. No anular con `outline: none` sin sustituto |
+| Cifras tabulares en precios y medidas | `font-variant-numeric: tabular-nums` |
+
+Tipografía: **Poppins** (400, 500, 600) para todo, **JetBrains Mono** para códigos de pedido e identificadores. Ambas por Google Fonts.
+
+> [!CAUTION]
+> **Verona** es la serif del wordmark. Es comercial y sin licencia web. El logotipo existe como trazado vectorial en `public/brand/`, por lo que reproducirlo es válido. **Nunca componer texto vivo en Verona** ni declararla en CSS.
+
+Solo una acción primaria por pantalla. El turquesa es color de contexto, nunca de acción. El rosa es acento afectivo, máximo una aparición por pantalla, nunca en elementos estructurales ni de sistema.
+
+En `components/admin/` (panel Taller) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
+
+Activos de marca en `public/brand/`: `taju-vertical.svg`, `taju-horizontal.svg`, `taju-contorno.svg`, `taju-isotipo.svg`. Por debajo de 120px de ancho usar el isotipo, nunca el horizontal.
+
+Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con el contorno del logotipo. No mezclar sets ni incrustar SVG sueltos de origen distinto.
 
 ### Component conventions
 
@@ -285,3 +349,36 @@ Los comentarios suenan como un colega dejando una nota rápida: breves, conceptu
 ```
 
 No describir lo que el código ya dice. Comentar solo cuando el contexto, la intención o una trampa no son evidentes a primera vista.
+
+### UI copy
+
+Fuente completa: `docs/branding/03-voz-de-marca.md`. Reglas obligatorias para cualquier texto visible por el usuario.
+
+Tutear siempre, sin excepción. Hablar en primera persona del plural: "te confirmamos", nunca "se confirmará" ni "TaJú confirma".
+
+**Nunca culpar al usuario.** El error es del sistema o de la marca, jamás de quien escribe.
+
+Los mensajes de error siguen la estructura: qué pasó, por qué importa, qué hacer. Sin signos de exclamación.
+
+```text
+MAL:  Campo obligatorio
+BIEN: Nos falta el diámetro de tu torta. Sin ese dato no podemos calcular la proporción del topper.
+
+MAL:  Ingresaste una fecha inválida
+BIEN: Esa fecha ya pasó. Elige una a partir del lunes, que es lo mínimo que necesitamos para producir.
+
+MAL:  Su pedido ha sido procesado exitosamente
+BIEN: Listo, recibimos tu pedido. Te escribimos por WhatsApp para confirmarte la fecha.
+```
+
+Las etiquetas de campo dicen **qué** se pide, sin puntuación final. El texto de ayuda dice **por qué** importa.
+
+Los botones describen la acción concreta: "Enviar mi pedido", no "Enviar". "Ver el detalle", no "Aceptar".
+
+Prohibido: anglicismos con equivalente natural (order, checkout, cart, shipping), lenguaje corporativo vacío (soluciones integrales, calidad garantizada), lenguaje de sistema expuesto al usuario (procesar, validar, registro, transacción), voz pasiva refleja, más de un signo de exclamación por pantalla.
+
+Excepción única: **cake topper** se mantiene en inglés. Es el término que los clientes del negocio ya usan.
+
+Las medidas se traducen a referencia reconocible: "22 cm, el tamaño de una torta de media libra", no "22 cm" solo. Precios con separador de miles de punto y sin decimales. Medidas con espacio antes de la unidad.
+
+En `components/admin/` el tono se apaga: funcional y neutro. Quien usa ese panel trabaja contra una fecha de entrega y cualquier ingenio verbal es ruido.
