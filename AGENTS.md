@@ -312,7 +312,7 @@ No hay dependencias cargadas desde CDN. Todo el código de terceros se instala c
 
 ## Writing and Documentation
 
-El texto en este repositorio sigue: sin emojis, sin relleno, sin vocabulario corporativo. Prosa por defecto. Los comentarios de código explican el *por qué* y el *qué no obvio*, nunca el *cómo*. Marcadores ASCII: `[!]` peligroso, `[?]` incierto, `[x]` deprecado, `-->` redirección.
+El texto en este repositorio sigue: sin emojis (se permite ASCII art discreto o caracteres ANSI cuando aportan claridad visual), sin relleno, sin vocabulario corporativo. Prosa por defecto. Separadores: coma o `|` preferidos sobre `—`; reservar `—` solo cuando ninguna alternativa cabe. Los comentarios de código explican el *por qué* y el *qué no obvio*, nunca el *cómo*. Marcadores ASCII: `[!]` peligroso, `[?]` incierto, `[x]` deprecado, `-->` redirección.
 
 JSDoc documenta el contrato de la función: qué hace, parámetros, valor de retorno, excepciones.
 
