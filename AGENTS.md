@@ -85,17 +85,13 @@ Los documentos de marca en `.docs/branding/` son normativos y versionados. Un ag
 
 Document known landmines here. Be specific: name the files, describe the behavior, state the failure mode.
 
-- **{Auth / JWT flow}**: `{lib/jwt.ts}` (main), `{lib/auth/jwt-edge.ts}` (edge). {What the token does, refresh behavior, role source.} Changes here affect every authenticated route.
-- **{CSRF protection}**: `{lib/csrf.ts}` + `{hooks/useCsrf.ts}` + `{middleware.ts}`. {Pattern used.} Every mutating request must carry the token. Public exemptions are hardcoded in `{middleware.ts}` — adding new public routes requires updating that list.
-- **{Database schema}**: {N} models with {notable constraints: cascade deletes, BigInt PKs, junction tables, etc.}. Migrations must be tested against a clean DB. Never edit generated files in `{lib/generated/}`.
-- **{Runtime serialization gotcha}**: {E.g., BigInt IDs cannot be JSON-serialized. Always convert before returning from route handlers.} Recurring source of runtime crashes.
-- **{Server/client boundary}**: `{"use client"}` placement determines what ships to the browser. Server-only code ({e.g., DB queries, JWT verification}) must never leak into client components.
-- **{Middleware scope}**: `{middleware.ts}` runs on every request. It handles {list: auth redirect, RBAC, CSRF, etc.}. Changes here affect the entire app.
-- **{Third-party anti-bot / challenge}**: `{lib/altcha.ts}` + `{route}` + `{component}`. {Library, pattern, CDN origin, expiration, env var.} If added to new forms, update {CSP or equivalent}.
-- **{Rate limiting}**: {Where it lives, what resets it, known scaling limitation.}
-- **{Environment variables}**: `{.env}` is the primary local file. Required variables listed in `{.env.example}`. Required in production: `{VAR_1}`, `{VAR_2}`.
-- **{CSP / security headers}**: `{next.config.ts}` defines allowed origins. Any new external dependency requires updating the corresponding directive.
-- **{Cache strategy}**: `{lib/cache-tags.ts}` centralizes cache tags and TTLs. {Which data is cached, TTLs, cache invalidation behavior, dev vs. production difference.}
+- **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Ubicación del módulo de auth: `{por definir}`.
+- **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Ubicación del middleware: `{por definir}`.
+- **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Ubicación del módulo: `{por definir}`.
+- **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible.
+- **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
+- **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
+- **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
 
 ---
 
@@ -146,7 +142,7 @@ El catálogo sirve a cliente final (unidad, alta carga emocional, necesita acomp
 
 ### Visual system
 
-Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores viven en `client/src/styles/tokens.css` como custom properties y `tailwind.config.ts` los consume por referencia (`var(--…)`), sin duplicarlos.
+Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores se implementarán como CSS custom properties consumidas por Tailwind mediante `var(--…)`. Ubicación del archivo de tokens y configuración de Tailwind: `{por definir al iniciar client/}`.
 
 **No copiar valores de tokens a este archivo.** Duplicar la tabla aquí garantiza que se desincronice del CSS. Para cualquier valor concreto, leer el archivo de tokens.
 
@@ -154,15 +150,15 @@ Arquitectura de dos capas: primitivas (`--amarillo-500`, `--space-4`) y semánti
 
 Invariantes verificables:
 
-| Regla | Verificación |
-|---|---|
-| Texto sobre color de marca siempre en tinta, nunca blanco | `--texto-sobre-acento` apunta a `--tinta-900`. No usar `text-white` sobre `bg-accion` ni `bg-contexto` |
-| No usar la paleta cruda de Tailwind | `grep -rE "(bg\|text\|border)-(yellow\|gray\|slate\|cyan\|red\|green\|blue)-[0-9]"` debe dar vacío |
-| No usar hexadecimales literales | `grep -rE "#[0-9a-fA-F]{6}"` en `client/src` debe dar vacío fuera de `tokens.css` |
-| Espaciado solo de la escala base 4 | Valores admitidos: 1, 2, 3, 4, 6, 8, 12, 16, 24. Nada arbitrario |
-| Objetivo táctil mínimo 44px | Botones y campos usan `--boton-alto` / `--campo-alto` |
-| Foco visible en todo elemento interactivo | Resuelto globalmente en `:focus-visible`. No anular con `outline: none` sin sustituto |
-| Cifras tabulares en precios y medidas | `font-variant-numeric: tabular-nums` |
+| Regla |
+|---|
+| Texto sobre color de marca siempre en tinta (`--tinta-900`). No usar blanco sobre el color de acción ni el de contexto. |
+| No usar la paleta cruda de Tailwind (`bg-yellow-400`, `text-gray-600`, etc.). Todo a través de tokens semánticos. |
+| No usar hexadecimales literales en componentes. Solo dentro del archivo de tokens. |
+| Espaciado solo de la escala base 4. Valores admitidos: 1, 2, 3, 4, 6, 8, 12, 16, 24. Nada arbitrario. |
+| Objetivo táctil mínimo 44px en botones y campos. |
+| Foco visible en todo elemento interactivo. No anular con `outline: none` sin sustituto. |
+| Cifras tabulares en precios y medidas (`font-variant-numeric: tabular-nums`). |
 
 Tipografía: **Poppins** (400, 500, 600) para todo, **JetBrains Mono** para códigos de pedido e identificadores. Ambas por Google Fonts.
 
@@ -171,7 +167,7 @@ Tipografía: **Poppins** (400, 500, 600) para todo, **JetBrains Mono** para cód
 
 Solo una acción primaria por pantalla. El turquesa es color de contexto, nunca de acción. El rosa es acento afectivo, máximo una aparición por pantalla, nunca en elementos estructurales ni de sistema.
 
-En `components/admin/` (panel Taller) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
+En el panel de Taller (admin) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
 
 Activos de marca en `public/brand/`: `taju-vertical.svg`, `taju-horizontal.svg`, `taju-contorno.svg`, `taju-isotipo.svg`. Por debajo de 120px de ancho usar el isotipo, nunca el horizontal.
 
@@ -179,10 +175,9 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Component conventions
 
-- Antes de crear un componente nuevo, revisar `client/src/components/ui/` para primitivos existentes.
+- Antes de crear un componente nuevo, revisar los primitivos de UI existentes. Estructura de carpetas de componentes: `{por definir al iniciar client/}`.
 - No usar `@apply` de Tailwind para abstraer clases repetidas. Si un patrón visual se repite, extraerlo a un componente React.
-- Los componentes de las tres secciones principales viven en `components/catalog/`, `components/order/` y `components/admin/`. Los primitivos compartidos van en `components/ui/`.
-- Iconos: `{TODO: definir librería}`.
+- Iconos: Lucide React (`lucide-react`). Trazo uniforme de 2px. No mezclar sets ni incrustar SVG sueltos de origen distinto.
 - Animaciones: respetar `prefers-reduced-motion` en cualquier transición o animación CSS.
 
 ### Naming
@@ -244,16 +239,11 @@ El agente no debe ejecutar estas acciones. Describir lo que se necesita hacer y 
 
 | Action | Why |
 |---|---|
-| `{migrate:create}` | Creates migration files, modifies DB schema |
-| `{migrate:deploy}` | Applies migrations to target DB |
-| `{db:push}` | Pushes schema without migration history |
-| `{db:seed}` | Mutates database data |
-| Editing `{.env}`, `{.env.example}` | Contains secrets and config |
-| Editing `{middleware CSRF exemptions}` | Security-sensitive exemptions |
-| Editing `{auth core files}` | Token logic — any change affects every authenticated route |
-| Git push, merge, or deploy actions | Irreversible remote operations |
-| Editing `{generated/}` | Auto-generated — will be overwritten |
-| Installing new dependencies | Requires package manager install + lockfile commit |
+| Seed o reset de MongoDB | Mutación de datos; irreversible en producción |
+| Editar `.env` o `.env.example` | Contiene secretos |
+| Editar módulos de auth o JWT | Cualquier cambio afecta todas las rutas autenticadas |
+| Git push, merge o deploy | Operaciones remotas irreversibles |
+| Instalar nuevas dependencias | Requiere npm install + lockfile commit |
 
 Cuando alguna de estas acciones sea necesaria, generar un bloque claro:
 
@@ -276,24 +266,12 @@ MANUAL ACTION REQUIRED:
 4. Refactorizar si es necesario; los tests deben seguir en verde.
 5. Ejecutar la suite completa antes de hacer commit.
 
-### Test structure
-
-```text
-{tests}/
-├── {module-a}.{runner}-test.ts   # {What this covers}
-├── {module-b}.{runner}-test.ts   # {What this covers}
-├── unit/                         # Future: pure logic, no I/O
-└── integration/                  # Future: end-to-end flows
-```
-
-Convención de nombres: `<module>.test.ts`
-
 ### Test conventions
 
-- Framework: `{TODO: definir — Jest o Vitest}`.
-- Mocking de DB: `{TODO: definir — mongodb-memory-server o mocks manuales}`.
-- Mocking de Cloudinary: interceptar `lib/cloudinary.ts` completo; nunca hacer llamadas reales en tests.
-- Cobertura objetivo: `server/src/services/` y `server/src/middleware/`.
+- Framework: `{por definir — Jest o Vitest}`.
+- Mocking de DB: `{por definir — mongodb-memory-server o mocks manuales}`.
+- Mocking de Cloudinary: interceptar el módulo de integración completo; nunca hacer llamadas reales en tests.
+- Cobertura objetivo y estructura de carpetas de tests: `{por definir al iniciar implementación}`.
 - Cada test debe ser independiente: sin estado compartido entre tests.
 
 ### Validation before claiming done
@@ -381,4 +359,4 @@ Excepción única: **cake topper** se mantiene en inglés. Es el término que lo
 
 Las medidas se traducen a referencia reconocible: "22 cm, el tamaño de una torta de media libra", no "22 cm" solo. Precios con separador de miles de punto y sin decimales. Medidas con espacio antes de la unidad.
 
-En `components/admin/` el tono se apaga: funcional y neutro. Quien usa ese panel trabaja contra una fecha de entrega y cualquier ingenio verbal es ruido.
+En el panel de Taller el tono se apaga: funcional y neutro. Quien usa ese panel trabaja contra una fecha de entrega y cualquier ingenio verbal es ruido.
