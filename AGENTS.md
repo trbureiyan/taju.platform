@@ -77,7 +77,7 @@ When assigned a task:
 - Si el cambio modifica una instrucción, un riesgo, un comando o una descripción de arquitectura, actualizar la documentación en el mismo commit.
 - Si tras la revisión no se necesita ninguna edición, registrar esa decisión en el resumen del cambio. No dejar instrucciones contradictorias.
 
-Los documentos de marca en `docs/branding/` son normativos y versionados. Un agente no los edita por iniciativa propia. Si una decisión de implementación contradice lo escrito ahí, la decisión está mal, no el documento. Si el documento está genuinamente equivocado, señalarlo y esperar confirmación antes de tocarlo.
+Los documentos de marca en `.docs/branding/` son normativos y versionados. Un agente no los edita por iniciativa propia. Si una decisión de implementación contradice lo escrito ahí, la decisión está mal, no el documento. Si el documento está genuinamente equivocado, señalarlo y esperar confirmación antes de tocarlo.
 
 ---
 
@@ -146,7 +146,7 @@ El catálogo sirve a cliente final (unidad, alta carga emocional, necesita acomp
 
 ### Visual system
 
-Fuente única de verdad: `docs/branding/04-tokens-de-diseno.md`. Los valores viven en `client/src/styles/tokens.css` como custom properties y `tailwind.config.ts` los consume por referencia (`var(--…)`), sin duplicarlos.
+Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores viven en `client/src/styles/tokens.css` como custom properties y `tailwind.config.ts` los consume por referencia (`var(--…)`), sin duplicarlos.
 
 **No copiar valores de tokens a este archivo.** Duplicar la tabla aquí garantiza que se desincronice del CSS. Para cualquier valor concreto, leer el archivo de tokens.
 
@@ -352,7 +352,7 @@ No describir lo que el código ya dice. Comentar solo cuando el contexto, la int
 
 ### UI copy
 
-Fuente completa: `docs/branding/03-voz-de-marca.md`. Reglas obligatorias para cualquier texto visible por el usuario.
+Fuente completa: `.docs/branding/03-voz-de-marca.md`. Reglas obligatorias para cualquier texto visible por el usuario.
 
 Tutear siempre, sin excepción. Hablar en primera persona del plural: "te confirmamos", nunca "se confirmará" ni "TaJú confirma".
 
