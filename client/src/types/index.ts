@@ -3,6 +3,13 @@
 export const ROLES = ['cliente', 'administrador'] as const
 export type Rol = (typeof ROLES)[number]
 
+// destino post-login/registro y a donde manda ProtectedRoute cuando el rol autenticado no es el que pide la
+// ruta - un solo mapa para que ambos casos siempre esten de acuerdo en donde vive cada rol
+export const RUTA_INICIO_POR_ROL: Record<Rol, string> = {
+  cliente: '/mis-pedidos',
+  administrador: '/admin/pedidos',
+}
+
 export const FAMILIAS = ['toppers', 'superficies', 'senaletica', 'papeleria'] as const
 export type Familia = (typeof FAMILIAS)[number]
 
@@ -20,6 +27,7 @@ export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number]
 
 export interface Usuario {
   _id: string
+  nombre: string
   email: string
   rol: Rol
 }

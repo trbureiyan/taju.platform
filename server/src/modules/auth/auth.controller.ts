@@ -5,6 +5,7 @@ import { AppError } from '../../lib/errors.js'
 
 // min(8) en registro, min(1) en login - login no valida fuerza de clave, solo que venga algo
 const registrarSchema = z.object({
+  nombre: z.string().min(2).max(120),
   email: z.string().email(),
   password: z.string().min(8),
 })
@@ -23,7 +24,7 @@ export async function registrar(req: Request, res: Response, next: NextFunction)
     return
   }
   try {
-    const result = await authService.registrar(parsed.data.email, parsed.data.password)
+    const result = await authService.registrar(parsed.data.nombre, parsed.data.email, parsed.data.password)
     res.status(201).json(result)
   } catch (err) {
     if (err instanceof AppError) {
