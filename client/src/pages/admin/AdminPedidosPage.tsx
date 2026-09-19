@@ -86,8 +86,7 @@ export function AdminPedidosPage() {
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Categoría</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Descripción</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Dimensión</th>
-                {/* [!] "Qty" es el unico anglicismo en la tabla - el resto de encabezados esta en español */}
-                <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Qty</th>
+                <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Cant.</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Fecha</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Entrega</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Estado</th>
@@ -113,13 +112,13 @@ export function AdminPedidosPage() {
                     </td>
                     <td className="py-3 pr-4 text-texto-secundario whitespace-nowrap">
                       {pedido.dimensiones.valor} cm
-                      {pedido.esDimensionPersonalizada && (
+                      {pedido.dimensiones.esDimensionPersonalizada && (
                         <span className="ml-1 text-xs text-texto-tenue">(personalizada)</span>
                       )}
                     </td>
                     <td className="py-3 pr-4 text-texto-principal">{pedido.cantidad}</td>
                     <td className="py-3 pr-4 text-texto-tenue whitespace-nowrap">
-                      {new Date(pedido.fechaSolicitud).toLocaleDateString('es-AR', {
+                      {new Date(pedido.fechaSolicitud).toLocaleDateString('es-CO', {
                         day: 'numeric',
                         month: 'short',
                       })}
@@ -149,7 +148,7 @@ export function AdminPedidosPage() {
                         />
                       ) : pedido.fechaEstimadaEntrega ? (
                         <span className="text-xs text-texto-tenue">
-                          {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-AR', {
+                          {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-CO', {
                             day: 'numeric',
                             month: 'short',
                           })}

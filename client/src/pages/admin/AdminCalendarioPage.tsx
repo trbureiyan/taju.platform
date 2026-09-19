@@ -20,7 +20,7 @@ function etiquetaSemana(lunes: Date): string {
   const viernes = new Date(lunes)
   viernes.setDate(lunes.getDate() + 4)
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
-  return `${lunes.toLocaleDateString('es-AR', opts)} – ${viernes.toLocaleDateString('es-AR', opts)}`
+  return `${lunes.toLocaleDateString('es-CO', opts)} – ${viernes.toLocaleDateString('es-CO', opts)}`
 }
 
 type Grupos = {

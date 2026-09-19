@@ -62,11 +62,9 @@ export function MisPedidosPage() {
                 <p className="text-xs text-texto-tenue">
                   {pedido.cantidad} unidad{pedido.cantidad !== 1 ? 'es' : ''} ·{' '}
                   {pedido.dimensiones.valor} {pedido.dimensiones.unidad}
-                  {pedido.esDimensionPersonalizada ? ' (personalizada)' : ''} ·{' '}
+                  {pedido.dimensiones.esDimensionPersonalizada ? ' (personalizada)' : ''} ·{' '}
                   Solicitado{' '}
-                  {/* [!] es-AR en un negocio colombiano - mismo locale se repite en las paginas de admin,
-                      el formato de fecha resultante coincide con es-CO pero vale la pena revisar si fue a proposito */}
-                  {new Date(pedido.fechaSolicitud).toLocaleDateString('es-AR', {
+                  {new Date(pedido.fechaSolicitud).toLocaleDateString('es-CO', {
                     day: 'numeric',
                     month: 'short',
                     year: 'numeric',
@@ -75,7 +73,7 @@ export function MisPedidosPage() {
                 {pedido.fechaEstimadaEntrega && (
                   <p className="text-xs font-medium text-exito-texto">
                     Entrega estimada:{' '}
-                    {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-AR', {
+                    {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-CO', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',
