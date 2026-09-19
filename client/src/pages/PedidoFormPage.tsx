@@ -32,7 +32,12 @@ const DIAS_MINIMOS_ENTREGA = 1
 function fechaMinimaEntrega(): string {
   const fecha = new Date()
   fecha.setDate(fecha.getDate() + DIAS_MINIMOS_ENTREGA)
-  return fecha.toISOString().slice(0, 10)
+  // toISOString() convierte a UTC — en GMT-5 antes de las 19:00 la fecha UTC es un dia atras
+  // getFullYear/Month/Date leen la zona local del dispositivo, que es donde opera el taller
+  const y = fecha.getFullYear()
+  const m = String(fecha.getMonth() + 1).padStart(2, '0')
+  const d = String(fecha.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 const MAX_ARCHIVOS = 3
