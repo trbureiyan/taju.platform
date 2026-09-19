@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Button } from '../components/ui/Button'
 import type { Producto } from '../types'
 import { ETIQUETAS_FAMILIA } from '../types'
+import { formatearPrecio } from '../lib/precio'
 
 const PLACEHOLDER = 'https://placehold.co/600x400/f5f0eb/9b8b7a?text=TaJú'
 
@@ -32,8 +33,7 @@ export function ProductoDetailPage() {
 
   const imagenPrincipal = producto.imagenes[0] ?? PLACEHOLDER
 
-  // [!] la intencion es volver al pedido despues de loguearse, pero LoginPage.tsx no lee este query param
-  // todavia - hoy el redirect a /pedido/:id se arma aca y se pierde en el camino
+  // LoginPage lee ?redirect= y vuelve exactamente aca despues de loguearse (ver client-auth)
   function handleSolicitar() {
     if (autenticado) {
       navigate(`/pedido/${producto!._id}`)
@@ -75,6 +75,10 @@ export function ProductoDetailPage() {
           </div>
 
           <p className="text-base text-texto-principal">{producto.descripcionTecnica}</p>
+
+          <p className="text-lg font-semibold text-texto-principal tabular-nums">
+            {formatearPrecio(producto.precio)}
+          </p>
 
           {/* Map -> Record se vuelve objeto plano al pasar por JSON, por eso Object.entries funciona directo */}
           {Object.keys(producto.especificacionesTecnicas).length > 0 && (
