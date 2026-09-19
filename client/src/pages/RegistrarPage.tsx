@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { RUTA_INICIO_POR_ROL } from '../types'
 
 export function RegistrarPage() {
   const { registrar } = useAuth()
+  const navigate = useNavigate()
+  const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -15,9 +19,9 @@ export function RegistrarPage() {
     setError(null)
     setCargando(true)
     try {
-      await registrar(email, password)
-      // [!] mismo problema que en LoginPage.tsx: reload completo puede tirar el token recien puesto en memoria
-      window.location.href = '/catalogo'
+      const usuario = await registrar(nombre, email, password)
+      // navigate en vez de window.location.href: un reload completo perderia el token recien guardado en memoria
+      navigate(RUTA_INICIO_POR_ROL[usuario.rol], { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos crear tu cuenta')
     } finally {
@@ -30,6 +34,14 @@ export function RegistrarPage() {
       <h1 className="text-2xl font-semibold text-texto-principal mb-8">Creá tu cuenta</h1>
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+        <Input
+          label="Nombre"
+          type="text"
+          autoComplete="name"
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          required
+        />
         <Input
           label="Correo"
           type="email"
@@ -62,9 +74,9 @@ export function RegistrarPage() {
 
       <p className="mt-6 text-sm text-texto-secundario text-center">
         ¿Ya tenés cuenta?{' '}
-        <a href="/login" className="text-accion hover:underline">
+        <Link to="/login" className="text-accion hover:underline">
           Ingresá
-        </a>
+        </Link>
       </p>
     </div>
   )

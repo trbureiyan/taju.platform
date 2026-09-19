@@ -8,16 +8,16 @@ const SALT_ROUNDS = 12
 
 // ─── Registro ─────────────────────────────────────────────────────────────────
 
-export async function registrar(email: string, password: string) {
+export async function registrar(nombre: string, email: string, password: string) {
   const existe = await Usuario.findOne({ email })
   if (existe) throw new AppError(409, 'El correo ya está registrado')
 
   const hash = await bcrypt.hash(password, SALT_ROUNDS)
-  const usuario = await Usuario.create({ email, password: hash })
+  const usuario = await Usuario.create({ nombre, email, password: hash })
 
   // se loguea automatico al registrarse, no hay paso intermedio de "verificar correo"
   const token = signToken({ sub: usuario.id, email: usuario.email, rol: usuario.rol })
-  return { token, usuario: { _id: usuario.id, email: usuario.email, rol: usuario.rol } }
+  return { token, usuario: { _id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } }
 }
 
 // ─── Login ────────────────────────────────────────────────────────────────────
@@ -32,5 +32,5 @@ export async function iniciarSesion(email: string, password: string) {
   if (!valida) throw new AppError(401, 'Credenciales incorrectas')
 
   const token = signToken({ sub: usuario.id, email: usuario.email, rol: usuario.rol })
-  return { token, usuario: { _id: usuario.id, email: usuario.email, rol: usuario.rol } }
+  return { token, usuario: { _id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } }
 }

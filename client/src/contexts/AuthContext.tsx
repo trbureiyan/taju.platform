@@ -8,8 +8,10 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (email: string, password: string) => Promise<void>
-  registrar: (email: string, password: string) => Promise<void>
+  // devuelven el usuario autenticado para que la pagina decida el destino (por rol) sin esperar
+  // el proximo render - el estado de React aun no se actualizo en el mismo tick del await
+  login: (email: string, password: string) => Promise<Usuario>
+  registrar: (nombre: string, email: string, password: string) => Promise<Usuario>
   logout: () => void
 }
 
@@ -33,13 +35,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, usuario } = await api.post<LoginResponse>('/auth/login', { email, password })
     setToken(token) // token va al modulo api.ts, usuario al estado de react - dos lugares distintos a proposito
     setState({ usuario, autenticado: true })
+    return usuario
   }, [])
 
   // login y registrar terminan igual (token + usuario autenticado), solo cambia el endpoint que golpean
-  const registrar = useCallback(async (email: string, password: string) => {
-    const { token, usuario } = await api.post<LoginResponse>('/auth/registrar', { email, password })
+  const registrar = useCallback(async (nombre: string, email: string, password: string) => {
+    const { token, usuario } = await api.post<LoginResponse>('/auth/registrar', {
+      nombre,
+      email,
+      password,
+    })
     setToken(token)
     setState({ usuario, autenticado: true })
+    return usuario
   }, [])
 
   // no hay endpoint de logout en el server - el token es stateless, "cerrar sesion" es solo olvidarlo aca

@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { RUTA_INICIO_POR_ROL } from '../types'
 
 export function LoginPage() {
   const { login } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -15,11 +19,11 @@ export function LoginPage() {
     setError(null)
     setCargando(true)
     try {
-      await login(email, password)
-      // [!] window.location.href hace un reload completo de la SPA - como el token vive solo en memoria
-      // (ver lib/api.ts), esto probablemente borra la sesion recien creada antes de que el catalogo la vea.
-      // un navigate('/catalogo') de react-router evitaria el reload y no perderia el token.
-      window.location.href = '/catalogo'
+      const usuario = await login(email, password)
+      // navigate en vez de window.location.href: un reload completo perderia el token, que solo vive en
+      // memoria (ver lib/api.ts). ?redirect= vuelve a la ruta que motivo el login (ej. desde un pedido)
+      const destino = searchParams.get('redirect') || RUTA_INICIO_POR_ROL[usuario.rol]
+      navigate(destino, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No pudimos iniciar sesión')
     } finally {
@@ -63,9 +67,9 @@ export function LoginPage() {
 
       <p className="mt-6 text-sm text-texto-secundario text-center">
         ¿No tenés cuenta?{' '}
-        <a href="/registrar" className="text-accion hover:underline">
+        <Link to="/registrar" className="text-accion hover:underline">
           Registrate
-        </a>
+        </Link>
       </p>
     </div>
   )

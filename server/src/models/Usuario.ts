@@ -2,6 +2,7 @@ import { Schema, model, Document } from 'mongoose'
 import { ROLES, type Rol } from '../types/index.js'
 
 export interface IUsuario extends Document {
+  nombre: string
   email: string
   password: string // siempre el hash de bcrypt, jamas texto plano (ver auth.service.ts)
   rol: Rol
@@ -9,6 +10,7 @@ export interface IUsuario extends Document {
 }
 
 const usuarioSchema = new Schema<IUsuario>({
+  nombre: { type: String, required: true, trim: true },
   // lowercase + trim en el schema, no solo en el controller - asi ningun otro caller (script, seed) cuela variantes
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
   // select: false por defecto - toJSON.transform solo protege serializacion, no .lean()/.toObject()/proyecciones.
