@@ -31,7 +31,7 @@ export default function App() {
             <Route
               path="/pedido/:productoId"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute rol="cliente">
                   <PedidoFormPage />
                 </ProtectedRoute>
               }
@@ -39,7 +39,7 @@ export default function App() {
             <Route
               path="/mis-pedidos"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute rol="cliente">
                   <MisPedidosPage />
                 </ProtectedRoute>
               }
