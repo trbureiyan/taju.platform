@@ -176,7 +176,8 @@
   --pedido-confirmado-texto: var(--turquesa-900);
 
   --pedido-produccion-fondo: var(--amarillo-100);
-  --pedido-produccion-texto: var(--amarillo-900);
+  /* [!] amarillo-900 sobre amarillo-100 da ~3.5:1, no alcanza WCAG AA (4.5:1 min texto pequeno) */
+  --pedido-produccion-texto: var(--tinta-900);
 
   --pedido-listo-fondo: var(--exito-100);
   --pedido-listo-texto: var(--exito-500);

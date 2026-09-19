@@ -52,32 +52,24 @@ export default {
           ayuda: 'var(--campo-ayuda)',
         },
         exito: {
-          DEFAULT: 'var(--exito-500)',
-          suave: 'var(--exito-100)',
           fondo: 'var(--estado-exito-fondo)',
           texto: 'var(--estado-exito-texto)',
-          borde: 'var(--exito-500)',
+          borde: 'var(--estado-exito-texto)', // reutiliza el tono oscuro del grupo para el borde
         },
         error: {
-          DEFAULT: 'var(--error-500)',
-          suave: 'var(--error-100)',
           fondo: 'var(--estado-error-fondo)',
           texto: 'var(--estado-error-texto)',
           borde: 'var(--campo-borde-error)',
         },
         aviso: {
-          DEFAULT: 'var(--aviso-500)',
-          suave: 'var(--aviso-100)',
           fondo: 'var(--estado-aviso-fondo)',
           texto: 'var(--estado-aviso-texto)',
-          borde: 'var(--aviso-500)',
+          borde: 'var(--estado-aviso-texto)',
         },
         info: {
-          DEFAULT: 'var(--info-500)',
-          suave: 'var(--info-100)',
           fondo: 'var(--estado-info-fondo)',
           texto: 'var(--estado-info-texto)',
-          borde: 'var(--info-500)',
+          borde: 'var(--estado-info-texto)',
         },
         pedido: {
           recibido: {
@@ -107,8 +99,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Poppins', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        // var() funciona aqui porque no es una @media condition — Tailwind emite font-family: var(--fuente-base)
+        sans: ['var(--fuente-base)'],
+        mono: ['var(--fuente-mono)'],
       },
       fontSize: {
         xs:      ['var(--texto-xs)',      { lineHeight: 'var(--interlineado-interfaz)' }],
