@@ -1,10 +1,5 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import type { EstadoPedido, Familia } from '../types/index.js'
-
-// arrays locales para los enum de mongoose - mismo vocabulario que server/src/types, duplicado
-// a proposito porque mongoose no acepta un type de TS directo en `enum`
-const ESTADOS: EstadoPedido[] = ['pendiente', 'en_produccion', 'listo', 'entregado']
-const FAMILIAS: Familia[] = ['toppers', 'superficies', 'senaletica', 'papeleria']
+import { ESTADOS_PEDIDO, FAMILIAS, type EstadoPedido, type Familia } from '../types/index.js'
 
 // ─── Subdocumentos ────────────────────────────────────────────────────────────
 
@@ -51,7 +46,6 @@ export interface IPedido extends Document {
   materiales: string
   imagenesReferencia: IImagenReferencia[]
   estado: EstadoPedido
-  esDimensionPersonalizada: boolean
   fechaSolicitud: Date
   fechaEstimadaEntrega: Date | null
   historialEstados: IHistorialEstado[]
@@ -90,8 +84,8 @@ const imagenReferenciaSchema = new Schema<IImagenReferencia>(
 
 const historialEstadoSchema = new Schema<IHistorialEstado>(
   {
-    estadoAnterior: { type: String, enum: [...ESTADOS, null], default: null },
-    estadoNuevo: { type: String, required: true, enum: ESTADOS },
+    estadoAnterior: { type: String, enum: [...ESTADOS_PEDIDO, null], default: null },
+    estadoNuevo: { type: String, required: true, enum: ESTADOS_PEDIDO },
     fecha: { type: Date, default: Date.now },
     actor: { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
   },
@@ -109,8 +103,7 @@ const pedidoSchema = new Schema<IPedido>({
   colores: { type: String, required: true },
   materiales: { type: String, required: true },
   imagenesReferencia: { type: [imagenReferenciaSchema], default: [] },
-  estado: { type: String, enum: ESTADOS, default: 'pendiente' },
-  esDimensionPersonalizada: { type: Boolean, default: false },
+  estado: { type: String, enum: ESTADOS_PEDIDO, default: 'pendiente' },
   fechaSolicitud: { type: Date, default: Date.now },
   fechaEstimadaEntrega: { type: Date, default: null },
   historialEstados: [historialEstadoSchema],
@@ -121,6 +114,6 @@ const pedidoSchema = new Schema<IPedido>({
 // y filtrar los que necesitan revision manual de dimension
 pedidoSchema.index({ cliente: 1, estado: 1 })
 pedidoSchema.index({ estado: 1, fechaSolicitud: -1 })
-pedidoSchema.index({ esDimensionPersonalizada: 1 })
+pedidoSchema.index({ 'dimensiones.esDimensionPersonalizada': 1 })
 
 export const Pedido = model<IPedido>('Pedido', pedidoSchema)

@@ -1,5 +1,5 @@
 import { Schema, model, Document } from 'mongoose'
-import type { Familia } from '../types/index.js'
+import { FAMILIAS, type Familia } from '../types/index.js'
 
 // las dimensiones tipicas de esa categoria (ej. "media libra" -> 22cm), para sugerir en el formulario
 interface IDimensionBase {
@@ -30,12 +30,10 @@ const dimensionBaseSchema = new Schema<IDimensionBase>(
 const categoriaSchema = new Schema<ICategoria>({
   nombre: { type: String, required: true, trim: true },
   descripcion: { type: String, default: '' },
-  // las 4 familias en linea aqui (Pedido.ts las trae de un const compartido) - si se agrega una familia,
-  // acordarse de actualizar los dos lugares
   familia: {
     type: String,
     required: true,
-    enum: ['toppers', 'superficies', 'senaletica', 'papeleria'],
+    enum: FAMILIAS,
   },
   dimensionesBase: { type: [dimensionBaseSchema], default: [] },
   activo: { type: Boolean, default: true },

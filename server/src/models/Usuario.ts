@@ -1,5 +1,5 @@
 import { Schema, model, Document } from 'mongoose'
-import type { Rol } from '../types/index.js'
+import { ROLES, type Rol } from '../types/index.js'
 
 export interface IUsuario extends Document {
   email: string
@@ -12,7 +12,7 @@ const usuarioSchema = new Schema<IUsuario>({
   // lowercase + trim en el schema, no solo en el controller - asi ningun otro caller (script, seed) cuela variantes
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
   password: { type: String, required: true },
-  rol: { type: String, enum: ['cliente', 'administrador'], default: 'cliente' },
+  rol: { type: String, enum: ROLES, default: 'cliente' },
   fechaRegistro: { type: Date, default: Date.now },
 })
 
