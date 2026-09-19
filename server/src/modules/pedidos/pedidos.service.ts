@@ -1,0 +1,128 @@
+import { Types } from 'mongoose'
+import { Pedido } from '../../models/Pedido.js'
+import { Categoria } from '../../models/Categoria.js'
+import { subirImagen } from '../../lib/cloudinary.js'
+import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
+
+// ─── Creacion ─────────────────────────────────────────────────────────────────
+
+interface CrearPedidoInput {
+  clienteId: string
+  categoriaId: string
+  descripcion: string
+  dimensionValor: number
+  esDimensionPersonalizada: boolean
+  cantidad: number
+  colores: string
+  materiales: string
+  archivos: Express.Multer.File[]
+}
+
+export async function crearPedido(input: CrearPedidoInput) {
+  // no se puede pedir sobre una categoria borrada ni pausada - evita pedidos huerfanos de algo que ya no se vende
+  const categoria = await Categoria.findById(input.categoriaId)
+  if (!categoria || !categoria.activo) {
+    throw new Error('Categoría no encontrada o inactiva')
+  }
+
+  // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
+  const imagenesReferencia = await Promise.all(
+    input.archivos.map(async (file) => ({
+      nombreOriginal: file.originalname,
+      mimeType: 'image/jpeg' as const,
+      tamano: file.size,
+      url: await subirImagen(file.buffer, file.mimetype),
+    })),
+  )
+
+  const pedido = await Pedido.create({
+    cliente: input.clienteId,
+    // se copia nombre/familia a mano en vez de solo guardar el _id - es el snapshot que congela
+    // como se veia la categoria al momento del pedido (ver ICategoriaEmbebida en el modelo)
+    categoria: {
+      _id: categoria._id,
+      nombre: categoria.nombre,
+      familia: categoria.familia,
+    },
+    descripcion: input.descripcion,
+    dimensiones: {
+      valor: input.dimensionValor,
+      unidad: 'cm',
+      esDimensionPersonalizada: input.esDimensionPersonalizada,
+    },
+    cantidad: input.cantidad,
+    colores: input.colores,
+    materiales: input.materiales,
+    imagenesReferencia,
+    estado: 'pendiente',
+    // arranca su propio historial desde el momento cero, el cliente es el "actor" de este primer paso
+    historialEstados: [
+      {
+        estadoAnterior: null,
+        estadoNuevo: 'pendiente',
+        fecha: new Date(),
+        actor: new Types.ObjectId(input.clienteId),
+      },
+    ],
+  })
+
+  return pedido
+}
+
+// ─── Consultas del cliente ──────────────────────────────────────────────────
+
+export async function getMisPedidos(clienteId: string) {
+  return Pedido.find({ cliente: clienteId }).sort({ fechaSolicitud: -1 }).lean()
+}
+
+// el filtro por clienteId no es solo prolijidad: es lo unico que impide que un cliente lea el pedido de otro
+export async function getPedidoById(pedidoId: string, clienteId: string) {
+  const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId }).lean()
+  if (!pedido) throw new Error('Pedido no encontrado')
+  return pedido
+}
+
+// ─── Panel de taller (admin) ────────────────────────────────────────────────
+
+// el orden de la constante canonica ES la maquina de estados - updateEstado solo permite moverse al siguiente indice
+const ORDEN_ESTADOS: readonly EstadoPedido[] = ESTADOS_PEDIDO
+
+// sin filtro de cliente: esta vista es solo para el rol administrador (ver requireRol en las rutas)
+export async function getAllPedidos() {
+  return Pedido.find().sort({ fechaSolicitud: -1 }).populate('cliente', 'email').lean()
+}
+
+// null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
+export async function setFechaEntrega(pedidoId: string, fecha: Date | null) {
+  const pedido = await Pedido.findById(pedidoId)
+  if (!pedido) throw new Error('Pedido no encontrado')
+  pedido.fechaEstimadaEntrega = fecha
+  await pedido.save()
+  return pedido.toObject()
+}
+
+// unica forma de mover el estado de un pedido - crearPedido nunca llama esto, arranca su propio historial
+export async function updateEstado(pedidoId: string, nuevoEstado: EstadoPedido, actorId: string) {
+  const pedido = await Pedido.findById(pedidoId)
+  if (!pedido) throw new Error('Pedido no encontrado')
+
+  // solo se avanza un paso a la vez, nada de saltarse "en_produccion" ni retroceder
+  const indexActual = ORDEN_ESTADOS.indexOf(pedido.estado as EstadoPedido)
+  const indexNuevo = ORDEN_ESTADOS.indexOf(nuevoEstado)
+  if (indexNuevo !== indexActual + 1) {
+    throw new Error(`Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
+  }
+
+  // el push queda en el mismo .save() que el cambio de estado - no hay ventana donde uno se guarde sin el otro
+  const estadoAnterior = pedido.estado
+  pedido.estado = nuevoEstado
+  pedido.historialEstados.push({
+    estadoAnterior,
+    estadoNuevo: nuevoEstado,
+    fecha: new Date(),
+    actor: new Types.ObjectId(actorId),
+  })
+
+  await pedido.save()
+  return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
+}
