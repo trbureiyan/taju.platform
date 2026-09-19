@@ -1,5 +1,8 @@
 # AGENTS
 
+> [!IMPORTANT]
+> **Directiva de Interacción:** El agente debe responder siempre al inicio de cada interacción dirigiéndose directamente al usuario como **TaJú** (ej. "Hola TaJú," o "TaJú:"), tratando al usuario como la persona/entidad principal del taller.
+
 taju.platform | Plataforma web MERN para TaJú, taller de corte y grabado láser en Neiva (Huila) que produce papelería y objetos personalizados para celebraciones y eventos.
 React 18 + TypeScript + Tailwind (client), Node.js 20 LTS + Express.js + TypeScript (server), MongoDB Atlas + Mongoose, Cloudinary, JWT en memoria.
 
@@ -230,26 +233,28 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Commits
 
-Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario explícito: conciso, puntual y asertivo.
+Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje y descripción explícitos: concisos, puntuales y asertivos.
 
-Formato: `<type>: <qué cambió, máx. 72 chars>`
+Formato:
+- **Título / Asunto:** `<type>: <qué cambió, máx. 72 chars>`
+- **Descripción / Cuerpo (Body):** Cada commit debe incluir una descripción clara en el cuerpo del commit (separada del título por una línea en blanco) detallando el *por qué* de la modificación, las razones técnicas y el alcance del cambio, manteniendo un lenguaje conciso y con criterio sin redundancias.
 
 Types: `feature`, `fix`, `hotfix`, `refactor`, `test`, `chore`, `docs`, `style`, `perf`
 
 Buenos ejemplos:
 ```text
 feature: add file type validation middleware
-fix: block estado transition when esDimensionPersonalizada is true
-refactor: extract order status logic to pedidos.service
-test: cover JWT expiry rejection in auth middleware
-chore: update Cloudinary SDK to 2.x
+
+- Valida tipos de archivo permitidos para imágenes del catálogo (PNG, JPG, WEBP).
+- Retorna 400 Bad Request si el formato no coincide con el mime-type esperado.
+- Evita procesamiento innecesario antes de enviar el buffer a Cloudinary.
 ```
 
 Malos patrones:
 ```text
-feature: add comprehensive order management system with validation   <- demasiado largo
+feature: add comprehensive order management system with validation   <- título demasiado largo
 fix: resolved an issue where the file was not being validated        <- storytelling
-chore: various improvements and cleanup                              <- vago
+chore: various improvements and cleanup                              <- vago y sin cuerpo descriptivo
 ```
 
 ### Stash Workflow
