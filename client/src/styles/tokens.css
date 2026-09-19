@@ -1,0 +1,217 @@
+/* === Primitivos | Capa 1 ===================================================== */
+
+:root {
+  /* Amarillo TaJu */
+  --amarillo-100: #FDF8E7;
+  --amarillo-300: #FAE79E;
+  --amarillo-500: #F5D447;
+  --amarillo-700: #BD9E27;
+  --amarillo-900: #A7912F;
+
+  /* Turquesa TaJu */
+  --turquesa-100: #EAF7F8;
+  --turquesa-300: #B8E2E5;
+  --turquesa-500: #7CC9CF;
+  --turquesa-700: #4A9AA1;
+  --turquesa-900: #2E6B70;
+
+  /* Rosa TaJu */
+  --rosa-300: #F9C9DD;
+  --rosa-500: #F195BD;
+
+  /* Tinta */
+  --tinta-900: #2B2B2A;
+  --tinta-700: #5C5C5A;
+  --tinta-500: #8A8A87;
+  --tinta-300: #C7C7C4;
+  --tinta-100: #EDEDEB;
+  --tinta-000: #FFFFFF;
+
+  /* Estados — vocabulario separado de la paleta de marca */
+  --exito-500: #2F7A52;
+  --exito-100: #E6F4EC;
+  --error-500: #C0392B;
+  --error-100: #FBEAE7;
+  --aviso-500: #A34E0C;
+  --aviso-100: #FDF0E3;
+  --info-500:  #2B6CB0;
+  --info-100:  #E8F0FA;
+
+  /* Tipografia */
+  --fuente-base: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fuente-mono: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+  --peso-regular: 400;
+  --peso-medio: 500;
+  --peso-semi: 600;
+  --texto-display: 3rem;
+  --texto-h1: 2.441rem;
+  --texto-h2: 1.953rem;
+  --texto-h3: 1.563rem;
+  --texto-lg: 1.25rem;
+  --texto-base: 1rem;
+  --texto-sm: 0.875rem;
+  --texto-xs: 0.75rem;
+  --interlineado-apretado: 1.2;
+  --interlineado-interfaz: 1.4;
+  --interlineado-texto: 1.6;
+  --medida-linea: 68ch;
+
+  /* Espaciado | escala base-4 */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  /* Radio y elevacion */
+  --radio-sm: 0.5rem;
+  --radio-md: 0.75rem;
+  --radio-lg: 1.25rem;
+  --radio-full: 9999px;
+  --sombra-sm: 0 1px 2px rgba(43, 43, 42, 0.06);
+  --sombra-md: 0 4px 12px rgba(43, 43, 42, 0.08);
+  --sombra-lg: 0 12px 32px rgba(43, 43, 42, 0.12);
+  --sombra-foco: 0 0 0 3px rgba(245, 212, 71, 0.55);
+
+  /* Movimiento */
+  --duracion-rapida: 120ms;
+  --duracion-normal: 200ms;
+  --duracion-lenta: 320ms;
+  --curva-estandar: cubic-bezier(0.2, 0, 0, 1);
+  --curva-entrada: cubic-bezier(0, 0, 0, 1);
+
+  /* Puntos de quiebre */
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* Capas z-index — no se escriben valores arbitrarios en componentes */
+  --z-base: 0;
+  --z-elevado: 10;
+  --z-encabezado: 100;
+  --z-superposicion: 200;
+  --z-modal: 300;
+  --z-aviso: 400;
+}
+
+/* === Semantica | Capa 2 ====================================================== */
+
+:root {
+  /* Superficies */
+  --superficie-base: var(--tinta-000);
+  --superficie-calida: var(--amarillo-100);
+  --superficie-fria: var(--turquesa-100);
+  --superficie-elevada: var(--tinta-000);
+  --superficie-hundida: var(--tinta-100);
+
+  /* Texto */
+  --texto-principal: var(--tinta-900);
+  --texto-secundario: var(--tinta-700);
+  --texto-tenue: var(--tinta-500);
+  --texto-sobre-acento: var(--tinta-900);
+  --texto-deshabilitado: var(--tinta-300);
+
+  /* Bordes */
+  --borde-sutil: var(--tinta-100);
+  --borde-medio: var(--tinta-300);
+  --borde-fuerte: var(--tinta-900);
+
+  /* Accion primaria */
+  --accion-fondo: var(--amarillo-500);
+  --accion-fondo-hover: var(--amarillo-700);
+  --accion-texto: var(--tinta-900);
+
+  /* Accion secundaria */
+  --accion-sec-fondo: transparent;
+  --accion-sec-borde: var(--tinta-900);
+  --accion-sec-texto: var(--tinta-900);
+
+  /* Contexto y orientacion — turquesa no es color de accion */
+  --contexto-fondo: var(--turquesa-500);
+  --contexto-fondo-suave: var(--turquesa-100);
+  --contexto-texto: var(--tinta-900);
+
+  /* Acento afectivo — maximo una vez por pantalla, nunca en elementos estructurales */
+  --acento-fondo: var(--rosa-500);
+  --acento-texto: var(--tinta-900);
+
+  /* Estados de sistema */
+  --estado-exito-texto: var(--exito-500);
+  --estado-exito-fondo: var(--exito-100);
+  --estado-error-texto: var(--error-500);
+  --estado-error-fondo: var(--error-100);
+  --estado-aviso-texto: var(--aviso-500);
+  --estado-aviso-fondo: var(--aviso-100);
+  --estado-info-texto: var(--info-500);
+  --estado-info-fondo: var(--info-100);
+
+  /* Formulario */
+  --campo-fondo: var(--tinta-000);
+  --campo-borde: var(--tinta-300);
+  --campo-borde-foco: var(--amarillo-700);
+  --campo-borde-error: var(--error-500);
+  --campo-texto: var(--tinta-900);
+  --campo-marcador: var(--tinta-500);
+  --campo-etiqueta: var(--tinta-900);
+  --campo-ayuda: var(--tinta-700);
+}
+
+/* === Estados de pedido ======================================================= */
+
+/* revision y confirmado quedan listos para cuando el flujo de estados crezca de 4 a 6 pasos */
+:root {
+  --pedido-recibido-fondo: var(--tinta-100);
+  --pedido-recibido-texto: var(--tinta-700);
+
+  --pedido-revision-fondo: var(--info-100);
+  --pedido-revision-texto: var(--info-500);
+
+  --pedido-confirmado-fondo: var(--turquesa-100);
+  --pedido-confirmado-texto: var(--turquesa-900);
+
+  --pedido-produccion-fondo: var(--amarillo-100);
+  --pedido-produccion-texto: var(--amarillo-900);
+
+  --pedido-listo-fondo: var(--exito-100);
+  --pedido-listo-texto: var(--exito-500);
+
+  /* Fondo saturado: unico estado con color pleno para distinguirse de un vistazo */
+  --pedido-entregado-fondo: var(--exito-500);
+  --pedido-entregado-texto: var(--tinta-000);
+}
+
+/* === Componentes | Capa 4 ==================================================== */
+
+:root {
+  /* Boton — 44px: objetivo tactico minimo accesible */
+  --boton-alto: 2.75rem;
+  --boton-padding-x: var(--space-6);
+  --boton-radio: var(--radio-sm);
+  --boton-peso: var(--peso-medio);
+
+  /* Campo de formulario */
+  --campo-alto: 2.75rem;
+  --campo-padding-x: var(--space-4);
+  --campo-radio: var(--radio-sm);
+  --campo-borde-ancho: 1px;
+  --campo-etiqueta-peso: var(--peso-medio);
+  --campo-etiqueta-tamano: var(--texto-sm);
+
+  /* Tarjeta de producto */
+  --tarjeta-radio: var(--radio-md);
+  --tarjeta-padding: var(--space-4);
+  --tarjeta-sombra: var(--sombra-sm);
+  --tarjeta-sombra-hover: var(--sombra-md);
+
+  /* Etiqueta de estado */
+  --etiqueta-radio: var(--radio-full);
+  --etiqueta-padding-x: var(--space-3);
+  --etiqueta-padding-y: var(--space-1);
+  --etiqueta-tamano: var(--texto-xs);
+  --etiqueta-peso: var(--peso-medio);
+}

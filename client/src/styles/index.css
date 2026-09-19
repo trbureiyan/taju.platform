@@ -1,0 +1,52 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--fuente-base);
+    font-size: var(--texto-base);
+    font-weight: var(--peso-regular);
+    line-height: var(--interlineado-texto);
+    color: var(--texto-principal);
+    background: var(--superficie-base);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-weight: var(--peso-semi);
+    line-height: var(--interlineado-apretado);
+    margin: 0;
+  }
+
+  p {
+    max-width: var(--medida-linea);
+    margin: 0;
+  }
+
+  /* Cifras tabulares donde el dato importa */
+  .cifra, td, .precio, .medida {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco global — quien navega con teclado sabe donde esta */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--sombra-foco);
+    border-radius: var(--radio-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
