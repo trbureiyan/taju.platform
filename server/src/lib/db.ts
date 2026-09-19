@@ -2,7 +2,10 @@ import mongoose from 'mongoose'
 
 let connected = false
 
-// idempotente: en dev con hot-reload esto se puede llamar varias veces
+/**
+ * Conecta a la base de datos de MongoDB. Es idempotente (se puede llamar múltiples veces).
+ * @throws Error si MONGO_URI no está definida.
+ */
 export async function connectDb(): Promise<void> {
   if (connected) return
 

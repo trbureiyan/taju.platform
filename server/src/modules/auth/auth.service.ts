@@ -8,12 +8,30 @@ const SALT_ROUNDS = 12
 
 // ─── Registro ─────────────────────────────────────────────────────────────────
 
+/**
+ * Registra un nuevo usuario y lo autentica de inmediato.
+ * @param nombre - Nombre visible del usuario.
+ * @param email - Correo único; lanza AppError(409) si ya está registrado.
+ * @param password - Contraseña en texto plano; se hashea con bcrypt antes de persistir.
+ * @returns Token JWT y datos públicos del usuario recién creado.
+ * @throws AppError(409) si el correo ya existe (findOne previo o race condition E11000).
+ */
 export async function registrar(nombre: string, email: string, password: string) {
   const existe = await Usuario.findOne({ email })
   if (existe) throw new AppError(409, 'El correo ya está registrado')
 
   const hash = await bcrypt.hash(password, SALT_ROUNDS)
-  const usuario = await Usuario.create({ nombre, email, password: hash })
+  let usuario
+  try {
+    usuario = await Usuario.create({ nombre, email, password: hash })
+  } catch (err: unknown) {
+    // race condition: dos requests simultáneos pasaron el findOne antes de que alguno insertara
+    // MongoDB lanza code 11000 (duplicate key) por el índice único en email
+    if (typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000) {
+      throw new AppError(409, 'El correo ya está registrado')
+    }
+    throw err
+  }
 
   // se loguea automatico al registrarse, no hay paso intermedio de "verificar correo"
   const token = signToken({ sub: usuario.id, email: usuario.email, rol: usuario.rol })
@@ -22,6 +40,14 @@ export async function registrar(nombre: string, email: string, password: string)
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
+/**
+ * Autentica a un usuario existente.
+ * @param email - Correo registrado.
+ * @param password - Contraseña en texto plano a comparar con el hash almacenado.
+ * @returns Token JWT y datos públicos del usuario.
+ * @throws AppError(401) con mensaje genérico tanto si el correo no existe como si la clave es incorrecta,
+ *         para no revelar cuál campo falló.
+ */
 export async function iniciarSesion(email: string, password: string) {
   // +password: el campo es select:false por defecto (ver Usuario.ts)
   const usuario = await Usuario.findOne({ email }).select('+password')

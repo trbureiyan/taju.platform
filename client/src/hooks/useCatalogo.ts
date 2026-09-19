@@ -9,6 +9,12 @@ interface Estado {
 }
 
 // null trae el catalogo completo, una familia especifica filtra en el server - ver CatalogoPage
+/**
+ * Carga el catálogo de productos, filtrando opcionalmente por familia.
+ * @param familia - Familia a filtrar, o null para traer todo el catálogo activo.
+ * @returns Estado con productos (array, vacío mientras carga), cargando (bool) y error (string|null).
+ *          Actualiza automáticamente cuando cambia la familia.
+ */
 export function useCatalogo(familia: Familia | null) {
   const [estado, setEstado] = useState<Estado>({ productos: [], cargando: true, error: null })
 

@@ -1,6 +1,14 @@
 import { forwardRef, useId } from 'react'
 
 // nota: aqui se llama "ayuda", en Input.tsx el mismo concepto se llama "hint" - nombres distintos, mismo rol
+
+/**
+ * Props del campo de texto multilínea.
+ * @prop label - Etiqueta visible del campo.
+ * @prop error - Mensaje de error; cuando presente, aria-invalid se activa y se muestra en lugar del texto de ayuda.
+ * @prop ayuda - Texto de ayuda; se oculta si hay error activo.
+ * @prop rows - Número de filas visibles del textarea; por defecto 4.
+ */
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string
   error?: string
@@ -10,8 +18,10 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 // forwardRef porque react-hook-form (o similar) necesita enganchar el ref directo al textarea
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, ayuda, rows = 4, className, ...props }, ref) => {
-    const id = useId() // React genera el id, evita colisiones si el mismo formulario repite el componente
+  ({ label, error, ayuda, rows = 4, className, id: idExterno, ...props }, ref) => {
+    const idGenerado = useId() // React genera el id, evita colisiones si el mismo formulario repite el componente
+    // si el caller pasa id, se respeta; si no, se usa el generado — igual que Input.tsx
+    const id = idExterno ?? idGenerado
     return (
       <div className="flex flex-col gap-1">
         <label htmlFor={id} className="text-sm font-medium text-campo-etiqueta">

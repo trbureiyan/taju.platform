@@ -113,7 +113,8 @@ export async function setFechaEntrega(pedidoId: string, fecha: Date | null) {
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
   pedido.fechaEntrega = fecha
   await pedido.save()
-  return pedido.toObject()
+  // populate('cliente', 'email').lean() para igualar el contrato de retorno de updateEstado
+  return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
 }
 
 // confirmarDimensionPersonalizada: el admin lo manda explicito en el mismo request que avanza a en_produccion -

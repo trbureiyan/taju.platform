@@ -139,7 +139,7 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos entre estados intermedios.
+Enum canónico. Mismo valor en base de datos, API y UI. Los valores exactos permitidos son: `recibido`, `en_revision`, `confirmado`, `en_produccion`, `listo_para_entrega`, `entregado`.
 
 ```ts
 type EstadoPedido =

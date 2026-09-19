@@ -4,6 +4,10 @@ import type { Producto } from '../../types'
 import { ETIQUETAS_FAMILIA } from '../../types'
 import { formatearPrecio } from '../../lib/precio'
 
+/**
+ * Props de la tarjeta de producto en el catálogo.
+ * @prop producto - Producto a mostrar; se espera que venga poblado con su categoría.
+ */
 interface ProductoCardProps {
   producto: Producto
 }

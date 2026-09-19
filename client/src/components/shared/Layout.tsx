@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { Nav } from './Nav'
 
+/**
+ * Envuelve el contenido de la app con el Nav y el contenedor principal.
+ * @prop children - Contenido de la página activa.
+ */
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-superficie-base flex flex-col">

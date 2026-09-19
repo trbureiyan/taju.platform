@@ -24,8 +24,12 @@ function esJpegValido(buffer: Buffer): boolean {
   return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
 }
 
-// ─── Middleware expuesto ────────────────────────────────────────────────────
-// envolvemos multer a mano para traducir sus errores a la forma de respuesta que usa el resto de la api
+/**
+ * Middleware para procesar subida de imágenes (multipart/form-data).
+ * Valida que los archivos no excedan el peso, sean JPEG válidos (revisando magic bytes),
+ * y los deja disponibles en req.files como buffers en memoria.
+ * Retorna 400 con un mensaje de error si la validación falla.
+ */
 export function uploadImagen(req: Request, res: Response, next: NextFunction): void {
   _multer(req, res, (err) => {
     if (err instanceof multer.MulterError) {

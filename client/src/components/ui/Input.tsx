@@ -1,5 +1,11 @@
 import { useId, type InputHTMLAttributes } from 'react'
 
+/**
+ * Props del campo de texto de una línea.
+ * @prop label - Etiqueta visible asociada al input mediante htmlFor.
+ * @prop error - Mensaje de error; activa aria-invalid y muestra el mensaje en rojo. Oculta hint.
+ * @prop hint - Texto de ayuda secundario; se muestra cuando no hay error activo.
+ */
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string

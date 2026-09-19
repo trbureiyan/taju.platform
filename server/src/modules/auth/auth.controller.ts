@@ -17,6 +17,10 @@ const loginSchema = z.object({
 
 // zod valida forma; el service lanza AppError para reglas de negocio (correo repetido).
 // cualquier otra excepcion (Mongo caido, bcrypt, JWT_SECRET ausente) se delega a errorHandler via next
+/**
+ * Maneja el registro de un nuevo usuario.
+ * @returns { token, usuario } con status 201.
+ */
 export async function registrar(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = registrarSchema.safeParse(req.body)
   if (!parsed.success) {
@@ -35,6 +39,10 @@ export async function registrar(req: Request, res: Response, next: NextFunction)
   }
 }
 
+/**
+ * Maneja el inicio de sesión de un usuario existente.
+ * @returns { token, usuario } con status 200.
+ */
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = loginSchema.safeParse(req.body)
   if (!parsed.success) {
@@ -53,7 +61,9 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
-// req.usuario ya viene decodificado del token por requireAuth, aqui no se toca la db
+/**
+ * Retorna los datos del usuario autenticado a partir de su token JWT.
+ */
 export function me(req: Request, res: Response): void {
   res.json({ usuario: req.usuario })
 }

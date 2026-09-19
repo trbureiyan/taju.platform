@@ -13,6 +13,10 @@ declare global {
 
 // para lecturas publicas que quieren dar mas informacion si hay sesion admin (ver catalog) sin exigir login -
 // token ausente o invalido simplemente no puebla req.usuario, nunca corta la request
+/**
+ * Extrae y valida el token JWT si está presente en el header Authorization, poblando req.usuario.
+ * Si no hay token o es inválido, ignora silenciosamente y permite continuar la request (para endpoints públicos).
+ */
 export function attachUsuarioOpcional(req: Request, _res: Response, next: NextFunction): void {
   const header = req.headers.authorization
   if (header?.startsWith('Bearer ')) {
@@ -25,7 +29,10 @@ export function attachUsuarioOpcional(req: Request, _res: Response, next: NextFu
   next()
 }
 
-// se usa en toda ruta que pida sesion - solo valida identidad, el permiso por rol es trabajo de rbac.ts
+/**
+ * Exige un token JWT válido. Pobla req.usuario si el token es legítimo.
+ * Retorna 401 si falta o es inválido. No valida rol (eso lo hace rbac.ts).
+ */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {

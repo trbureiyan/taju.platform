@@ -26,6 +26,10 @@ interface LoginResponse {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 // nada de rehidratar sesion al montar: si recargas la pagina, se pierde la sesion, es la decision de diseño
+/**
+ * Provee el contexto de autenticación a toda la app.
+ * @prop children - Árbol de componentes que pueden acceder a useAuth().
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ usuario: null, autenticado: false })
 
