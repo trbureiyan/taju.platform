@@ -8,7 +8,12 @@ cloudinary.config({
   secure: true,
 })
 
-// cloudinary acepta data URI directo, asi que evitamos escribir a disco temporal
+/**
+ * Sube una imagen a Cloudinary desde un buffer en memoria usando Data URI.
+ * @param buffer - Contenido binario de la imagen.
+ * @param mimetype - Tipo MIME (ej. 'image/jpeg').
+ * @returns URL segura (https) de la imagen alojada.
+ */
 export async function subirImagen(buffer: Buffer, mimetype: string): Promise<string> {
   const dataUri = `data:${mimetype};base64,${buffer.toString('base64')}`
   const result = await cloudinary.uploader.upload(dataUri, {

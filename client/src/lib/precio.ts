@@ -1,7 +1,13 @@
 import type { Precio } from '../types'
 
-// texto corto para tarjeta/detalle - superficies muestra "desde" porque el precio real depende de la
-// cantidad (ver AGENTS.md: escala de precios, minimo 12 unidades); el resto muestra el precio unitario fijo
+/**
+ * Formatea el precio para mostrar en tarjeta o detalle de producto.
+ * Para la familia superficies (escalas) muestra "Desde $X c/u (mín. N unidades)" apuntando
+ * a la escala de menor cantidad mínima — que es el precio de entrada real, no el más bajo posible.
+ * Para precio unitario fijo muestra "$X". Si no hay precio definido devuelve "Precio a consultar".
+ * @param precio - Objeto Precio con unitario y/o escalas.
+ * @returns Cadena lista para mostrar en la UI.
+ */
 export function formatearPrecio(precio: Precio): string {
   if (precio.escalas.length > 0) {
     // la escala de menor cantidad minima es el punto de entrada real - "desde" apunta ahi, no al precio mas bajo posible
@@ -13,8 +19,16 @@ export function formatearPrecio(precio: Precio): string {
   }
   return 'Precio a consultar'
 }
-// resumen del total para una cantidad puntual (PedidoFormPage) - null cuando no hay suficiente info para cotizar
-// (superficies exige el minimo de la escala mas baja, ver AGENTS.md) para no mostrar un numero enganoso
+
+/**
+ * Calcula el total para una cantidad puntual, usado en PedidoFormPage.
+ * Para superficies (escalas) aplica la escala de mayor cantidadMinima que la cantidad pedida cubra.
+ * Si la cantidad no alcanza el mínimo de ninguna escala, devuelve null (no se muestra precio engañoso).
+ * Para precio unitario fijo, siempre hay resultado mientras haya precio definido.
+ * @param precio - Objeto Precio con unitario y/o escalas.
+ * @param cantidad - Cantidad solicitada (entero positivo).
+ * @returns Objeto { total, unitario } o null si no hay información suficiente para cotizar.
+ */
 export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: number; unitario: number } | null {
   if (precio.escalas.length > 0) {
     // la escala aplicable es la de mayor cantidadMinima que la cantidad pedida todavia cubre
@@ -30,3 +44,4 @@ export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: 
   }
   return null
 }
+

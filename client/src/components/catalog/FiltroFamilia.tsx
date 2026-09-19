@@ -1,6 +1,11 @@
 import type { Familia } from '../../types'
 import { ETIQUETAS_FAMILIA } from '../../types'
 
+/**
+ * Props del filtro de familia del catálogo.
+ * @prop seleccionada - Familia actualmente seleccionada, o null para "Todos".
+ * @prop onChange - Callback invocado con la nueva familia o null al seleccionar "Todos".
+ */
 interface FiltroFamiliaProps {
   seleccionada: Familia | null
   onChange: (familia: Familia | null) => void

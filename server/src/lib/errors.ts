@@ -1,7 +1,9 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
 
-// error de negocio esperado (correo duplicado, credenciales invalidas, etc) - lleva su propio status HTTP.
-// cualquier otra excepcion (Mongo caido, bcrypt fallando, JWT_SECRET ausente) no es un AppError y cae al 500
+/**
+ * Error de negocio con estado HTTP específico. Atrapado por errorHandler para
+ * devolver el mensaje al cliente.
+ */
 export class AppError extends Error {
   status: number
 
@@ -11,7 +13,10 @@ export class AppError extends Error {
   }
 }
 
-// Express 4 no propaga rechazos de handlers async al middleware de errores - este wrapper lo hace explicito
+/**
+ * Wrapper para rutas asíncronas de Express. Atrapa promesas rechazadas
+ * y las pasa a next() automáticamente.
+ */
 export function asyncHandler(
   handler: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
 ): RequestHandler {
@@ -20,7 +25,10 @@ export function asyncHandler(
   }
 }
 
-// ultimo middleware de la cadena: AppError expone su mensaje, todo lo demas se loguea y responde generico
+/**
+ * Middleware central de manejo de errores.
+ * Errores AppError envían su mensaje al cliente. Otros errores retornan 500 genérico.
+ */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
   if (err instanceof AppError) {

@@ -3,6 +3,13 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 type Variante = 'primario' | 'secundario' | 'fantasma'
 type Tamano = 'sm' | 'md' | 'lg'
 
+/**
+ * Props del componente Button.
+ * @prop variante - Estilo visual: 'primario' (acción de marca), 'secundario' (apoyo con borde),
+ *                 'fantasma' (sin fondo, solo texto). Solo una acción primaria por pantalla.
+ * @prop tamano - Tamaño: 'sm' | 'md' | 'lg'. Los tres mantienen el objetivo táctil mínimo de 44px.
+ * @prop cargando - Muestra spinner decorativo y bloquea el click; no modifica el nombre accesible del botón.
+ */
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variante?: Variante
   tamano?: Tamano
