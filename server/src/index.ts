@@ -4,6 +4,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { connectDb } from './lib/db.js'
+import { errorHandler } from './lib/errors.js'
 import routes from './routes/index.js'
 
 const app = express()
@@ -22,6 +23,8 @@ app.get('/health', (_req, res) => {
 
 app.use('/api', routes)
 
+// ultimo middleware - captura AppError de los services y cualquier rechazo de asyncHandler
+app.use(errorHandler)
 // ─── Arranque ─────────────────────────────────────────────────────────────────
 // no levantamos el server hasta tener la conexion a mongo, para no aceptar requests contra una db muerta
 connectDb()
