@@ -1,0 +1,153 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "es-ES"
+tone_instructions: "Tono técnico, directo y conciso. Sin emojis, sin rodeos y sin vocabulario corporativo. Estilo profesional y enfocado en la precisión técnica."
+
+reviews:
+  profile: "chill"
+
+  auto_review:
+    enabled: true
+    base_branches:
+      - "main"
+      - "dev"
+    drafts: false
+    ignore_title_keywords:
+      - "WIP"
+      - "wip"
+      - "DO NOT MERGE"
+
+  request_changes_workflow: false
+
+  high_level_summary: true
+  high_level_summary_placeholder: "@coderabbitai summary"
+  high_level_summary_in_walkthrough: false
+  high_level_summary_instructions: |
+    Crea notas de versión concisas y estructuradas.
+    NO uses emojis bajo ninguna circunstancia.
+    Mantén un tono técnico, profesional y directo.
+    IMPORTANTE: Envuelve absoluta y estrictamente TODO tu resumen dentro de una etiqueta HTML colapsable `<details><summary>Análisis automático de CodeRabbit</summary> ... </details>` para que no sea intrusivo en la descripción principal del PR.
+
+  collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  review_details: false
+
+  poem: false
+  in_progress_fortune: true
+  enable_prompt_for_ai_agents: true
+
+  review_status: true
+  commit_status: true
+  fail_commit_status: false
+
+  estimate_code_review_effort: true
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+  suggested_reviewers: true
+  labeling_instructions: []
+  auto_apply_labels: false
+  auto_assign_reviewers: false
+
+  slop_detection:
+    enabled: true
+
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    simplify:
+      enabled: false
+
+  tools:
+    shellcheck:
+      enabled: false
+
+  path_instructions:
+    # dependencias: versiones exactas sin ^ ni ~
+    - path: "**/package.json"
+      instructions: "Las versiones de las dependencias deben estar fijadas exactamente (sin usar '^' ni '~')."
+
+    # capa de módulos — separación estricta controller/service
+    - path: "server/src/modules/**/*.controller.ts"
+      instructions: |
+        El controller solo maneja request/response y delega al service.
+        No debe contener lógica de negocio ni consultas a Mongoose directamente.
+        Validar que los errores se propagan al middleware de errores, no se swallowean.
+
+    - path: "server/src/modules/**/*.service.ts"
+      instructions: |
+        El service contiene la lógica de negocio pura.
+        No debe importar Request, Response ni NextFunction de Express.
+        Validar que usa el vocabulario de dominio en español definido en AGENTS.md.
+
+    # modelos Mongoose — vocabulario de dominio
+    - path: "server/src/models/**/*.ts"
+      instructions: |
+        Los nombres de campos deben estar en español y coincidir exactamente con el vocabulario de AGENTS.md.
+        El enum EstadoPedido debe usar los valores canónicos: recibido, en_revision, confirmado, en_produccion, listo_para_entrega, entregado.
+        Sin traducción de campos entre backend y frontend; el término es idéntico en ambos lados.
+        Sin campos added sin revisar el servicio y controlador que los consumen.
+
+    # middleware — RBAC y validación
+    - path: "server/src/middleware/**/*.ts"
+      instructions: |
+        RBAC: verificar que se valida el rol contra los dos valores canónicos únicamente: 'cliente' y 'administrador'. Sin valores mágicos ni strings sueltos.
+        Auth: el token JWT vive en memoria del cliente. Sin localStorage, sin cookies.
+        Cualquier cambio en la estructura del payload JWT afecta todas las rutas autenticadas — documentar con [DECISION].
+
+    # componentes de cliente — sistema de tokens
+    - path: "client/src/components/**/*.tsx"
+      instructions: |
+        Sin valores crudos de Tailwind (bg-yellow-*, text-gray-*, etc.). Todo a través de tokens semánticos CSS custom properties.
+        Sin hexadecimales literales. Los hex solo existen en tokens.css.
+        Espaciado solo de la escala base 4: valores admitidos 1, 2, 3, 4, 6, 8, 12, 16, 24.
+        Objetivo táctil mínimo 44px en botones y campos.
+        Foco visible en todo elemento interactivo. No anular outline sin sustituto.
+        Un solo set de iconos: lucide-react, trazo 2px. Sin SVG sueltos de origen distinto.
+        Animaciones deben respetar prefers-reduced-motion.
+
+    # tokens de diseño — consistencia triple
+    - path: "client/src/styles/tokens.css"
+      instructions: |
+        Si se modifica este archivo, verificar que tailwind.config.js y .docs/branding/04-tokens-de-diseno.md sean consistentes.
+        Los tres archivos forman una unidad. Una discrepancia es un error, no una ambigüedad.
+
+    # tests — Vitest
+    - path: "**/*.test.ts"
+      instructions: |
+        Framework: Vitest. No usar jest.* globals sin el adaptador correspondiente.
+        Cada test debe ser independiente: sin estado compartido entre tests.
+        Mocking de Cloudinary: interceptar el módulo de integración completo, nunca hacer llamadas reales.
+        Mocking de DB: mongodb-memory-server.
+
+    - path: "**/*.test.tsx"
+      instructions: |
+        Framework: Vitest + Testing Library.
+        Sin snapshots frágiles. Testear comportamiento, no implementación.
+        Cada test debe ser independiente: sin estado compartido entre tests.
+
+    # typescript general
+    - path: "**/*.ts"
+      instructions: |
+        Los comentarios explican el 'por qué' y lo 'no obvio', nunca el 'cómo'.
+        Documentar contratos de funciones públicas con JSDoc: qué hace, parámetros, retorno, excepciones.
+        Marcadores ASCII en comentarios de una línea: [!] para mutaciones peligrosas, [?] para enfoques inciertos, [x] para rutas obsoletas, --> para redirigir al lector.
+        Decisiones de diseño no obvias: // [DECISION] {elección} — {por qué}. {tradeoff o acción futura}.
+
+    - path: "**/*.tsx"
+      instructions: |
+        Los comentarios explican el 'por qué' y lo 'no obvio', nunca el 'cómo'.
+        Documentar props de componentes públicos con JSDoc.
+        Sin lógica de negocio en componentes; extraer a hooks o servicios.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/AGENTS.md"

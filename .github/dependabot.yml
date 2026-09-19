@@ -1,0 +1,63 @@
+version: 2
+
+updates:
+  # client — React 18 + Vite + Tailwind
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    groups:
+      client-deps:
+        patterns:
+          - "*"
+    labels:
+      - "dependencies"
+      - "client"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # server — Express + Mongoose + JWT + Cloudinary
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    groups:
+      server-deps:
+        patterns:
+          - "*"
+    # major bumps en estas tres requieren decision manual — no PR automatico
+    ignore:
+      - dependency-name: "mongoose"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "express"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jsonwebtoken"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "server"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # github-actions — mantener actions actualizadas
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+      timezone: "America/Bogota"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(deps)"
