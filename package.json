@@ -1,0 +1,15 @@
+{
+  "name": "taju-platform",
+  "private": true,
+  "scripts": {
+    "dev:client": "pnpm --filter taju-client dev",
+    "dev:server": "pnpm --filter taju-server dev",
+    "build:client": "pnpm --filter taju-client build",
+    "typecheck": "pnpm --filter taju-client typecheck && pnpm --filter taju-server typecheck",
+    "lint": "pnpm --filter taju-client lint && pnpm --filter taju-server lint"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

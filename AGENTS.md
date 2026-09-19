@@ -8,28 +8,48 @@ React 18 + TypeScript + Tailwind (client), Node.js 20 LTS + Express.js + TypeScr
 ## Repository Map
 
 ```text
-{project-root}/
-├── {entry-layer}/           # {Description of routing or entrypoint responsibility}
-│   ├── {auth-module}/       # {Auth flows}
-│   ├── {api-module}/        # {API endpoints — grouped by domain}
-│   └── {public-pages}/      # {Public-facing surfaces}
-├── {components}/            # {React/UI components}
-│   ├── {feature-group}/     # {Feature-specific components}
-│   └── {ui-primitives}/     # {Shared primitives — check here before creating new}
-├── {hooks}/                 # {Custom hooks — one file per concern}
-├── {lib}/                   # {Shared server-side utilities}
-│   ├── {auth-module}/       # {JWT, CSRF, session helpers}
-│   ├── {db-client}/         # {Database client singleton}
-│   └── {generated}/         # [GENERATED] Never edit manually
-├── {repositories}/          # {Data access layer — ORM queries, one file per domain}
-├── {schema}/                # {Database schema, migrations, seed}
-├── {middleware}/            # {Global middleware: auth, RBAC, security}
-├── {tests}/                 # {Test files — naming convention: <module>.<runner>-test.ts}
-└── {ci}/                    # {CI workflows, PR templates}
+taju.platform/
+├── client/                          # React 18 + TypeScript + Vite + Tailwind
+│   ├── index.html                   # entry point — Google Fonts aqui, no en CSS
+│   ├── tailwind.config.js           # consume CSS vars, no duplica valores
+│   ├── vite.config.ts
+│   ├── tsconfig.json
+│   └── src/
+│       ├── main.tsx                 # render root
+│       ├── App.tsx                  # router root (por definir en Phase 1)
+│       ├── styles/
+│       │   ├── tokens.css           # fuente unica de tokens — ver 04-tokens-de-diseno.md
+│       │   └── index.css            # @import tokens + @tailwind layers + reset base
+│       ├── components/
+│       │   ├── ui/                  # primitivos compartidos: Button, Input, Badge...
+│       │   ├── catalog/             # componentes del catalogo de productos
+│       │   ├── orders/              # formulario y flujo de pedidos
+│       │   ├── admin/               # panel de taller — tono neutro, sin acento rosa
+│       │   └── shared/              # layout, nav, feedback generico
+│       ├── hooks/                   # un archivo por concern (useOrderStatus.ts, etc.)
+│       ├── lib/                     # utilidades del cliente (api.ts, formatters, etc.)
+│       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
+├── server/                          # Node.js 20 LTS + Express + TypeScript
+│   ├── tsconfig.json                # CommonJS, compila a dist/
+│   └── src/
+│       ├── index.ts                 # arranque del servidor
+│       ├── routes/                  # rutas agrupadas por dominio
+│       ├── controllers/             # manejo de request/response
+│       ├── services/                # logica de negocio pura
+│       ├── models/                  # esquemas Mongoose
+│       ├── middleware/              # auth, RBAC, validacion, upload
+│       └── lib/                     # db.ts, cloudinary.ts, jwt.ts
+├── public/
+│   └── brand/                       # SVGs de marca — nunca editar
+├── .docs/                           # documentacion normativa
+│   └── branding/                    # fuentes de verdad de marca
+├── .github/
+│   └── workflows/
+│       └── ci.yml                   # lint | typecheck | build en main y develop
+└── AGENTS.md
 ```
 
-**Layer architecture:** {Describe the data flow from request to response in one sentence.}
-For example: Route handler → `lib/data/` (business logic) → `repositories/` (ORM queries) → Database.
+**Layer architecture:** Request → `routes/` → `controllers/` → `services/` (business logic) → `models/` (Mongoose) → MongoDB Atlas.
 
 ---
 
@@ -37,12 +57,15 @@ For example: Route handler → `lib/data/` (business logic) → `repositories/` 
 
 | Command | Purpose | Notes |
 |---|---|---|
-| `{dev}` | Dev server | Local development |
-| `{build}` | Production build | Run before every push |
-| `{lint}` | Linter | Pre-commit hook |
-| `{test}` | Test runner | Full suite |
-| `{test:watch}` | Test watch mode | TDD workflow |
-| `{typecheck}` | Type-check only | Pre-push hook |
+| `pnpm dev:client` | Vite dev server (client) | Puerto 5173 por defecto |
+| `pnpm dev:server` | tsx watch (server) | Puerto 3001 por defecto |
+| `pnpm build:client` | tsc + vite build | Correr antes de todo push |
+| `pnpm typecheck` | tsc --noEmit en client y server | Pre-push check |
+| `pnpm lint` | eslint en client y server | Pre-commit check |
+| `pnpm --filter taju-client build` | build directo del client | |
+| `pnpm --filter taju-server build` | tsc compila a server/dist/ | |
+
+Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
 
 ### Dangerous Commands
 
@@ -65,8 +88,9 @@ When assigned a task:
 
 - Empezar con el conjunto mínimo de archivos plausible. Búsqueda dirigida sobre escaneos amplios.
 - Ignorar `client/dist/`, `server/dist/`, `node_modules/`.
-- If a task touches {high-coupling area A}, also check {file B, C, D} — they form a unit.
-- If a task touches {high-coupling area E}, check {file F, G} as well.
+- Si un task toca `server/src/modules/auth/`, revisar también `server/src/middleware/rbac.ts` y las rutas protegidas — forman una unidad.
+- Si un task toca `client/src/styles/tokens.css`, revisar también `client/tailwind.config.js` y `.docs/branding/04-tokens-de-diseno.md` — los tres deben coincidir.
+- Si un task toca `server/src/models/`, revisar también el servicio y el controlador correspondiente — no modificar el schema sin revisar las consultas que lo consumen.
 
 **Audit before acting:** Verificar cada hallazgo contra el código actual. Corregir solo los problemas aún válidos. Saltear el resto con una razón breve. Mantener los cambios mínimos. Validar después.
 
@@ -85,9 +109,9 @@ Los documentos de marca en `.docs/branding/` son normativos y versionados. Un ag
 
 Document known landmines here. Be specific: name the files, describe the behavior, state the failure mode.
 
-- **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Ubicación del módulo de auth: `{por definir}`.
-- **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Ubicación del middleware: `{por definir}`.
-- **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Ubicación del módulo: `{por definir}`.
+- **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Modulo de auth: `server/src/modules/auth/` (por crear en Phase 1).
+- **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Middleware: `server/src/middleware/rbac.ts` (por crear en Phase 1).
+- **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts` (por crear en Phase 1).
 - **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
 - **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
@@ -112,7 +136,7 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos.
+Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos entre estados intermedios.
 
 ```ts
 type EstadoPedido =
@@ -124,7 +148,7 @@ type EstadoPedido =
   | 'entregado';
 ```
 
-Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa, nunca se escribe suelta en un componente.
+Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
 
 ### Vocabulario de especificación
 
@@ -142,7 +166,7 @@ El catálogo sirve a cliente final (unidad, alta carga emocional, necesita acomp
 
 ### Visual system
 
-Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores se implementarán como CSS custom properties consumidas por Tailwind mediante `var(--…)`. Ubicación del archivo de tokens y configuración de Tailwind: `{por definir al iniciar client/}`.
+Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores viven como CSS custom properties en `client/src/styles/tokens.css`, consumidas por Tailwind en `client/tailwind.config.js` via `var(--…)`. Estos dos archivos deben coincidir con el doc de tokens.
 
 **No copiar valores de tokens a este archivo.** Duplicar la tabla aquí garantiza que se desincronice del CSS. Para cualquier valor concreto, leer el archivo de tokens.
 
@@ -169,13 +193,24 @@ Solo una acción primaria por pantalla. El turquesa es color de contexto, nunca 
 
 En el panel de Taller (admin) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
 
-Activos de marca en `public/brand/`: `taju-vertical.svg`, `taju-horizontal.svg`, `taju-contorno.svg`, `taju-isotipo.svg`. Por debajo de 120px de ancho usar el isotipo, nunca el horizontal.
+Activos de marca en `public/brand/`:
+
+| Archivo | Uso |
+|---|---|
+| `taju-isotipo.svg` | Solo el simbolo — usar por debajo de 120px de ancho o en favicon |
+| `taju-isotipo-monocromático.svg` | Fondos oscuros o estampado |
+| `taju-imagotipo.svg` | Simbolo + wordmark — uso general |
+| `taju-imagotipo-v2.svg` | Variante vertical (isotipo arriba, wordmark abajo) |
+| `taju-logotipo-completo.svg` | Logotipo completo |
+| `taju-logotipo-only-taju.svg` | Solo el texto "taju" |
+
+Regla: por debajo de 120px usar `taju-isotipo.svg`, nunca el imagotipo completo. El favicon en `index.html` apunta a `/brand/taju-isotipo.svg`.
 
 Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con el contorno del logotipo. No mezclar sets ni incrustar SVG sueltos de origen distinto.
 
 ### Component conventions
 
-- Antes de crear un componente nuevo, revisar los primitivos de UI existentes. Estructura de carpetas de componentes: `{por definir al iniciar client/}`.
+- Antes de crear un componente nuevo, revisar los primitivos en `client/src/components/ui/`. Componentes específicos de dominio van en `catalog/`, `orders/`, o `admin/` según corresponda.
 - No usar `@apply` de Tailwind para abstraer clases repetidas. Si un patrón visual se repite, extraerlo a un componente React.
 - Iconos: Lucide React (`lucide-react`). Trazo uniforme de 2px. No mezclar sets ni incrustar SVG sueltos de origen distinto.
 - Animaciones: respetar `prefers-reduced-motion` en cualquier transición o animación CSS.
@@ -195,7 +230,7 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Commits
 
-Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling.
+Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario explícito: conciso, puntual y asertivo.
 
 Formato: `<type>: <qué cambió, máx. 72 chars>`
 
@@ -216,6 +251,12 @@ feature: add comprehensive order management system with validation   <- demasiad
 fix: resolved an issue where the file was not being validated        <- storytelling
 chore: various improvements and cleanup                              <- vago
 ```
+
+### Stash Workflow
+
+Al iterar o recuperar cambios con `git stash`, preferir siempre `git stash apply` o restauración puntual dirigida vía `git checkout stash@{...} -- <ruta>` en lugar de `git stash pop`. 
+
+`git stash pop` elimina el stash de forma destructiva inmediatamente después de aplicarlo. En operaciones automatizadas por agentes, un fallo durante el aplique o interrupción puede derivar en pérdida de cambios o estados del working tree difíciles de recuperar. Usar `apply` o `checkout` selectivo preserva la fuente de verdad en el stash hasta verificar los cambios.
 
 ### Architectural decisions
 
@@ -268,10 +309,10 @@ MANUAL ACTION REQUIRED:
 
 ### Test conventions
 
-- Framework: `{por definir — Jest o Vitest}`.
-- Mocking de DB: `{por definir — mongodb-memory-server o mocks manuales}`.
+- Framework: Vitest (client) + Vitest o Jest (server) — por definir al iniciar Phase 1.
+- Mocking de DB: mongodb-memory-server — por definir al iniciar Phase 1.
 - Mocking de Cloudinary: interceptar el módulo de integración completo; nunca hacer llamadas reales en tests.
-- Cobertura objetivo y estructura de carpetas de tests: `{por definir al iniciar implementación}`.
+- Cobertura objetivo y estructura de carpetas de tests: por definir al iniciar Phase 1.
 - Cada test debe ser independiente: sin estado compartido entre tests.
 
 ### Validation before claiming done
@@ -312,7 +353,7 @@ No hay dependencias cargadas desde CDN. Todo el código de terceros se instala c
 
 ## Writing and Documentation
 
-El texto en este repositorio sigue: sin emojis, sin relleno, sin vocabulario corporativo. Prosa por defecto. Los comentarios de código explican el *por qué* y el *qué no obvio*, nunca el *cómo*. Marcadores ASCII: `[!]` peligroso, `[?]` incierto, `[x]` deprecado, `-->` redirección.
+El texto en este repositorio sigue: sin emojis (se permite ASCII art discreto o caracteres ANSI cuando aportan claridad visual), sin relleno, sin vocabulario corporativo. Prosa por defecto. Separadores: coma o `|` preferidos sobre `—`; reservar `—` solo cuando ninguna alternativa cabe. Los comentarios de código explican el *por qué* y el *qué no obvio*, nunca el *cómo*. Marcadores ASCII: `[!]` peligroso, `[?]` incierto, `[x]` deprecado, `-->` redirección.
 
 JSDoc documenta el contrato de la función: qué hace, parámetros, valor de retorno, excepciones.
 
