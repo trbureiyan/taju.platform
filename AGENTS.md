@@ -230,7 +230,7 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Commits
 
-Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling.
+Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario explícito: conciso, puntual y asertivo.
 
 Formato: `<type>: <qué cambió, máx. 72 chars>`
 
@@ -251,6 +251,12 @@ feature: add comprehensive order management system with validation   <- demasiad
 fix: resolved an issue where the file was not being validated        <- storytelling
 chore: various improvements and cleanup                              <- vago
 ```
+
+### Stash Workflow
+
+Al iterar o recuperar cambios con `git stash`, preferir siempre `git stash apply` o restauración puntual dirigida vía `git checkout stash@{...} -- <ruta>` en lugar de `git stash pop`. 
+
+`git stash pop` elimina el stash de forma destructiva inmediatamente después de aplicarlo. En operaciones automatizadas por agentes, un fallo durante el aplique o interrupción puede derivar en pérdida de cambios o estados del working tree difíciles de recuperar. Usar `apply` o `checkout` selectivo preserva la fuente de verdad en el stash hasta verificar los cambios.
 
 ### Architectural decisions
 
