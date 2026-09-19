@@ -1,10 +1,13 @@
 // ─── Enums de dominio ───────────────────────────────────────────────────────
 // espejo exacto de server/src/types - mismo string en modelo, ruta y UI, sin traduccion en el medio
-export type Rol = 'cliente' | 'administrador'
+export const ROLES = ['cliente', 'administrador'] as const
+export type Rol = (typeof ROLES)[number]
 
-export type Familia = 'toppers' | 'superficies' | 'senaletica' | 'papeleria'
+export const FAMILIAS = ['toppers', 'superficies', 'senaletica', 'papeleria'] as const
+export type Familia = (typeof FAMILIAS)[number]
 
-export type EstadoPedido = 'pendiente' | 'en_produccion' | 'listo' | 'entregado'
+export const ESTADOS_PEDIDO = ['pendiente', 'en_produccion', 'listo', 'entregado'] as const
+export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number]
 
 // ─── Entidades ────────────────────────────────────────────────────────────────
 
@@ -65,7 +68,6 @@ export interface Pedido {
   materiales: string
   imagenesReferencia: ImagenReferencia[]
   estado: EstadoPedido
-  esDimensionPersonalizada: boolean
   fechaSolicitud: string
   fechaEstimadaEntrega: string | null
 }
