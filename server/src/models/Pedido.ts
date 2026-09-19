@@ -47,7 +47,7 @@ export interface IPedido extends Document {
   imagenesReferencia: IImagenReferencia[]
   estado: EstadoPedido
   fechaSolicitud: Date
-  fechaEstimadaEntrega: Date | null
+  fechaEntrega: Date | null
   historialEstados: IHistorialEstado[]
 }
 
@@ -103,9 +103,9 @@ const pedidoSchema = new Schema<IPedido>({
   colores: { type: String, required: true },
   materiales: { type: String, required: true },
   imagenesReferencia: { type: [imagenReferenciaSchema], default: [] },
-  estado: { type: String, enum: ESTADOS_PEDIDO, default: 'pendiente' },
+  estado: { type: String, enum: ESTADOS_PEDIDO, default: 'recibido' },
   fechaSolicitud: { type: Date, default: Date.now },
-  fechaEstimadaEntrega: { type: Date, default: null },
+  fechaEntrega: { type: Date, default: null },
   historialEstados: [historialEstadoSchema],
 })
 

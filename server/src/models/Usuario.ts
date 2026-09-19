@@ -11,7 +11,9 @@ export interface IUsuario extends Document {
 const usuarioSchema = new Schema<IUsuario>({
   // lowercase + trim en el schema, no solo en el controller - asi ningun otro caller (script, seed) cuela variantes
   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-  password: { type: String, required: true },
+  // select: false por defecto - toJSON.transform solo protege serializacion, no .lean()/.toObject()/proyecciones.
+  // auth.service.ts debe pedirlo explicito con .select('+password') donde lo necesite para comparar el hash
+  password: { type: String, required: true, select: false },
   rol: { type: String, enum: ROLES, default: 'cliente' },
   fechaRegistro: { type: Date, default: Date.now },
 })

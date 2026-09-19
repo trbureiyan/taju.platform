@@ -1,11 +1,10 @@
+// side-effect import: debe ser el primero para que dotenv corra antes de que
+// cualquier modulo importado mas abajo (p. ej. cloudinary.ts) lea process.env
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import { connectDb } from './lib/db.js'
 import routes from './routes/index.js'
-
-// carga .env antes de leer cualquier process.env de aqui en adelante
-dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT ?? 3001
