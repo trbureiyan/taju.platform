@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# dos jobs separados porque client tiene build y server (por ahora) no
+jobs:
+  client:
+    name: client | lint - typecheck - build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      # frozen-lockfile: si el lockfile no coincide con package.json, falla en vez de reescribirlo silenciosamente
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter taju-client lint
+      - run: pnpm --filter taju-client typecheck
+      - run: pnpm --filter taju-client build
+
+  server:
+    name: server | lint - typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter taju-server lint
+      - run: pnpm --filter taju-server typecheck
