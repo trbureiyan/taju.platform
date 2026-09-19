@@ -34,9 +34,11 @@ export function Badge({ children, variante = 'neutro', className = '' }: BadgePr
 
 // mapea el estado del pedido a un color de sistema, la etiqueta en texto la sigue mandando el llamador
 const VARIANTE_POR_ESTADO: Record<EstadoPedido, BadgeProps['variante']> = {
-  pendiente: 'info',
+  recibido: 'neutro',
+  en_revision: 'info',
+  confirmado: 'info',
   en_produccion: 'aviso',
-  listo: 'exito',
+  listo_para_entrega: 'exito',
   entregado: 'neutro',
 }
 

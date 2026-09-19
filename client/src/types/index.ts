@@ -6,7 +6,14 @@ export type Rol = (typeof ROLES)[number]
 export const FAMILIAS = ['toppers', 'superficies', 'senaletica', 'papeleria'] as const
 export type Familia = (typeof FAMILIAS)[number]
 
-export const ESTADOS_PEDIDO = ['pendiente', 'en_produccion', 'listo', 'entregado'] as const
+export const ESTADOS_PEDIDO = [
+  'recibido',
+  'en_revision',
+  'confirmado',
+  'en_produccion',
+  'listo_para_entrega',
+  'entregado',
+] as const
 export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number]
 
 // ─── Entidades ────────────────────────────────────────────────────────────────
@@ -32,13 +39,34 @@ export interface Categoria {
   activo: boolean
 }
 
+// lo que realmente devuelve el populate('categoria', 'nombre familia dimensionesBase') del server -
+// no es una Categoria completa (sin descripcion ni activo), no prometer campos que la API no manda
+export interface CategoriaPoblada {
+  _id: string
+  nombre: string
+  familia: Familia
+  dimensionesBase: DimensionBase[]
+}
+
+export interface EscalaPrecio {
+  cantidadMinima: number
+  precioUnitario: number
+}
+
+// unitario para las tres familias normales, escalas solo para `superficies` (minimo 12 unidades) - ver AGENTS.md
+export interface Precio {
+  unitario: number | null
+  escalas: EscalaPrecio[]
+}
+
 export interface Producto {
   _id: string
   nombre: string
   descripcionTecnica: string
-  categoria: Categoria
+  categoria: CategoriaPoblada
   especificacionesTecnicas: Record<string, string>
   imagenes: string[]
+  precio: Precio
   activo: boolean
 }
 
@@ -69,7 +97,8 @@ export interface Pedido {
   imagenesReferencia: ImagenReferencia[]
   estado: EstadoPedido
   fechaSolicitud: string
-  fechaEstimadaEntrega: string | null
+  fechaEntrega: string | null
+  confirmacionDimensionPersonalizada: boolean
 }
 
 // en el panel de admin el pedido siempre viene con el cliente populado, nunca solo el id
@@ -83,9 +112,11 @@ export type PedidoAdmin = Omit<Pedido, 'cliente'> & {
 
 // la etiqueta se deriva de este mapa, nunca se escribe suelta en un componente
 export const ETIQUETAS_ESTADO: Record<EstadoPedido, string> = {
-  pendiente: 'Pendiente',
+  recibido: 'Recibido',
+  en_revision: 'En revisión',
+  confirmado: 'Confirmado',
   en_produccion: 'En producción',
-  listo: 'Listo para entrega',
+  listo_para_entrega: 'Listo para entrega',
   entregado: 'Entregado',
 }
 
@@ -98,8 +129,10 @@ export const ETIQUETAS_FAMILIA: Record<Familia, string> = {
 
 // nombres de clase que apuntan a tailwind.config.js -> tokens.css, nunca colores crudos
 export const CLASES_ESTADO: Record<EstadoPedido, string> = {
-  pendiente: 'bg-pedido-pendiente-fondo text-pedido-pendiente-texto',
+  recibido: 'bg-pedido-recibido-fondo text-pedido-recibido-texto',
+  en_revision: 'bg-pedido-revision-fondo text-pedido-revision-texto',
+  confirmado: 'bg-pedido-confirmado-fondo text-pedido-confirmado-texto',
   en_produccion: 'bg-pedido-produccion-fondo text-pedido-produccion-texto',
-  listo: 'bg-pedido-listo-fondo text-pedido-listo-texto',
+  listo_para_entrega: 'bg-pedido-listo-fondo text-pedido-listo-texto',
   entregado: 'bg-pedido-entregado-fondo text-pedido-entregado-texto',
 }

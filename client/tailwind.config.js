@@ -25,6 +25,11 @@ export default {
           activo: 'var(--accion-fondo-hover)',
           texto: 'var(--accion-texto)',
         },
+        'accion-sec': {
+          fondo: 'var(--accion-sec-fondo)',
+          borde: 'var(--accion-sec-borde)',
+          texto: 'var(--accion-sec-texto)',
+        },
         contexto: {
           DEFAULT: 'var(--contexto-fondo)',
           suave: 'var(--contexto-fondo-suave)',
@@ -75,9 +80,17 @@ export default {
           borde: 'var(--info-500)',
         },
         pedido: {
-          pendiente: {
+          recibido: {
             fondo: 'var(--pedido-recibido-fondo)',
             texto: 'var(--pedido-recibido-texto)',
+          },
+          revision: {
+            fondo: 'var(--pedido-revision-fondo)',
+            texto: 'var(--pedido-revision-texto)',
+          },
+          confirmado: {
+            fondo: 'var(--pedido-confirmado-fondo)',
+            texto: 'var(--pedido-confirmado-texto)',
           },
           produccion: {
             fondo: 'var(--pedido-produccion-fondo)',
@@ -113,6 +126,15 @@ export default {
         4: 'var(--space-4)', 6: 'var(--space-6)', 8: 'var(--space-8)',
         12: 'var(--space-12)', 16: 'var(--space-16)', 24: 'var(--space-24)',
       },
+      height: {
+        boton: 'var(--boton-alto)',
+      },
+      minHeight: {
+        boton: 'var(--boton-alto)',
+      },
+      padding: {
+        'boton-x': 'var(--boton-padding-x)',
+      },
       borderRadius: {
         sm: 'var(--radio-sm)',
         md: 'var(--radio-md)',
@@ -136,12 +158,20 @@ export default {
         normal: 'var(--duracion-normal)',
         lenta: 'var(--duracion-lenta)',
       },
+      // [DECISION] los breakpoints quedan como numeros literales, no var(--bp-*): una @media condition se evalua
+      // antes de que el CSS custom property exista, asi que Tailwind no puede leer el token aqui. Si cambia
+      // --bp-* en tokens.css hay que cambiar este bloque a mano - son los mismos 4 valores en los dos archivos.
       screens: {
         sm: '480px', md: '768px', lg: '1024px', xl: '1280px',
       },
+      // z-index si acepta var() porque no participa de un @media - referencia el token en vez de duplicar el numero
       zIndex: {
-        base: '0', elevado: '10', encabezado: '100',
-        superposicion: '200', modal: '300', aviso: '400',
+        base: 'var(--z-base)',
+        elevado: 'var(--z-elevado)',
+        encabezado: 'var(--z-encabezado)',
+        superposicion: 'var(--z-superposicion)',
+        modal: 'var(--z-modal)',
+        aviso: 'var(--z-aviso)',
       },
     },
   },

@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react'
+import { useId, type InputHTMLAttributes } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -7,7 +7,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export function Input({ label, error, hint, id, className = '', ...props }: InputProps) {
-  const inputId = id ?? label.toLowerCase().replace(/\s+/g, '-') // id derivado del label si nadie manda uno
+  // useId en vez de derivar del label - dos Input con la misma etiqueta (ej. "Nombre" en dos formularios
+  // distintos de la misma pagina) no deben terminar compartiendo id/aria-describedby
+  const idGenerado = useId()
+  const inputId = id ?? idGenerado
   const hintId = hint ? `${inputId}-hint` : undefined
   const errorId = error ? `${inputId}-error` : undefined
 
@@ -24,11 +27,9 @@ export function Input({ label, error, hint, id, className = '', ...props }: Inpu
         className={[
           'w-full rounded-campo border px-3 py-2 text-base text-texto-principal',
           'bg-campo-fondo placeholder:text-texto-tenue',
-          'min-h-[44px] outline-none transition-shadow',
-          'focus-visible:shadow-foco',
-          error
-            ? 'border-error-borde focus-visible:shadow-none'
-            : 'border-borde-defecto hover:border-borde-activo',
+          'min-h-boton outline-none transition-shadow focus-visible:shadow-foco',
+          // el borde rojo ya comunica el error - el anillo de foco se mantiene igual, nunca se quita
+          error ? 'border-error-borde' : 'border-borde-defecto hover:border-borde-activo',
           className,
         ]
           .filter(Boolean)
