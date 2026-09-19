@@ -230,7 +230,7 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Commits
 
-Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario explícito: conciso, puntual y asertivo.
+Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario y descripcion explícita: conciso, puntual y asertivo. En español.
 
 Formato: `<type>: <qué cambió, máx. 72 chars>`
 
