@@ -13,7 +13,7 @@ import { AppError } from '../../lib/errors.js'
  */
 export async function listarCategorias(familia?: Familia, esAdmin = false) {
   const filtro: Record<string, unknown> = {}
-  if (familia) filtro.familia = familia
+  if (familia) filtro.familia = { $eq: familia }
   if (!esAdmin) filtro.activo = true
   return Categoria.find(filtro).sort({ nombre: 1 }).lean()
 }
@@ -64,7 +64,7 @@ export async function actualizarCategoria(
  */
 async function categoriasVisibles(familia: Familia | undefined, esAdmin: boolean) {
   const filtro: Record<string, unknown> = {}
-  if (familia) filtro.familia = familia
+  if (familia) filtro.familia = { $eq: familia }
   if (!esAdmin) filtro.activo = true
   return Categoria.find(filtro).select('_id').lean()
 }
