@@ -18,11 +18,16 @@ export function ProductoDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    let cancelado = false
+    // reset explícito: evita mostrar el producto anterior mientras el nuevo aun carga
+    setProducto(null)
+    setCargando(true)
     api
       .get<Producto>(`/productos/${id}`)
-      .then(setProducto)
-      .catch(() => navigate('/catalogo', { replace: true })) // id invalido o producto dado de baja, no rompemos la pagina
-      .finally(() => setCargando(false))
+      .then((p) => { if (!cancelado) setProducto(p) })
+      .catch(() => { if (!cancelado) navigate('/catalogo', { replace: true }) }) // id invalido o producto dado de baja, no rompemos la pagina
+      .finally(() => { if (!cancelado) setCargando(false) })
+    return () => { cancelado = true }
   }, [id, navigate])
 
   if (cargando) {
