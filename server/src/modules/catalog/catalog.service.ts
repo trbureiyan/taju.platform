@@ -174,7 +174,7 @@ export async function actualizarProducto(
   if (datos.precio) {
     const productoActual = await Producto.findById(id).populate('categoria', 'familia').lean()
     if (!productoActual || !productoActual.categoria) throw new AppError(404, 'Producto no encontrado')
-    validarPrecioPorFamilia((productoActual.categoria as { familia: string }).familia as Familia, datos.precio)
+    validarPrecioPorFamilia((productoActual.categoria as unknown as { familia: string }).familia as Familia, datos.precio)
   }
   const producto = await Producto.findByIdAndUpdate(id, datos, { new: true })
   if (!producto) throw new AppError(404, 'Producto no encontrado')
