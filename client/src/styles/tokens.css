@@ -55,6 +55,7 @@
   --interlineado-interfaz: 1.4;
   --interlineado-texto: 1.6;
   --medida-linea: 68ch;
+  --ancho-maximo: 1200px; /* contenedor de pagina (Layout) - mas ancho que prosa, no es texto de lectura */
 
   /* Espaciado | escala base-4 */
   --space-1: 0.25rem;
