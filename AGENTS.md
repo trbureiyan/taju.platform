@@ -136,17 +136,19 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico simplificado para el MVP. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés.
+Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos entre estados intermedios.
 
 ```ts
 type EstadoPedido =
-  | 'pendiente'
+  | 'recibido'
+  | 'en_revision'
+  | 'confirmado'
   | 'en_produccion'
-  | 'listo'
+  | 'listo_para_entrega'
   | 'entregado';
 ```
 
-Etiquetas de presentación: Pendiente, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
+Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
 
 ### Vocabulario de especificación
 

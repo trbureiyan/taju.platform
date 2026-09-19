@@ -44,9 +44,9 @@ Cambios concretos:
 
 ## Checklist
 
-- [ ] Build limpio (`pnpm build`)
-- [ ] Tests pasan (`pnpm test`)
-- [ ] Typecheck sin errores (`pnpm exec tsc --noEmit`)
+- [ ] Build limpio (`pnpm --filter taju-client build`, y `pnpm --filter taju-server build` cuando el PR toca el servidor)
+- [ ] Tests pasan (cuando el runner esté definido — ver AGENTS.md)
+- [ ] Typecheck sin errores (`pnpm typecheck`)
 - [ ] Lint limpio (`pnpm lint`)
 - [ ] [Validación manual relevante para este PR — ser específico]
 
@@ -68,7 +68,7 @@ Cambios:
 
 ## Checklist
 
-- [ ] Build limpio (`pnpm build`)
-- [ ] Tests pasan (`pnpm test`)
-- [ ] Typecheck sin errores (`pnpm exec tsc --noEmit`)
+- [ ] Build limpio (`pnpm --filter taju-client build`, y `pnpm --filter taju-server build` cuando el PR toca el servidor)
+- [ ] Tests pasan (cuando el runner esté definido — ver AGENTS.md)
+- [ ] Typecheck sin errores (`pnpm typecheck`)
 - [ ] Lint limpio (`pnpm lint`)
