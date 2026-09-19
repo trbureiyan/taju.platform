@@ -12,6 +12,7 @@ interface ICategoriaEmbebida {
 }
 
 // esDimensionPersonalizada bloquea el avance a "en_produccion" hasta que el admin confirme a mano
+// (ver confirmacionDimensionPersonalizada en IPedido y el chequeo en pedidos.service.ts)
 interface IDimensiones {
   valor: number
   unidad: 'cm'
@@ -48,6 +49,8 @@ export interface IPedido extends Document {
   estado: EstadoPedido
   fechaSolicitud: Date
   fechaEntrega: Date | null
+  // el admin la marca explicito antes de avanzar a en_produccion cuando esDimensionPersonalizada es true
+  confirmacionDimensionPersonalizada: boolean
   historialEstados: IHistorialEstado[]
 }
 
@@ -106,6 +109,7 @@ const pedidoSchema = new Schema<IPedido>({
   estado: { type: String, enum: ESTADOS_PEDIDO, default: 'recibido' },
   fechaSolicitud: { type: Date, default: Date.now },
   fechaEntrega: { type: Date, default: null },
+  confirmacionDimensionPersonalizada: { type: Boolean, default: false },
   historialEstados: [historialEstadoSchema],
 })
 

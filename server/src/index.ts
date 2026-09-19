@@ -25,6 +25,7 @@ app.use('/api', routes)
 
 // ultimo middleware - captura AppError de los services y cualquier rechazo de asyncHandler
 app.use(errorHandler)
+
 // ─── Arranque ─────────────────────────────────────────────────────────────────
 // no levantamos el server hasta tener la conexion a mongo, para no aceptar requests contra una db muerta
 connectDb()
