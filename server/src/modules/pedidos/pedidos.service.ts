@@ -3,6 +3,7 @@ import { Pedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { subirImagen } from '../../lib/cloudinary.js'
 import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
+import { AppError } from '../../lib/errors.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ export async function crearPedido(input: CrearPedidoInput) {
   // no se puede pedir sobre una categoria borrada ni pausada - evita pedidos huerfanos de algo que ya no se vende
   const categoria = await Categoria.findById(input.categoriaId)
   if (!categoria || !categoria.activo) {
-    throw new Error('Categoría no encontrada o inactiva')
+    throw new AppError(400, 'Categoría no encontrada o inactiva')
   }
 
   // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
@@ -54,12 +55,12 @@ export async function crearPedido(input: CrearPedidoInput) {
     colores: input.colores,
     materiales: input.materiales,
     imagenesReferencia,
-    estado: 'pendiente',
+    estado: 'recibido',
     // arranca su propio historial desde el momento cero, el cliente es el "actor" de este primer paso
     historialEstados: [
       {
         estadoAnterior: null,
-        estadoNuevo: 'pendiente',
+        estadoNuevo: 'recibido',
         fecha: new Date(),
         actor: new Types.ObjectId(input.clienteId),
       },
@@ -78,7 +79,7 @@ export async function getMisPedidos(clienteId: string) {
 // el filtro por clienteId no es solo prolijidad: es lo unico que impide que un cliente lea el pedido de otro
 export async function getPedidoById(pedidoId: string, clienteId: string) {
   const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId }).lean()
-  if (!pedido) throw new Error('Pedido no encontrado')
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
   return pedido
 }
 
@@ -95,22 +96,39 @@ export async function getAllPedidos() {
 // null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
 export async function setFechaEntrega(pedidoId: string, fecha: Date | null) {
   const pedido = await Pedido.findById(pedidoId)
-  if (!pedido) throw new Error('Pedido no encontrado')
-  pedido.fechaEstimadaEntrega = fecha
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
+  pedido.fechaEntrega = fecha
   await pedido.save()
   return pedido.toObject()
 }
 
-// unica forma de mover el estado de un pedido - crearPedido nunca llama esto, arranca su propio historial
-export async function updateEstado(pedidoId: string, nuevoEstado: EstadoPedido, actorId: string) {
+// confirmarDimensionPersonalizada: el admin lo manda explicito en el mismo request que avanza a en_produccion -
+// no hay endpoint separado porque la confirmacion no tiene sentido fuera de esa transicion puntual
+export async function updateEstado(
+  pedidoId: string,
+  nuevoEstado: EstadoPedido,
+  actorId: string,
+  confirmarDimensionPersonalizada = false,
+) {
   const pedido = await Pedido.findById(pedidoId)
-  if (!pedido) throw new Error('Pedido no encontrado')
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
 
   // solo se avanza un paso a la vez, nada de saltarse "en_produccion" ni retroceder
   const indexActual = ORDEN_ESTADOS.indexOf(pedido.estado as EstadoPedido)
   const indexNuevo = ORDEN_ESTADOS.indexOf(nuevoEstado)
   if (indexNuevo !== indexActual + 1) {
-    throw new Error(`Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
+    throw new AppError(409, `Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
+  }
+
+  // dimension personalizada exige confirmacion manual del admin antes de entrar a produccion
+  if (nuevoEstado === 'en_produccion' && pedido.dimensiones.esDimensionPersonalizada) {
+    if (!pedido.confirmacionDimensionPersonalizada && !confirmarDimensionPersonalizada) {
+      throw new AppError(
+        409,
+        'Este pedido tiene una dimensión personalizada y necesita tu confirmación antes de pasar a producción',
+      )
+    }
+    pedido.confirmacionDimensionPersonalizada = true
   }
 
   // el push queda en el mismo .save() que el cambio de estado - no hay ventana donde uno se guarde sin el otro

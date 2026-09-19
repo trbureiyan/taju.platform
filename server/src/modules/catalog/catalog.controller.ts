@@ -2,6 +2,11 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import * as catalogService from './catalog.service.js'
 import { FAMILIAS, type Familia } from '../../types/index.js'
+import { asyncHandler } from '../../lib/errors.js'
+
+function esAdmin(req: Request): boolean {
+  return req.usuario?.rol === 'administrador'
+}
 
 // ─── Categorias ─────────────────────────────────────────────────────────────
 
@@ -22,27 +27,23 @@ const actualizarCategoriaSchema = z
   })
   .strict()
 
-// query param opcional - sin familia trae todo el catalogo activo
-export async function listarCategorias(req: Request, res: Response): Promise<void> {
+// query param opcional - sin familia trae todo el catalogo activo. Con sesion admin, incluye inactivos
+export const listarCategorias = asyncHandler(async (req: Request, res: Response) => {
   const familia = req.query.familia as Familia | undefined
   if (familia && !FAMILIAS.includes(familia)) {
     res.status(400).json({ error: 'Familia inválida' })
     return
   }
-  const categorias = await catalogService.listarCategorias(familia)
+  const categorias = await catalogService.listarCategorias(familia, esAdmin(req))
   res.json(categorias)
-}
+})
 
-export async function obtenerCategoria(req: Request, res: Response): Promise<void> {
-  try {
-    const categoria = await catalogService.obtenerCategoria(req.params.id)
-    res.json(categoria)
-  } catch {
-    res.status(404).json({ error: 'Categoría no encontrada' })
-  }
-}
+export const obtenerCategoria = asyncHandler(async (req: Request, res: Response) => {
+  const categoria = await catalogService.obtenerCategoria(req.params.id, esAdmin(req))
+  res.json(categoria)
+})
 
-export async function crearCategoria(req: Request, res: Response): Promise<void> {
+export const crearCategoria = asyncHandler(async (req: Request, res: Response) => {
   const parsed = crearCategoriaSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
@@ -50,23 +51,29 @@ export async function crearCategoria(req: Request, res: Response): Promise<void>
   }
   const categoria = await catalogService.crearCategoria(parsed.data)
   res.status(201).json(categoria)
-}
+})
 
-export async function actualizarCategoria(req: Request, res: Response): Promise<void> {
+export const actualizarCategoria = asyncHandler(async (req: Request, res: Response) => {
   const parsed = actualizarCategoriaSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
     return
   }
-  try {
-    const categoria = await catalogService.actualizarCategoria(req.params.id, parsed.data)
-    res.json(categoria)
-  } catch {
-    res.status(404).json({ error: 'Categoría no encontrada' })
-  }
-}
+  const categoria = await catalogService.actualizarCategoria(req.params.id, parsed.data)
+  res.json(categoria)
+})
 
 // ─── Productos ───────────────────────────────────────────────────────────────
+
+const escalaPrecioSchema = z.object({
+  cantidadMinima: z.number().int().positive(),
+  precioUnitario: z.number().nonnegative(),
+})
+
+const precioSchema = z.object({
+  unitario: z.number().nonnegative().nullable().default(null),
+  escalas: z.array(escalaPrecioSchema).default([]),
+})
 
 // imagenes llega como array de urls ya subidas - este endpoint no maneja el upload en si (ver middleware/upload.ts)
 const crearProductoSchema = z.object({
@@ -74,6 +81,8 @@ const crearProductoSchema = z.object({
   descripcionTecnica: z.string().max(1000).default(''),
   categoria: z.string().min(1),
   imagenes: z.array(z.string()).default([]),
+  especificacionesTecnicas: z.record(z.string()).default({}),
+  precio: precioSchema.default({ unitario: null, escalas: [] }),
 })
 
 const actualizarProductoSchema = z
@@ -81,55 +90,49 @@ const actualizarProductoSchema = z
     nombre: z.string().min(2).max(120).optional(),
     descripcionTecnica: z.string().max(1000).optional(),
     imagenes: z.array(z.string()).optional(),
+    especificacionesTecnicas: z.record(z.string()).optional(),
+    precio: precioSchema.optional(),
     activo: z.boolean().optional(),
   })
   .strict()
 
-export async function listarProductos(req: Request, res: Response): Promise<void> {
+export const listarProductos = asyncHandler(async (req: Request, res: Response) => {
   const familia = req.query.familia as Familia | undefined
   const categoriaId = req.query.categoria as string | undefined
   if (familia && !FAMILIAS.includes(familia)) {
     res.status(400).json({ error: 'Familia inválida' })
     return
   }
-  const productos = await catalogService.listarProductos(familia, categoriaId)
+  const productos = await catalogService.listarProductos(familia, categoriaId, esAdmin(req))
   res.json(productos)
-}
+})
 
-export async function obtenerProducto(req: Request, res: Response): Promise<void> {
-  try {
-    const producto = await catalogService.obtenerProducto(req.params.id)
-    res.json(producto)
-  } catch {
-    res.status(404).json({ error: 'Producto no encontrado' })
-  }
-}
+export const obtenerProducto = asyncHandler(async (req: Request, res: Response) => {
+  const producto = await catalogService.obtenerProducto(req.params.id, esAdmin(req))
+  res.json(producto)
+})
 
-export async function crearProducto(req: Request, res: Response): Promise<void> {
+export const crearProducto = asyncHandler(async (req: Request, res: Response) => {
   const parsed = crearProductoSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
     return
   }
-  try {
-    const producto = await catalogService.crearProducto(parsed.data)
-    res.status(201).json(producto)
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al crear el producto'
-    res.status(400).json({ error: message })
-  }
-}
+  const producto = await catalogService.crearProducto(parsed.data)
+  res.status(201).json(producto)
+})
 
-export async function actualizarProducto(req: Request, res: Response): Promise<void> {
+export const actualizarProducto = asyncHandler(async (req: Request, res: Response) => {
   const parsed = actualizarProductoSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
     return
   }
-  try {
-    const producto = await catalogService.actualizarProducto(req.params.id, parsed.data)
-    res.json(producto)
-  } catch {
-    res.status(404).json({ error: 'Producto no encontrado' })
-  }
-}
+  const producto = await catalogService.actualizarProducto(req.params.id, parsed.data)
+  res.json(producto)
+})
+
+export const eliminarProducto = asyncHandler(async (req: Request, res: Response) => {
+  await catalogService.eliminarProducto(req.params.id)
+  res.status(204).send()
+})

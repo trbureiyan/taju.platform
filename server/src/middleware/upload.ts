@@ -18,6 +18,12 @@ const _multer = multer({
   },
 }).array('imagenes', MAX_FILES) // el campo del form-data se llama "imagenes" en plural, coincide con PedidoFormPage
 
+// FF D8 FF: firma real de JPEG en los primeros 3 bytes - el mimetype del fileFilter es solo lo que
+// el cliente declaro en el header, no prueba nada sobre el contenido real de los bytes
+function esJpegValido(buffer: Buffer): boolean {
+  return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+}
+
 // ─── Middleware expuesto ────────────────────────────────────────────────────
 // envolvemos multer a mano para traducir sus errores a la forma de respuesta que usa el resto de la api
 export function uploadImagen(req: Request, res: Response, next: NextFunction): void {
@@ -33,10 +39,18 @@ export function uploadImagen(req: Request, res: Response, next: NextFunction): v
       return
     }
     if (err instanceof Error) {
-      // este es el Error que lanza fileFilter cuando el mimetype no es jpeg
+      // este es el Error que lanza fileFilter cuando el mimetype declarado no es jpeg
       res.status(400).json({ error: err.message })
       return
     }
+
+    const archivos = (req.files as Express.Multer.File[]) ?? []
+    const archivoInvalido = archivos.find((f) => !esJpegValido(f.buffer))
+    if (archivoInvalido) {
+      res.status(400).json({ error: 'Uno de los archivos no es una imagen JPG válida' })
+      return
+    }
+
     next()
   })
 }
