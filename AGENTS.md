@@ -33,23 +33,23 @@ taju.platform/
 │   ├── tsconfig.json                # CommonJS, compila a dist/
 │   └── src/
 │       ├── index.ts                 # arranque del servidor
-│       ├── routes/                  # rutas agrupadas por dominio
-│       ├── controllers/             # manejo de request/response
-│       ├── services/                # logica de negocio pura
+│       ├── routes/                  # router raiz, monta cada modulo bajo /api
+│       ├── modules/                 # slice vertical por dominio: auth/, catalog/, pedidos/
+│       │   └── <dominio>/           # *.routes.ts + *.controller.ts + *.service.ts juntos
 │       ├── models/                  # esquemas Mongoose
 │       ├── middleware/              # auth, RBAC, validacion, upload
-│       └── lib/                     # db.ts, cloudinary.ts, jwt.ts
+│       └── lib/                     # db.ts, cloudinary.ts, jwt.ts, errors.ts
 ├── public/
 │   └── brand/                       # SVGs de marca — nunca editar
 ├── .docs/                           # documentacion normativa
 │   └── branding/                    # fuentes de verdad de marca
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                   # lint | typecheck | build en main y develop
+│       └── ci.yml                   # lint | typecheck | build en main y dev
 └── AGENTS.md
 ```
 
-**Layer architecture:** Request → `routes/` → `controllers/` → `services/` (business logic) → `models/` (Mongoose) → MongoDB Atlas.
+**Layer architecture:** Request → `routes/index.ts` (monta cada modulo) → `modules/<dominio>/*.routes.ts` → `*.controller.ts` (request/response) → `*.service.ts` (logica de negocio) → `models/` (Mongoose) → MongoDB Atlas.
 
 ---
 
@@ -109,9 +109,9 @@ Los documentos de marca en `.docs/branding/` son normativos y versionados. Un ag
 
 Document known landmines here. Be specific: name the files, describe the behavior, state the failure mode.
 
-- **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Modulo de auth: `server/src/modules/auth/` (por crear en Phase 1).
-- **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Middleware: `server/src/middleware/rbac.ts` (por crear en Phase 1).
-- **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts` (por crear en Phase 1).
+- **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Modulo de auth: `server/src/modules/auth/`.
+- **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Middleware: `server/src/middleware/rbac.ts`.
+- **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts`.
 - **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
 - **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.

@@ -1,6 +1,7 @@
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 import * as authService from './auth.service.js'
+import { AppError } from '../../lib/errors.js'
 
 // min(8) en registro, min(1) en login - login no valida fuerza de clave, solo que venga algo
 const registrarSchema = z.object({
@@ -13,8 +14,9 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
-// zod valida forma, el service valida reglas de negocio (correo repetido) - por eso el try/catch separado
-export async function registrar(req: Request, res: Response): Promise<void> {
+// zod valida forma; el service lanza AppError para reglas de negocio (correo repetido).
+// cualquier otra excepcion (Mongo caido, bcrypt, JWT_SECRET ausente) se delega a errorHandler via next
+export async function registrar(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = registrarSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
@@ -24,13 +26,15 @@ export async function registrar(req: Request, res: Response): Promise<void> {
     const result = await authService.registrar(parsed.data.email, parsed.data.password)
     res.status(201).json(result)
   } catch (err) {
-    // 409 y no 400: la forma de los datos esta bien, el conflicto es que el correo ya existe
-    const message = err instanceof Error ? err.message : 'Error al registrar'
-    res.status(409).json({ error: message })
+    if (err instanceof AppError) {
+      res.status(err.status).json({ error: err.message })
+      return
+    }
+    next(err)
   }
 }
 
-export async function login(req: Request, res: Response): Promise<void> {
+export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = loginSchema.safeParse(req.body)
   if (!parsed.success) {
     res.status(400).json({ error: 'Datos inválidos' })
@@ -39,8 +43,12 @@ export async function login(req: Request, res: Response): Promise<void> {
   try {
     const result = await authService.iniciarSesion(parsed.data.email, parsed.data.password)
     res.json(result)
-  } catch {
-    res.status(401).json({ error: 'Credenciales incorrectas' })
+  } catch (err) {
+    if (err instanceof AppError) {
+      res.status(err.status).json({ error: err.message })
+      return
+    }
+    next(err)
   }
 }
 
