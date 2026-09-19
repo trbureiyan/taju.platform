@@ -136,19 +136,17 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés, sin guiones bajos.
+Enum canónico simplificado para el MVP. Mismo valor en base de datos, API y UI. Sin mayúsculas, sin inglés.
 
 ```ts
 type EstadoPedido =
-  | 'recibido'
-  | 'en_revision'
-  | 'confirmado'
+  | 'pendiente'
   | 'en_produccion'
-  | 'listo_para_entrega'
+  | 'listo'
   | 'entregado';
 ```
 
-Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa, nunca se escribe suelta en un componente.
+Etiquetas de presentación: Pendiente, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
 
 ### Vocabulario de especificación
 
@@ -230,7 +228,7 @@ Iconos: **Lucide React** (`lucide-react`). Trazo uniforme de 2px que combina con
 
 ### Commits
 
-Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario y descripcion explícita: conciso, puntual y asertivo. En español.
+Corto, directo, estilo caverna. Leer el mensaje, correlacionar con el diff. Sin storytelling. Todo commit debe llevar un mensaje o comentario explícito: conciso, puntual y asertivo.
 
 Formato: `<type>: <qué cambió, máx. 72 chars>`
 
