@@ -25,7 +25,7 @@ export async function listarCategorias(familia?: Familia, esAdmin = false) {
  * @throws AppError 404 si no existe o está inactiva y no es admin.
  */
 export async function obtenerCategoria(id: string, esAdmin = false) {
-  const filtro: Record<string, unknown> = { _id: id }
+  const filtro: Record<string, unknown> = { _id: { $eq: id } }
   if (!esAdmin) filtro.activo = true
   const categoria = await Categoria.findOne(filtro).lean()
   if (!categoria) throw new AppError(404, 'Categoría no encontrada')
@@ -83,10 +83,10 @@ export async function listarProductos(familia?: Familia, categoriaId?: string, e
   if (categoriaId) {
     if (!esAdmin) {
       // una categoria desactivada no expone sus productos aunque se conozca el id exacto
-      const cat = await Categoria.findOne({ _id: categoriaId, activo: true }).select('_id').lean()
+      const cat = await Categoria.findOne({ _id: { $eq: categoriaId }, activo: true }).select('_id').lean()
       if (!cat) return []
     }
-    filtro.categoria = categoriaId
+    filtro.categoria = { $eq: categoriaId }
   } else if (familia) {
     // producto no guarda familia directo, asi que primero resolvemos que categorias pertenecen a ella
     const cats = await categoriasVisibles(familia, esAdmin)
@@ -108,7 +108,7 @@ export async function listarProductos(familia?: Familia, categoriaId?: string, e
  * @throws AppError 404 si no existe, o si está inactivo/su categoría está inactiva (y no es admin).
  */
 export async function obtenerProducto(id: string, esAdmin = false) {
-  const filtro: Record<string, unknown> = { _id: id }
+  const filtro: Record<string, unknown> = { _id: { $eq: id } }
   if (!esAdmin) filtro.activo = true
   const producto = await Producto.findOne(filtro)
     .populate('categoria', 'nombre familia dimensionesBase activo')
