@@ -11,6 +11,7 @@ import { asyncHandler } from '../../lib/errors.js'
 const booleanoTexto = z.enum(['true', 'false']).transform((v) => v === 'true')
 
 const crearPedidoSchema = z.object({
+  productoId: z.string().min(1, 'Producto requerido'),
   categoriaId: z.string().min(1, 'Categoría requerida'),
   descripcion: z.string().min(1, 'Describí tu pedido'),
   dimensionValor: z.coerce.number().positive('El valor de dimensión debe ser mayor a 0'),
@@ -18,6 +19,8 @@ const crearPedidoSchema = z.object({
   cantidad: z.coerce.number().int().min(1, 'La cantidad mínima es 1'),
   colores: z.string().min(1, 'Indicá los colores'),
   materiales: z.string().min(1, 'Indicá los materiales'),
+  // nullable a proposito: el cliente puede no tener una fecha en mente todavia
+  fechaEntrega: z.string().datetime({ offset: true }).nullable().default(null),
 })
 
 export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
@@ -33,6 +36,7 @@ export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
   const pedido = await pedidosService.crearPedido({
     clienteId: req.usuario!.sub,
     ...parsed.data,
+    fechaEntrega: parsed.data.fechaEntrega ? new Date(parsed.data.fechaEntrega) : null,
     archivos,
   })
   res.status(201).json(pedido)

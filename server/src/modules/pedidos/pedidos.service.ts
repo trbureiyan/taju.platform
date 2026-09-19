@@ -1,6 +1,7 @@
 import { Types } from 'mongoose'
 import { Pedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
+import { Producto } from '../../models/Producto.js'
 import { subirImagen } from '../../lib/cloudinary.js'
 import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
@@ -9,6 +10,7 @@ import { AppError } from '../../lib/errors.js'
 
 interface CrearPedidoInput {
   clienteId: string
+  productoId: string
   categoriaId: string
   descripcion: string
   dimensionValor: number
@@ -16,6 +18,7 @@ interface CrearPedidoInput {
   cantidad: number
   colores: string
   materiales: string
+  fechaEntrega: Date | null
   archivos: Express.Multer.File[]
 }
 
@@ -24,6 +27,12 @@ export async function crearPedido(input: CrearPedidoInput) {
   const categoria = await Categoria.findById(input.categoriaId)
   if (!categoria || !categoria.activo) {
     throw new AppError(400, 'Categoría no encontrada o inactiva')
+  }
+
+  // sin esto dos pedidos de productos distintos en la misma categoria quedan indistinguibles para el admin
+  const producto = await Producto.findById(input.productoId)
+  if (!producto || !producto.activo) {
+    throw new AppError(400, 'Producto no encontrado o inactivo')
   }
 
   // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
@@ -38,8 +47,12 @@ export async function crearPedido(input: CrearPedidoInput) {
 
   const pedido = await Pedido.create({
     cliente: input.clienteId,
-    // se copia nombre/familia a mano en vez de solo guardar el _id - es el snapshot que congela
-    // como se veia la categoria al momento del pedido (ver ICategoriaEmbebida en el modelo)
+    // snapshot de producto y categoria al momento del pedido - si luego cambian nombre o se desactivan,
+    // el historico de este pedido no se altera (ver IProductoEmbebido/ICategoriaEmbebida en el modelo)
+    producto: {
+      _id: producto._id,
+      nombre: producto.nombre,
+    },
     categoria: {
       _id: categoria._id,
       nombre: categoria.nombre,
@@ -56,6 +69,7 @@ export async function crearPedido(input: CrearPedidoInput) {
     materiales: input.materiales,
     imagenesReferencia,
     estado: 'recibido',
+    fechaEntrega: input.fechaEntrega,
     // arranca su propio historial desde el momento cero, el cliente es el "actor" de este primer paso
     historialEstados: [
       {

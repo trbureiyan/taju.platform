@@ -88,6 +88,10 @@ export interface ImagenReferencia {
 export interface Pedido {
   _id: string
   cliente: string | { _id: string; email: string }
+  producto: {
+    _id: string
+    nombre: string
+  }
   categoria: {
     _id: string
     nombre: string

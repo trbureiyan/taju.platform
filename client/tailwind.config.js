@@ -152,7 +152,7 @@ export default {
         tarjeta: 'var(--sombra-sm)',
         'tarjeta-hover': 'var(--sombra-md)',
       },
-      maxWidth: { prosa: 'var(--medida-linea)' },
+      maxWidth: { prosa: 'var(--medida-linea)', contenedor: 'var(--ancho-maximo)' },
       transitionDuration: {
         rapida: 'var(--duracion-rapida)',
         normal: 'var(--duracion-normal)',

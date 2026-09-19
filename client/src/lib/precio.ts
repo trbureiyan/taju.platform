@@ -13,3 +13,21 @@ export function formatearPrecio(precio: Precio): string {
   }
   return 'Precio a consultar'
 }
+
+// resumen del total para una cantidad puntual (PedidoFormPage) - null cuando no hay suficiente info para cotizar
+// (superficies exige el minimo de la escala mas baja, ver AGENTS.md) para no mostrar un numero enganoso
+export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: number; unitario: number } | null {
+  if (precio.escalas.length > 0) {
+    // la escala aplicable es la de mayor cantidadMinima que la cantidad pedida todavia cubre
+    const aplicable = [...precio.escalas]
+      .sort((a, b) => a.cantidadMinima - b.cantidadMinima)
+      .filter((e) => cantidad >= e.cantidadMinima)
+      .pop()
+    if (!aplicable) return null
+    return { total: aplicable.precioUnitario * cantidad, unitario: aplicable.precioUnitario }
+  }
+  if (precio.unitario != null) {
+    return { total: precio.unitario * cantidad, unitario: precio.unitario }
+  }
+  return null
+}

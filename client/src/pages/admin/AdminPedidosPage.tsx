@@ -6,9 +6,11 @@ import { Button } from '../../components/ui/Button'
 
 // mapa lineal a proposito - el admin solo puede avanzar un paso, nunca saltar ni retroceder (ver pedidos.service)
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
-  pendiente: 'en_produccion',
-  en_produccion: 'listo',
-  listo: 'entregado',
+  recibido: 'en_revision',
+  en_revision: 'confirmado',
+  confirmado: 'en_produccion',
+  en_produccion: 'listo_para_entrega',
+  listo_para_entrega: 'entregado',
 }
 
 export function AdminPedidosPage() {
@@ -27,15 +29,28 @@ export function AdminPedidosPage() {
       .finally(() => setCargando(false))
   }, [])
 
-  // avanza un solo paso - si SIGUIENTE_ESTADO no tiene entrada (entregado), el boton ni se muestra en el render
+  // avanza un solo paso - si SIGUIENTE_ESTADO no tiene entrada (entregado), el boton ni se muestra en el render.
+  // es una transicion irreversible (no se puede retroceder, ver pedidos.service) - siempre pide confirmacion
   async function avanzarEstado(pedido: PedidoAdmin) {
     const siguiente = SIGUIENTE_ESTADO[pedido.estado]
     if (!siguiente || actualizando) return // actualizando evita doble click mientras la request esta en vuelo
+
+    // dimension personalizada exige confirmacion explicita antes de pasar a en_produccion (ver pedidos.service)
+    const requiereConfirmacionDimension =
+      siguiente === 'en_produccion' &&
+      pedido.dimensiones.esDimensionPersonalizada &&
+      !pedido.confirmacionDimensionPersonalizada
+
+    const mensaje = requiereConfirmacionDimension
+      ? `Este pedido tiene una dimensión personalizada. ¿Confirmás que ya la revisaste y pasás el pedido a "${ETIQUETAS_ESTADO[siguiente]}"?`
+      : `¿Pasar este pedido a "${ETIQUETAS_ESTADO[siguiente]}"? No se puede deshacer.`
+    if (!window.confirm(mensaje)) return
 
     setActualizando(pedido._id)
     try {
       const actualizado = await api.patch<PedidoAdmin>(`/pedidos/${pedido._id}/estado`, {
         estado: siguiente,
+        confirmarDimensionPersonalizada: requiereConfirmacionDimension,
       })
       // reemplaza solo esa fila con la respuesta del server, no un refetch completo de la lista
       setPedidos((prev) => prev.map((p) => (p._id === pedido._id ? actualizado : p)))
@@ -46,12 +61,18 @@ export function AdminPedidosPage() {
     }
   }
 
-  // string vacio (input date sin valor) se traduce a null - "sin fecha" es un estado valido, no un error
+  // string vacio (input date sin valor) se traduce a null - "sin fecha" es un estado valido, no un error.
+  // new Date('YYYY-MM-DD') interpreta el string como medianoche UTC, que en Colombia (UTC-5) ya es el dia
+  // anterior - fijar la hora a mediodia local evita que la conversion a UTC cruce a la fecha equivocada
+  function fechaLocalSinCorrimiento(isoValue: string): string {
+    return new Date(`${isoValue}T12:00:00`).toISOString()
+  }
+
   async function guardarFechaEntrega(pedidoId: string, isoValue: string) {
     try {
-      const fechaEstimadaEntrega = isoValue ? new Date(isoValue).toISOString() : null
+      const fechaEntrega = isoValue ? fechaLocalSinCorrimiento(isoValue) : null
       const actualizado = await api.patch<PedidoAdmin>(`/pedidos/${pedidoId}/fecha-entrega`, {
-        fechaEstimadaEntrega,
+        fechaEntrega,
       })
       setPedidos((prev) => prev.map((p) => (p._id === pedidoId ? actualizado : p)))
     } catch (err) {
@@ -83,6 +104,7 @@ export function AdminPedidosPage() {
             <thead>
               <tr className="border-b border-borde-medio">
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Cliente</th>
+                <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Producto</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Categoría</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Descripción</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Dimensión</th>
@@ -103,6 +125,9 @@ export function AdminPedidosPage() {
                   >
                     <td className="py-3 pr-4 text-texto-principal">
                       {pedido.cliente.email}
+                    </td>
+                    <td className="py-3 pr-4 text-texto-principal">
+                      {pedido.producto.nombre}
                     </td>
                     <td className="py-3 pr-4 text-texto-principal">
                       {pedido.categoria.nombre}
@@ -130,15 +155,15 @@ export function AdminPedidosPage() {
                           aria-label="Fecha estimada de entrega"
                           className="rounded-campo border border-campo-borde bg-campo-fondo text-campo-texto text-xs px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accion"
                           defaultValue={
-                            pedido.fechaEstimadaEntrega
-                              ? pedido.fechaEstimadaEntrega.slice(0, 10)
+                            pedido.fechaEntrega
+                              ? pedido.fechaEntrega.slice(0, 10)
                               : ''
                           }
                           // guarda solo al salir del campo y si de verdad cambio, no en cada tecla
                           onBlur={(e) => {
                             const val = e.currentTarget.value
-                            const prev = pedido.fechaEstimadaEntrega
-                              ? pedido.fechaEstimadaEntrega.slice(0, 10)
+                            const prev = pedido.fechaEntrega
+                              ? pedido.fechaEntrega.slice(0, 10)
                               : ''
                             if (val !== prev) {
                               setFechaEditando(pedido._id)
@@ -146,9 +171,9 @@ export function AdminPedidosPage() {
                             }
                           }}
                         />
-                      ) : pedido.fechaEstimadaEntrega ? (
+                      ) : pedido.fechaEntrega ? (
                         <span className="text-xs text-texto-tenue">
-                          {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-CO', {
+                          {new Date(pedido.fechaEntrega).toLocaleDateString('es-CO', {
                             day: 'numeric',
                             month: 'short',
                           })}

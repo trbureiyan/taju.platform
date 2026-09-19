@@ -11,6 +11,13 @@ interface ICategoriaEmbebida {
   familia: Familia
 }
 
+// mismo patron de snapshot que categoria - sin esto, dos pedidos de productos distintos en la misma
+// categoria son indistinguibles para el admin (ver AdminPedidosPage)
+interface IProductoEmbebido {
+  _id: Types.ObjectId
+  nombre: string
+}
+
 // esDimensionPersonalizada bloquea el avance a "en_produccion" hasta que el admin confirme a mano
 // (ver confirmacionDimensionPersonalizada en IPedido y el chequeo en pedidos.service.ts)
 interface IDimensiones {
@@ -39,6 +46,7 @@ interface IHistorialEstado {
 
 export interface IPedido extends Document {
   cliente: Types.ObjectId
+  producto: IProductoEmbebido
   categoria: ICategoriaEmbebida
   descripcion: string
   dimensiones: IDimensiones
@@ -62,6 +70,14 @@ const categoriaEmbebidaSchema = new Schema<ICategoriaEmbebida>(
     _id: { type: Schema.Types.ObjectId, required: true },
     nombre: { type: String, required: true },
     familia: { type: String, required: true, enum: FAMILIAS },
+  },
+  { _id: false },
+)
+
+const productoEmbebidoSchema = new Schema<IProductoEmbebido>(
+  {
+    _id: { type: Schema.Types.ObjectId, required: true },
+    nombre: { type: String, required: true },
   },
   { _id: false },
 )
@@ -99,6 +115,7 @@ const historialEstadoSchema = new Schema<IHistorialEstado>(
 // no createdAt/updatedAt genericos de mongoose
 const pedidoSchema = new Schema<IPedido>({
   cliente: { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
+  producto: { type: productoEmbebidoSchema, required: true },
   categoria: { type: categoriaEmbebidaSchema, required: true },
   descripcion: { type: String, required: true },
   dimensiones: { type: dimensionesSchema, required: true },

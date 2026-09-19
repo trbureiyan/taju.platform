@@ -142,6 +142,8 @@ export function AdminCatalogoPage() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // error puntual de una fila (activar/desactivar/eliminar), separado del error de carga inicial de arriba
+  const [errorFila, setErrorFila] = useState<string | null>(null)
 
   useEffect(() => {
     // ambas listas se necesitan de entrada (el form de producto usa las categorias), asi que van en paralelo
@@ -157,16 +159,26 @@ export function AdminCatalogoPage() {
       .finally(() => setCargando(false))
   }, [])
 
-  // [!] a diferencia de los forms de arriba, si esto falla no hay mensaje visible para el admin -
-  // el boton simplemente no cambia de estado, sin explicar por que
   async function toggleActivo(id: string, activo: boolean) {
+    setErrorFila(null)
     try {
       await api.patch<Producto>(`/productos/${id}`, { activo: !activo })
       setProductos((prev) =>
         prev.map((p) => (p._id === id ? { ...p, activo: !activo } : p)),
       )
-    } catch {
-      // si falla el patch, la UI se queda como estaba antes del click - no hay optimistic update que revertir
+    } catch (err) {
+      setErrorFila(err instanceof Error ? err.message : 'No pudimos actualizar el producto')
+    }
+  }
+
+  async function eliminarProducto(id: string) {
+    if (!window.confirm('¿Eliminar este producto? No se puede deshacer.')) return
+    setErrorFila(null)
+    try {
+      await api.delete(`/productos/${id}`)
+      setProductos((prev) => prev.filter((p) => p._id !== id))
+    } catch (err) {
+      setErrorFila(err instanceof Error ? err.message : 'No pudimos eliminar el producto')
     }
   }
 
@@ -210,6 +222,12 @@ export function AdminCatalogoPage() {
         <h2 className="text-lg font-medium text-texto-principal">Productos</h2>
         <FormProducto categorias={categorias} onCreado={(p) => setProductos((prev) => [...prev, p])} />
 
+        {errorFila && (
+          <p role="alert" className="text-sm text-error-texto">
+            {errorFila}
+          </p>
+        )}
+
         <ul className="flex flex-col gap-2 mt-2">
           {productos.map((p) => (
             <li
@@ -224,16 +242,24 @@ export function AdminCatalogoPage() {
                     : '—'}
                 </span>
               </div>
-              <button
-                onClick={() => toggleActivo(p._id, p.activo)}
-                className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                  p.activo
-                    ? 'border-borde-defecto text-texto-secundario hover:border-error-borde hover:text-error-texto'
-                    : 'border-exito-borde text-exito-texto hover:bg-exito-fondo'
-                }`}
-              >
-                {p.activo ? 'Desactivar' : 'Activar'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => toggleActivo(p._id, p.activo)}
+                  className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                    p.activo
+                      ? 'border-borde-defecto text-texto-secundario hover:border-error-borde hover:text-error-texto'
+                      : 'border-exito-borde text-exito-texto hover:bg-exito-fondo'
+                  }`}
+                >
+                  {p.activo ? 'Desactivar' : 'Activar'}
+                </button>
+                <button
+                  onClick={() => eliminarProducto(p._id)}
+                  className="text-xs px-3 py-1 rounded-full border border-borde-defecto text-texto-secundario hover:border-error-borde hover:text-error-texto transition-colors"
+                >
+                  Eliminar
+                </button>
+              </div>
             </li>
           ))}
         </ul>

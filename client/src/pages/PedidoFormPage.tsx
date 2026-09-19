@@ -5,6 +5,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import type { Producto, Pedido } from '../types'
 import { ETIQUETAS_FAMILIA } from '../types'
+import { calcularPrecioTotal } from '../lib/precio'
 
 interface Campos {
   dimensionSeleccionada: string
@@ -13,6 +14,7 @@ interface Campos {
   cantidad: string
   colores: string
   materiales: string
+  fechaEntrega: string
 }
 
 interface Errores {
@@ -21,6 +23,16 @@ interface Errores {
   cantidad?: string
   colores?: string
   materiales?: string
+  fechaEntrega?: string
+}
+
+// un dia habil de margen minimo - da tiempo al taller a reaccionar antes de empezar a cortar
+const DIAS_MINIMOS_ENTREGA = 1
+
+function fechaMinimaEntrega(): string {
+  const fecha = new Date()
+  fecha.setDate(fecha.getDate() + DIAS_MINIMOS_ENTREGA)
+  return fecha.toISOString().slice(0, 10)
 }
 
 const MAX_ARCHIVOS = 3
@@ -52,6 +64,7 @@ export function PedidoFormPage() {
     cantidad: '1',
     colores: '',
     materiales: '',
+    fechaEntrega: '',
   })
   const [errores, setErrores] = useState<Errores>({})
 
@@ -110,6 +123,10 @@ export function PedidoFormPage() {
     if (!campos.cantidad || isNaN(qty) || qty < 1) next.cantidad = 'La cantidad mínima es 1'
     if (!campos.colores.trim()) next.colores = 'Indicá los colores'
     if (!campos.materiales.trim()) next.materiales = 'Indicá los materiales'
+    // fechaEntrega es opcional, pero si la eligen tiene que respetar el minimo de produccion
+    if (campos.fechaEntrega && campos.fechaEntrega < fechaMinimaEntrega()) {
+      next.fechaEntrega = `Elegí una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
+    }
     setErrores(next)
     return Object.keys(next).length === 0
   }
@@ -134,6 +151,7 @@ export function PedidoFormPage() {
     }
 
     const fd = new FormData()
+    fd.append('productoId', producto._id)
     fd.append('categoriaId', producto.categoria._id)
     fd.append('descripcion', campos.descripcion)
     fd.append('dimensionValor', String(dimensionValor))
@@ -141,6 +159,10 @@ export function PedidoFormPage() {
     fd.append('cantidad', campos.cantidad)
     fd.append('colores', campos.colores)
     fd.append('materiales', campos.materiales)
+    // mediodia local evita que la conversion a UTC cruce a la fecha anterior (ver AdminPedidosPage)
+    if (campos.fechaEntrega) {
+      fd.append('fechaEntrega', new Date(`${campos.fechaEntrega}T12:00:00`).toISOString())
+    }
     archivos.forEach((f) => fd.append('imagenes', f))
 
     try {
@@ -185,6 +207,11 @@ export function PedidoFormPage() {
   }
 
   const dimensiones = producto.categoria.dimensionesBase
+  const cantidadNumerica = parseInt(campos.cantidad, 10)
+  const precioEstimado =
+    !isNaN(cantidadNumerica) && cantidadNumerica > 0
+      ? calcularPrecioTotal(producto.precio, cantidadNumerica)
+      : null
 
   return (
     <section className="max-w-xl">
@@ -299,6 +326,28 @@ export function PedidoFormPage() {
           error={errores.materiales}
         />
 
+        <Input
+          label="Fecha de entrega"
+          type="date"
+          min={fechaMinimaEntrega()}
+          hint="Opcional - si no la sabés todavía, te la confirmamos por WhatsApp"
+          value={campos.fechaEntrega}
+          onChange={(e) => set('fechaEntrega', e.target.value)}
+          error={errores.fechaEntrega}
+        />
+
+        {precioEstimado && (
+          <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">
+            <p className="text-sm text-texto-secundario">Precio estimado</p>
+            <p className="text-lg font-semibold text-texto-principal tabular-nums">
+              ${precioEstimado.total.toLocaleString('es-CO')}
+            </p>
+            <p className="text-xs text-texto-tenue">
+              ${precioEstimado.unitario.toLocaleString('es-CO')} c/u × {campos.cantidad}
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-texto-principal">
             Imágenes de referencia
@@ -331,7 +380,7 @@ export function PedidoFormPage() {
           disabled={enviando}
           className="w-full"
         >
-          {enviando ? 'Enviando pedido…' : 'Enviar pedido'}
+          {enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido'}
         </Button>
       </form>
     </section>

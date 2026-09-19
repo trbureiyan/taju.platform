@@ -32,6 +32,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new Error(body.error ?? `Error ${res.status}`)
   }
 
+  // 204 (DELETE) no trae body - .json() explota con SyntaxError sobre un string vacio
+  if (res.status === 204) return undefined as T
+
   return res.json() as Promise<T>
 }
 
@@ -44,4 +47,5 @@ export const api = {
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   postForm: <T>(path: string, body: FormData) =>
     request<T>(path, { method: 'POST', body }),
+  delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
 }

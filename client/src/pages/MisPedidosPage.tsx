@@ -70,10 +70,10 @@ export function MisPedidosPage() {
                     year: 'numeric',
                   })}
                 </p>
-                {pedido.fechaEstimadaEntrega && (
+                {pedido.fechaEntrega && (
                   <p className="text-xs font-medium text-exito-texto">
                     Entrega estimada:{' '}
-                    {new Date(pedido.fechaEstimadaEntrega).toLocaleDateString('es-CO', {
+                    {new Date(pedido.fechaEntrega).toLocaleDateString('es-CO', {
                       weekday: 'long',
                       day: 'numeric',
                       month: 'long',

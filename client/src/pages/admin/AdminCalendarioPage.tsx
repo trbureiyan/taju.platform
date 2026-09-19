@@ -51,11 +51,11 @@ export function AdminCalendarioPage() {
     sinFecha: PedidoAdmin[]
   }>(
     (acc, p) => {
-      if (!p.fechaEstimadaEntrega) {
+      if (!p.fechaEntrega) {
         acc.sinFecha.push(p)
         return acc
       }
-      const lunes = inicioSemana(new Date(p.fechaEstimadaEntrega))
+      const lunes = inicioSemana(new Date(p.fechaEntrega))
       const key = lunes.toISOString().slice(0, 10)
       if (!acc.grupos[key]) {
         acc.grupos[key] = { etiqueta: etiquetaSemana(lunes), pedidos: [] }
