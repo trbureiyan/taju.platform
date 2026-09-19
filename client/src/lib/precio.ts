@@ -13,7 +13,6 @@ export function formatearPrecio(precio: Precio): string {
   }
   return 'Precio a consultar'
 }
-
 // resumen del total para una cantidad puntual (PedidoFormPage) - null cuando no hay suficiente info para cotizar
 // (superficies exige el minimo de la escala mas baja, ver AGENTS.md) para no mostrar un numero enganoso
 export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: number; unitario: number } | null {
