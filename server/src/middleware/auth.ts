@@ -24,7 +24,6 @@ export function attachUsuarioOpcional(req: Request, _res: Response, next: NextFu
   }
   next()
 }
-
 // se usa en toda ruta que pida sesion - solo valida identidad, el permiso por rol es trabajo de rbac.ts
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization
