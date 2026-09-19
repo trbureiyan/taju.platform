@@ -50,6 +50,7 @@ export function uploadImagen(req: Request, res: Response, next: NextFunction): v
       res.status(400).json({ error: 'Uno de los archivos no es una imagen JPG válida' })
       return
     }
+
     next()
   })
 }
