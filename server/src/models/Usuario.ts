@@ -23,7 +23,7 @@ const usuarioSchema = new Schema<IUsuario>({
 // asi ningun endpoint puede filtrar el hash sin querer, ni acordandose de hacer .select('-password')
 usuarioSchema.set('toJSON', {
   transform(_doc, ret) {
-    delete ret.password
+    delete (ret as Partial<IUsuario>).password
     return ret
   },
 })
