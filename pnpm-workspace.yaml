@@ -1,5 +1,7 @@
 packages:
   - client
   - server
+overrides:
+  qs: "6.16.0"
 allowBuilds:
   esbuild: false

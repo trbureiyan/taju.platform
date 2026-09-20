@@ -1,39 +1,20 @@
 version: 2
 
 updates:
-  # client — React 18 + Vite + Tailwind
+  # Monorepo unificado pnpm — client y server actualizados atomicamente con su pnpm-lock.yaml raiz
   - package-ecosystem: "npm"
-    directory: "/client"
+    directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "08:00"
       timezone: "America/Bogota"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
     groups:
-      client-deps:
+      monorepo-deps:
         patterns:
           - "*"
-    labels:
-      - "dependencies"
-      - "client"
-    commit-message:
-      prefix: "chore(deps)"
-
-  # server — Express + Mongoose + JWT + Cloudinary
-  - package-ecosystem: "npm"
-    directory: "/server"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "08:00"
-      timezone: "America/Bogota"
-    open-pull-requests-limit: 3
-    groups:
-      server-deps:
-        patterns:
-          - "*"
-    # major bumps en estas tres requieren decision manual — no PR automatico
+    # Major bumps criticos requieren decision manual — no PR automatico
     ignore:
       - dependency-name: "mongoose"
         update-types: ["version-update:semver-major"]
@@ -41,13 +22,16 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "jsonwebtoken"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
     labels:
       - "dependencies"
-      - "server"
     commit-message:
       prefix: "chore(deps)"
 
-  # github-actions — mantener actions actualizadas
+  # GitHub Actions — mantener workflows actualizados
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -55,7 +39,11 @@ updates:
       day: "monday"
       time: "08:00"
       timezone: "America/Bogota"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
+    groups:
+      github-actions:
+        patterns:
+          - "*"
     labels:
       - "dependencies"
       - "ci"
