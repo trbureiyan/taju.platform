@@ -119,6 +119,11 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
 - **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
 - **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
+- **TypeScript 7 bloqueado por typescript-eslint**: `typescript-eslint@8.x` soporta TS `>=4.8.4 <6.1.0`. Fijado en `6.0.3` hasta que typescript-eslint soporte TS 7 (tracking: [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). No subir `typescript` a `7.x` en ninguno de los dos `package.json` hasta que ese issue esté cerrado.
+- **Tailwind v4 requiere `@tailwindcss/vite`**: El paquete `tailwindcss@4` no incluye plugin PostCSS. La integración es via `@tailwindcss/vite` registrado en `client/vite.config.ts`. `postcss.config.js` tiene solo `autoprefixer`. El CSS usa `@import "tailwindcss"` y el plugin detecta `client/tailwind.config.js` automáticamente — no usar `@config` en el CSS.
+- **Zod v4 — `z.record()` requiere dos args**: En Zod v3 `z.record(z.string())` infería `Record<string, string>`. En v4 el único argumento es el key schema y los valores quedan como `unknown`. Forma correcta: `z.record(z.string(), z.string())`. Buscar `z\.record\([^,)]+\)` si se agrega código nuevo con Zod.
+- **Zod v4 — `error.flatten()` removido**: `ZodError.prototype.flatten()` no existe en v4. Reemplazar con `z.flattenError(error)`. Cualquier código nuevo que acceda a errores Zod debe usar la función standalone.
+- **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Los dos usos existentes en `useCatalogo.ts` y `ProductoDetailPage.tsx` son intencionales (reset antes del fetch para evitar estado obsoleto visible) y están suprimidos con `// eslint-disable-next-line`. Código nuevo que necesite el mismo patrón debe suprimir con la misma directiva y documentar el motivo.
 
 ---
 
