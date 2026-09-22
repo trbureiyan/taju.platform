@@ -24,7 +24,7 @@ const loginSchema = z.object({
 export async function registrar(req: Request, res: Response, next: NextFunction): Promise<void> {
   const parsed = registrarSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos inválidos', detalle: z.flattenError(parsed.error) })
     return
   }
   try {

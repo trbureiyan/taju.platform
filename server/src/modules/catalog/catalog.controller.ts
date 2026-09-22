@@ -56,7 +56,7 @@ export const obtenerCategoria = asyncHandler(async (req: Request, res: Response)
 export const crearCategoria = asyncHandler(async (req: Request, res: Response) => {
   const parsed = crearCategoriaSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos inválidos', detalle: z.flattenError(parsed.error) })
     return
   }
   const categoria = await catalogService.crearCategoria(parsed.data)
@@ -69,7 +69,7 @@ export const crearCategoria = asyncHandler(async (req: Request, res: Response) =
 export const actualizarCategoria = asyncHandler(async (req: Request, res: Response) => {
   const parsed = actualizarCategoriaSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos inválidos', detalle: z.flattenError(parsed.error) })
     return
   }
   const categoria = await catalogService.actualizarCategoria(req.params.id, parsed.data)
@@ -145,7 +145,7 @@ export const obtenerProducto = asyncHandler(async (req: Request, res: Response) 
 export const crearProducto = asyncHandler(async (req: Request, res: Response) => {
   const parsed = crearProductoSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos inválidos', detalle: z.flattenError(parsed.error) })
     return
   }
   const producto = await catalogService.crearProducto(parsed.data)
@@ -158,7 +158,7 @@ export const crearProducto = asyncHandler(async (req: Request, res: Response) =>
 export const actualizarProducto = asyncHandler(async (req: Request, res: Response) => {
   const parsed = actualizarProductoSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos inválidos', detalle: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos inválidos', detalle: z.flattenError(parsed.error) })
     return
   }
   const producto = await catalogService.actualizarProducto(req.params.id, parsed.data)

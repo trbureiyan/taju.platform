@@ -1,7 +1,6 @@
 // puente entre los tokens CSS (.docs/branding/04-tokens-de-diseno.md) y las clases de tailwind.
 // todo aqui apunta a un var(--...) semantico - los componentes nunca deberian tocar la paleta cruda
 export default {
-  content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       colors: {

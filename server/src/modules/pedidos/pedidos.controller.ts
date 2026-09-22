@@ -26,7 +26,7 @@ const crearPedidoSchema = z.object({
 export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
   const parsed = crearPedidoSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Datos del pedido inválidos', detalles: parsed.error.flatten() })
+    res.status(400).json({ error: 'Datos del pedido inválidos', detalles: z.flattenError(parsed.error) })
     return
   }
 
@@ -62,7 +62,7 @@ const setFechaEntregaSchema = z.object({
 export const setFechaEntrega = asyncHandler(async (req: Request, res: Response) => {
   const parsed = setFechaEntregaSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Fecha inválida', detalles: parsed.error.flatten() })
+    res.status(400).json({ error: 'Fecha inválida', detalles: z.flattenError(parsed.error) })
     return
   }
 
@@ -84,7 +84,7 @@ const actualizarEstadoSchema = z.object({
 export const actualizarEstado = asyncHandler(async (req: Request, res: Response) => {
   const parsed = actualizarEstadoSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Estado inválido', detalles: parsed.error.flatten() })
+    res.status(400).json({ error: 'Estado inválido', detalles: z.flattenError(parsed.error) })
     return
   }
 
