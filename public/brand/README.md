@@ -22,6 +22,10 @@ Archivos de referencia y fuente original; no usar directamente en la interfaz.
 | `TAJU LETRAS.png` | Letras aisladas |
 | `logo taju.jpg.jpeg` | Imagen raster de referencia |
 
+## Dimensiones
+
+Los archivos SVG de esta carpeta están formateados con dimensiones fijas de **512 × 512 px** (`width="512" height="512"`), a pesar de ser formato vectorial. No asumir escala libre.
+
 ## Reglas de uso
 
 - Por debajo de 120 px de ancho usar `taju-isotipo.svg`, nunca el imagotipo completo.
