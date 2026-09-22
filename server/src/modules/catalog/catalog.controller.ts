@@ -94,7 +94,7 @@ const crearProductoSchema = z.object({
   descripcionTecnica: z.string().max(1000).default(''),
   categoria: z.string().min(1),
   imagenes: z.array(z.string()).default([]),
-  especificacionesTecnicas: z.record(z.string()).default({}),
+  especificacionesTecnicas: z.record(z.string(), z.string()).default({}),
   precio: precioSchema.default({ unitario: null, escalas: [] }),
 })
 
@@ -103,7 +103,7 @@ const actualizarProductoSchema = z
     nombre: z.string().min(2).max(120).optional(),
     descripcionTecnica: z.string().max(1000).optional(),
     imagenes: z.array(z.string()).optional(),
-    especificacionesTecnicas: z.record(z.string()).optional(),
+    especificacionesTecnicas: z.record(z.string(), z.string()).optional(),
     precio: precioSchema.optional(),
     activo: z.boolean().optional(),
   })

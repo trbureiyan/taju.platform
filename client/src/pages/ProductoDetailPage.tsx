@@ -19,7 +19,8 @@ export function ProductoDetailPage() {
   useEffect(() => {
     if (!id) return
     let cancelado = false
-    // reset explícito: evita mostrar el producto anterior mientras el nuevo aun carga
+    // reset explícito: evita mostrar el producto anterior mientras el nuevo aun carga — intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProducto(null)
     setCargando(true)
     api

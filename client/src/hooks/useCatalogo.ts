@@ -21,8 +21,9 @@ export function useCatalogo(familia: Familia | null) {
   useEffect(() => {
     let cancelado = false // evita el "setState en componente desmontado" si cambian de familia rapido
 
-    // vuelve a mostrar "cargando" en cada cambio de familia, no solo la primera vez - conserva productos
-    // viejos en el estado mientras tanto para que la grilla no salte a vacio de golpe
+    // muestra "cargando" en cada cambio de familia conservando los productos anteriores visibles
+    // mientras tanto — evita salto a vacío. setState sincrónico aquí es intencional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEstado((prev) => ({ ...prev, cargando: true, error: null }))
 
     const path = familia ? `/productos?familia=${familia}` : '/productos'
