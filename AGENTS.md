@@ -44,6 +44,8 @@ taju.platform/
 │       └── lib/                     # db.ts, cloudinary.ts, jwt.ts, errors.ts
 ├── public/
 │   └── brand/                       # SVGs de marca — nunca editar
+├── tools/
+│   └── db-local/                    # modulo externo: prepara MongoDB local (pnpm db:local)
 ├── .docs/                           # documentacion normativa
 │   └── branding/                    # fuentes de verdad de marca
 ├── .github/
@@ -67,6 +69,7 @@ taju.platform/
 | `pnpm lint` | eslint en client y server | Pre-commit check |
 | `pnpm --filter taju-client build` | build directo del client | |
 | `pnpm --filter taju-server build` | tsc compila a server/dist/ | |
+| `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales. Ver `tools/db-local/README.md` |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
 
