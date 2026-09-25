@@ -228,4 +228,19 @@ describe('crearPedido', () => {
     await expect(crearPedido(input)).resolves.toBeTruthy()
     expect(await Pedido.countDocuments()).toBe(1)
   })
+
+  // hallazgo de CodeRabbit en PR #65: antes solo se limpiaba en el catch de clave duplicada,
+  // cualquier otra falla de la transaccion dejaba las imagenes huerfanas para siempre
+  it('limpia las imagenes aunque la transaccion falle por una razon distinta a clave duplicada', async () => {
+    const { input } = await pedidoBase()
+    const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+    const falla = vi.spyOn(Pedido, 'create').mockRejectedValueOnce(new Error('mongo caido a mitad'))
+
+    await expect(crearPedido({ ...input, archivos: [archivo as Express.Multer.File] })).rejects.toThrow(
+      'mongo caido a mitad',
+    )
+
+    falla.mockRestore()
+    expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
+  })
 })
