@@ -107,8 +107,8 @@ export async function crearPedido(input: CrearPedidoInput) {
   // TransientTransactionError, que es justo lo que recibe el perdedor de dos inserts simultaneos de la misma
   // clave; en el reintento ve la reserva ya confirmada y cae en E11000 -> 409. Requiere replica set (Atlas M0 lo es).
   const session = await mongoose.startSession()
+  let pedidoId: Types.ObjectId | undefined
   try {
-    let pedidoId: Types.ObjectId | undefined
     await session.withTransaction(async () => {
       const ahora = new Date()
       // reserva vencida que el monitor TTL todavia no borro: se libera aqui, dentro de la misma transaccion
@@ -120,20 +120,23 @@ export async function crearPedido(input: CrearPedidoInput) {
       )
       await Pedido.create([armarPedido(pedidoId, input, producto, categoria, imagenesReferencia)], { session })
     })
-    const pedido = await Pedido.findById(pedidoId)
-    if (!pedido) throw new Error('Pedido confirmado en la transaccion pero no encontrado')
-    return pedido
   } catch (err) {
-    if (esClaveDuplicada(err)) {
-      // perdio la carrera de idempotencia: sus imagenes ya subieron pero ningun pedido las va a referenciar.
-      // allSettled a proposito - si Cloudinary falla ahora igual devolvemos 409, no lo escalamos a 500
-      await Promise.allSettled(imagenesReferencia.map((img) => eliminarImagen(img.publicId)))
-      throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
-    }
+    // la transaccion no se confirmo, sea por clave duplicada o cualquier otra causa (validacion,
+    // TransientTransactionError agotado, fallo de commit) - las imagenes ya subidas quedan sin
+    // pedido que las referencie. allSettled a proposito: si Cloudinary falla ahora, igual
+    // propagamos el error original de la transaccion, no lo tapamos con uno de limpieza
+    await Promise.allSettled(imagenesReferencia.map((img) => eliminarImagen(img.publicId)))
+    if (esClaveDuplicada(err)) throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
     throw err
   } finally {
     await session.endSession()
   }
+
+  // fuera del try/catch de la transaccion a proposito - si esta consulta falla, el pedido ya se
+  // confirmo y sus imagenes SI le pertenecen, no hay que limpiarlas como si hubiera perdido
+  const pedido = await Pedido.findById(pedidoId)
+  if (!pedido) throw new Error('Pedido confirmado en la transaccion pero no encontrado')
+  return pedido
 }
 
 /**
