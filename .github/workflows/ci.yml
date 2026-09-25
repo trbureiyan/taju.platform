@@ -40,3 +40,4 @@ jobs:
       - run: pnpm --filter taju-server typecheck
       # levanta mongod en memoria como replica set (mongodb-memory-server); nunca toca Atlas
       - run: pnpm --filter taju-server test
+      - run: pnpm --filter taju-server build

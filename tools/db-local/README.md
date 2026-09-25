@@ -4,15 +4,17 @@ Prepara una base MongoDB local para desarrollo. Modulo externo al flujo principa
 
 ```sh
 pnpm db:local           # muestra el plan y pide confirmacion
-pnpm db:local --yes     # sin preguntar (tambien si no hay TTY)
+pnpm db:local --yes     # sin preguntar
 pnpm db:local --uri mongodb://127.0.0.1:27017/taju_test
 ```
 
 Destino: `--uri`, si no `MONGO_URI` de la shell o de `server/.env`, si no `mongodb://127.0.0.1:27017/taju`. `--uri` sin valor es un error, no cae al siguiente.
 
-Pasos: destino, conexion, plan, aplicar. En la conexion exige que MongoDB corra como replica set: `crearPedido` usa transacciones y un standalone las rechaza ("Transaction numbers are only allowed on a replica set member"). Crea las colecciones que falten y los indices declarados en `server/src/models`. Idempotente: correrlo dos veces no cambia nada la segunda vez. No borra ni modifica datos, no hace seed.
+Confirmacion: solo `--yes`/`-y` la saltan. Si se corre sin entrada interactiva (por ejemplo desde un script) y sin ese flag, el comando aborta sin aplicar nada — nunca asume un "si" implicito.
 
-[!] Rechaza cualquier destino no local (`mongodb+srv://` o algun host remoto, en URIs con varios hosts se revisan todos). Atlas nunca se toca desde aqui.
+Pasos: destino, conexion, plan, aplicar. En la conexion exige que MongoDB corra como replica set: `crearPedido` usa transacciones y un standalone las rechaza ("Transaction numbers are only allowed on a replica set member"). Ademas de la URI de conexion, valida que el propio replica set (segun `hello`: `me`, `primary`, `hosts`, `passives`, `arbiters`) no anuncie ningun miembro remoto antes de tocar la base — el discovery del driver puede llegar a hosts que la URI original no listaba. Crea las colecciones que falten y los indices declarados en `server/src/models`. Idempotente: correrlo dos veces no cambia nada la segunda vez. No borra ni modifica datos, no hace seed.
+
+[!] Rechaza cualquier destino no local (`mongodb+srv://` o algun host remoto, en URIs con varios hosts se revisan todos, y tambien la topologia real del replica set una vez conectado). Atlas nunca se toca desde aqui.
 
 Mantenimiento: los indices salen de los schemas, asi que solo hay que tocar este modulo si se agrega o mueve un modelo (lista `MODELOS` en `setup.ts`).
 

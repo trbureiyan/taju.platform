@@ -27,7 +27,9 @@ const COMANDOS_DOCKER = [
 ]
 
 const args = process.argv.slice(2)
-const sinPreguntar = args.includes('--yes') || args.includes('-y') || !process.stdin.isTTY
+// [DECISION] solo --yes/-y saltan la confirmacion. Antes, correr sin TTY (ej. invocado por error desde un
+// script o un hook) tambien la saltaba y aplicaba mutaciones sin que nadie las autorizara explicitamente.
+const yesExplicito = args.includes('--yes') || args.includes('-y')
 
 function paso(n: number, texto: string): void {
   console.log(`\n[${n}/4] ${texto}`)
@@ -39,7 +41,11 @@ function sugerirDocker(): void {
 }
 
 async function confirmar(pregunta: string): Promise<boolean> {
-  if (sinPreguntar) return true
+  if (yesExplicito) return true
+  if (!process.stdin.isTTY) {
+    console.error('    Sin --yes y sin entrada interactiva - no se aplica nada. Repetir con --yes para confirmar sin preguntar.')
+    return false
+  }
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   const r = (await rl.question(`${pregunta} [s/N] `)).trim().toLowerCase()
   rl.close()
@@ -76,13 +82,26 @@ function resolverUri(): string {
   return (existsSync(envPath) ? leerMongoUriDeEnv(envPath) : undefined) ?? URI_POR_DEFECTO
 }
 
+function esHostLocal(host: string): boolean {
+  return HOSTS_LOCALES.includes(host.replace(/:\d+$/, ''))
+}
+
 // [!] guarda contra Atlas: este script es solo para local, un error de .env no debe tocar prod
 function esLocal(uri: string): boolean {
   if (!uri.startsWith('mongodb://')) return false
   const autoridad = uri.slice('mongodb://'.length).split(/[/?]/)[0]
   // una URI de replica set lista varios hosts; el discovery puede alcanzar cualquiera, asi que todos deben ser locales
   const hosts = autoridad.slice(autoridad.lastIndexOf('@') + 1).split(',')
-  return hosts.every((h) => HOSTS_LOCALES.includes(h.replace(/:\d+$/, '')))
+  return hosts.every(esHostLocal)
+}
+
+// [DECISION] la URI que el usuario paso puede listar solo hosts locales y aun asi el replica set real
+// anunciar un miembro remoto (config de replica set discovery, no controlado por la URI) - hay que validar
+// lo que el propio servidor reporta en "hello", no solo lo que se le pidio conectar
+function esTopologiaLocal(hello: { me?: unknown; primary?: unknown; hosts?: unknown; passives?: unknown; arbiters?: unknown }): boolean {
+  const listas = [hello.hosts, hello.passives, hello.arbiters].filter((l): l is unknown[] => Array.isArray(l))
+  const miembros = [hello.me, hello.primary, ...listas.flat()]
+  return miembros.every((m) => m === undefined || (typeof m === 'string' && esHostLocal(m)))
 }
 
 // un mongod con --replSet sin rs.initiate() se reporta como RSGhost: no es seleccionable y la conexion vence por timeout
@@ -121,6 +140,10 @@ async function main(): Promise<number> {
   if (!hello.setName) {
     console.error('    MongoDB corre como standalone. Crear pedidos necesita transacciones, y solo un replica set las acepta.')
     sugerirDocker()
+    return 1
+  }
+  if (!esTopologiaLocal(hello)) {
+    console.error('    El replica set anuncia un miembro no local (me/primary/hosts/passives/arbiters). Abortado antes de tocar la base.')
     return 1
   }
   console.log(`    OK, base "${conn.name}", replica set "${hello.setName}"`)
