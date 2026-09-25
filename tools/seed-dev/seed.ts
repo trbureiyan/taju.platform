@@ -1,9 +1,12 @@
 /**
- * Puebla taju-dev con categorias, productos y usuarios de muestra de las 4 familias
- * del catalogo. Idempotente via upsert con $setOnInsert: un documento que ya existe
- * (por nombre o email) nunca se sobreescribe.
+ * Puebla la base con categorias y productos de las 4 familias del catalogo. En taju-dev
+ * (destino por defecto) tambien crea dos usuarios de muestra (cliente, administrador).
+ * En produccion, --permitir-prod habilita sembrar SOLO el catalogo - nunca usuarios, porque
+ * la contrasena de muestra es publica en tools/seed-dev/datos.ts.
+ * Idempotente via upsert con $setOnInsert: un documento que ya existe (por nombre o email)
+ * nunca se sobreescribe.
  *
- * Uso: pnpm seed:dev [--yes] [--uri <mongodb+srv://...>]
+ * Uso: pnpm seed:dev [--yes] [--uri <mongodb+srv://...>] [--permitir-prod]
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -33,6 +36,20 @@ async function confirmar(pregunta: string): Promise<boolean> {
   const r = (await rl.question(`${pregunta} [s/N] `)).trim().toLowerCase()
   rl.close()
   return r === 's' || r === 'si' || r === 'y'
+}
+
+// [DECISION] confirmacion reforzada para produccion: --yes/-y no aplica aca bajo ninguna circunstancia,
+// y no alcanza con "s" - hay que tipear el nombre exacto de la base. Dos capas de friccion deliberada
+// para una operacion que crea datos reales en el entorno que ve el cliente final.
+async function confirmarProduccion(base: string): Promise<boolean> {
+  if (!process.stdin.isTTY) {
+    console.error('    Sembrar produccion exige confirmacion interactiva, no hay entrada por TTY - abortado.')
+    return false
+  }
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const r = (await rl.question(`    Escribi "${base}" para confirmar que vas a crear datos reales ahi: `)).trim()
+  rl.close()
+  return r === base
 }
 
 function leerMongoUriDeEnv(envPath: string): string | undefined {
@@ -67,23 +84,11 @@ function resolverUri(): string {
   throw new Error('No hay MONGO_URI disponible (ni --uri, ni env de la shell, ni server/.env)')
 }
 
-// [!] guarda dura, sin flag de override: este script crea datos reales, nunca debe poder tocar taju-prod
-function nombreDeBase(uri: string): string {
-  const sinQuery = uri.split('?')[0]
-  return sinQuery.slice(sinQuery.lastIndexOf('/') + 1)
-}
-
 async function main(): Promise<number> {
   paso(1, 'Destino')
   const uri = resolverUri()
   const visible = uri.replace(/\/\/[^@]*@/, '//***@')
-  const base = nombreDeBase(uri)
   console.log(`    ${visible}`)
-  console.log(`    base: "${base}"`)
-  if (base === 'taju-prod') {
-    console.error('    Destino es taju-prod. Este script no seedea produccion bajo ninguna circunstancia; abortado.')
-    return 1
-  }
 
   paso(2, 'Conexion')
   try {
@@ -92,24 +97,40 @@ async function main(): Promise<number> {
     console.error('    No se pudo conectar a ese destino.')
     return 1
   }
-  console.log(`    OK, conectado a "${Usuario.db.name}"`)
+  // [DECISION] el nombre de base autoritativo es el que reporta el driver ya conectado, no uno parseado
+  // a mano de la URI antes de conectar - una URI con la base codificada de forma distinta podria hacer
+  // que el parseo manual no coincida con la base real a la que Mongo termina resolviendo, evadiendo la guarda
+  const base = Usuario.db.name
+  console.log(`    OK, conectado a "${base}"`)
+  const esProduccion = base === 'taju-prod'
+  if (esProduccion && !args.includes('--permitir-prod')) {
+    console.error('    Destino es taju-prod. Sin --permitir-prod, este script no lo toca. Pensado para cargar el catalogo real antes de un lanzamiento, no para datos de prueba - ver AGENTS.md antes de usar esta bandera.')
+    return 1
+  }
+  if (esProduccion) console.error('    [!] ATENCION: destino es produccion. Esto va a crear datos reales visibles para clientes.')
 
   paso(3, 'Plan')
-  const categoriasFaltantes = []
   for (const c of CATEGORIAS) {
     const existe = await Categoria.exists({ nombre: c.nombre })
     console.log(`    categoria  ${c.nombre.padEnd(28)} ${existe ? 'existe' : 'crear'}`)
-    if (!existe) categoriasFaltantes.push(c.nombre)
   }
   for (const p of PRODUCTOS) {
     const existe = await Producto.exists({ nombre: p.nombre })
     console.log(`    producto   ${p.nombre.padEnd(28)} ${existe ? 'existe' : 'crear'}`)
   }
-  for (const u of USUARIOS) {
-    const existe = await Usuario.exists({ email: u.email })
-    console.log(`    usuario    ${u.email.padEnd(28)} ${existe ? 'existe' : 'crear'}`)
+  // [DECISION] nunca crear USUARIOS en produccion - PASSWORD_SEED y los emails de datos.ts son publicos
+  // (el archivo esta versionado en el repo), asi que publicar una cuenta administrador con esa clave
+  // conocida en el entorno real seria un agujero de seguridad, no un dato de muestra inofensivo.
+  if (esProduccion) {
+    console.log('    usuarios   omitidos - PASSWORD_SEED es publica, nunca se crean en produccion')
+  } else {
+    for (const u of USUARIOS) {
+      const existe = await Usuario.exists({ email: u.email })
+      console.log(`    usuario    ${u.email.padEnd(28)} ${existe ? 'existe' : 'crear'}`)
+    }
   }
-  if (!(await confirmar('    Aplicar?'))) {
+  const confirmado = esProduccion ? await confirmarProduccion(base) : await confirmar('    Aplicar?')
+  if (!confirmado) {
     console.log('    Cancelado, sin cambios.')
     return 0
   }
@@ -141,6 +162,11 @@ async function main(): Promise<number> {
       },
       { upsert: true, new: true },
     )
+  }
+
+  if (esProduccion) {
+    console.log('    Listo. Catalogo sembrado, usuarios omitidos (ver nota de produccion arriba).')
+    return 0
   }
 
   const hash = await bcrypt.hash(PASSWORD_SEED, SALT_ROUNDS)

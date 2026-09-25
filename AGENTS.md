@@ -77,7 +77,7 @@ taju.platform/
 | `pnpm --filter taju-client test` | Vitest + jsdom | `test:watch` para modo interactivo |
 | `pnpm --filter taju-server test` | Vitest + mongod en memoria | Incluye la prueba de carga de pedidos (autocannon) |
 | `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales, exige replica set. Ver `tools/db-local/README.md` |
-| `pnpm seed:dev` | Puebla `taju-dev` con categorias/productos/usuarios de muestra | Idempotente via `$setOnInsert`, rechaza incondicionalmente `taju-prod`. Ver `tools/seed-dev/README.md`. Mutacion de datos — confirmar con el usuario antes de correr (Dangerous Commands) |
+| `pnpm seed:dev` | Puebla `taju-dev` con categorias/productos/usuarios de muestra | Idempotente via `$setOnInsert`. `--permitir-prod` habilita sembrar SOLO catalogo en `taju-prod` (nunca usuarios — la password de muestra es publica), con confirmacion tipeada que `--yes` no puede saltarse. Ver `tools/seed-dev/README.md`. Mutacion de datos — confirmar con el usuario antes de correr (Dangerous Commands) |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
 
