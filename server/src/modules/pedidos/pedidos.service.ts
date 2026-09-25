@@ -1,12 +1,47 @@
-import { Types } from 'mongoose'
+import { createHash } from 'node:crypto'
+import mongoose, { Types } from 'mongoose'
 import { Pedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
-import { subirImagen } from '../../lib/cloudinary.js'
+import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
+import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
+
+// cubre doble click y reintentos de red, que llegan en segundos; mas largo empezaria a frenar pedidos legitimos
+const VENTANA_IDEMPOTENCIA_MS = 60_000
+
+const MENSAJE_PEDIDO_DUPLICADO =
+  'Ya recibimos este mismo pedido hace un momento. Revisa Mis pedidos antes de enviarlo otra vez.'
+
+// [DECISION] clave = hash de clienteId + productoId + fechaEntrega + el resto de la especificacion, no solo los
+// tres primeros - un doble click o un reintento mandan el payload identico, asi que igual se detectan, y un
+// cliente profesional que pide dos variantes del mismo producto para la misma fecha no queda bloqueado.
+// Los archivos entran como hash de su contenido, no como nombre/tamano: dos pedidos con el mismo texto pero
+// fotos de referencia distintas son pedidos distintos, y metadata (nombre, peso) no lo garantiza igual que el
+// contenido. El hash es rapido (sha256 sobre <=3 buffers de max 5 MB), no vale la pena optimizarlo.
+function claveIdempotencia(input: CrearPedidoInput): string {
+  const partes = [
+    input.clienteId,
+    input.productoId,
+    input.categoriaId,
+    input.fechaEntrega?.toISOString() ?? 'sin-fecha',
+    input.descripcion.trim(),
+    input.dimensionValor,
+    input.esDimensionPersonalizada,
+    input.cantidad,
+    input.colores.trim(),
+    input.materiales.trim(),
+    input.archivos.map((archivo) => createHash('sha256').update(archivo.buffer).digest('hex')),
+  ]
+  return createHash('sha256').update(JSON.stringify(partes)).digest('hex')
+}
+
+function esClaveDuplicada(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: number }).code === 11000
+}
 
 interface CrearPedidoInput {
   clienteId: string
@@ -22,6 +57,14 @@ interface CrearPedidoInput {
   archivos: Express.Multer.File[]
 }
 
+/**
+ * Crea un pedido nuevo con sus imagenes de referencia, protegido contra duplicados.
+ * @param input - Datos del formulario de pedido, incluidos los archivos ya validados por uploadImagen.
+ * @returns El documento del pedido recien creado.
+ * @throws AppError(400) si la categoria o el producto no existen o estan inactivos.
+ * @throws AppError(409) si el mismo pedido (mismo cliente, especificacion y archivos) ya se recibio
+ *         en los ultimos 60 s - ver claveIdempotencia.
+ */
 export async function crearPedido(input: CrearPedidoInput) {
   // no se puede pedir sobre una categoria borrada ni pausada - evita pedidos huerfanos de algo que ya no se vende
   const categoria = await Categoria.findById(input.categoriaId)
@@ -35,17 +78,77 @@ export async function crearPedido(input: CrearPedidoInput) {
     throw new AppError(400, 'Producto no encontrado o inactivo')
   }
 
+  const clave = claveIdempotencia(input)
+
+  // chequeo barato fuera de la transaccion: corta el reintento secuencial antes de gastar subidas a Cloudinary.
+  // no es la garantia - dos requests simultaneos pasan este punto juntos, eso lo resuelve la transaccion de abajo
+  const reservaVigente = await IdempotenciaPedido.exists({ _id: clave, expiraEn: { $gt: new Date() } })
+  if (reservaVigente) throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
+
+  // [DECISION] las subidas van antes y fuera de la transaccion - una transaccion abierta durante I/O externo
+  // arriesga el limite de 60s de Mongo. Tradeoff: el perdedor de una carrera simultanea sube igual sus imagenes;
+  // se limpian en el catch de abajo apenas se confirma que perdio, asi que quedan huerfanas solo el tiempo
+  // que dura esa subida, no indefinidamente.
   // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
   const imagenesReferencia = await Promise.all(
-    input.archivos.map(async (file) => ({
-      nombreOriginal: file.originalname,
-      mimeType: 'image/jpeg' as const,
-      tamano: file.size,
-      url: await subirImagen(file.buffer, file.mimetype),
-    })),
+    input.archivos.map(async (file) => {
+      const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
+      return {
+        nombreOriginal: file.originalname,
+        mimeType: 'image/jpeg' as const,
+        tamano: file.size,
+        url,
+        publicId,
+      }
+    }),
   )
 
-  const pedido = await Pedido.create({
+  // [DECISION] withTransaction en vez de startTransaction/commit a mano - reintenta solo ante
+  // TransientTransactionError, que es justo lo que recibe el perdedor de dos inserts simultaneos de la misma
+  // clave; en el reintento ve la reserva ya confirmada y cae en E11000 -> 409. Requiere replica set (Atlas M0 lo es).
+  const session = await mongoose.startSession()
+  try {
+    let pedidoId: Types.ObjectId | undefined
+    await session.withTransaction(async () => {
+      const ahora = new Date()
+      // reserva vencida que el monitor TTL todavia no borro: se libera aqui, dentro de la misma transaccion
+      await IdempotenciaPedido.deleteOne({ _id: clave, expiraEn: { $lte: ahora } }, { session })
+      pedidoId = new Types.ObjectId()
+      await IdempotenciaPedido.create(
+        [{ _id: clave, pedido: pedidoId, expiraEn: new Date(ahora.getTime() + VENTANA_IDEMPOTENCIA_MS) }],
+        { session },
+      )
+      await Pedido.create([armarPedido(pedidoId, input, producto, categoria, imagenesReferencia)], { session })
+    })
+    const pedido = await Pedido.findById(pedidoId)
+    if (!pedido) throw new Error('Pedido confirmado en la transaccion pero no encontrado')
+    return pedido
+  } catch (err) {
+    if (esClaveDuplicada(err)) {
+      // perdio la carrera de idempotencia: sus imagenes ya subieron pero ningun pedido las va a referenciar.
+      // allSettled a proposito - si Cloudinary falla ahora igual devolvemos 409, no lo escalamos a 500
+      await Promise.allSettled(imagenesReferencia.map((img) => eliminarImagen(img.publicId)))
+      throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
+    }
+    throw err
+  } finally {
+    await session.endSession()
+  }
+}
+
+/**
+ * Arma el documento de pedido a partir del input validado y los snapshots de producto/categoria.
+ * No toca la base de datos - solo construye el objeto que crearPedido persiste dentro de la transaccion.
+ */
+function armarPedido(
+  pedidoId: Types.ObjectId,
+  input: CrearPedidoInput,
+  producto: { _id: Types.ObjectId; nombre: string },
+  categoria: { _id: Types.ObjectId; nombre: string; familia: string },
+  imagenesReferencia: { nombreOriginal: string; mimeType: 'image/jpeg'; tamano: number; url: string }[],
+) {
+  return {
+    _id: pedidoId,
     cliente: input.clienteId,
     // snapshot de producto y categoria al momento del pedido - si luego cambian nombre o se desactivan,
     // el historico de este pedido no se altera (ver IProductoEmbebido/ICategoriaEmbebida en el modelo)
@@ -79,9 +182,7 @@ export async function crearPedido(input: CrearPedidoInput) {
         actor: new Types.ObjectId(input.clienteId),
       },
     ],
-  })
-
-  return pedido
+  }
 }
 
 // ─── Consultas del cliente ──────────────────────────────────────────────────
