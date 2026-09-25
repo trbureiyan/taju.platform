@@ -69,7 +69,7 @@ taju.platform/
 | `pnpm lint` | eslint en client y server | Pre-commit check |
 | `pnpm --filter taju-client build` | build directo del client | |
 | `pnpm --filter taju-server build` | tsc compila a server/dist/ | |
-| `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales. Ver `tools/db-local/README.md` |
+| `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales, exige replica set. Ver `tools/db-local/README.md` |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
 
