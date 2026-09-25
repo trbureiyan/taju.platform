@@ -48,6 +48,8 @@ taju.platform/
 │       └── lib/                     # db.ts, cloudinary.ts, jwt.ts, errors.ts
 ├── public/
 │   └── brand/                       # SVGs de marca — nunca editar
+├── tools/
+│   └── db-local/                    # modulo externo: prepara MongoDB local (pnpm db:local)
 ├── .docs/                           # documentacion normativa
 │   └── branding/                    # fuentes de verdad de marca
 ├── .github/
@@ -73,6 +75,7 @@ taju.platform/
 | `pnpm --filter taju-server build` | tsc compila a server/dist/ | Usa `tsconfig.build.json` |
 | `pnpm --filter taju-client test` | Vitest + jsdom | `test:watch` para modo interactivo |
 | `pnpm --filter taju-server test` | Vitest + mongod en memoria | Incluye la prueba de carga de pedidos (autocannon) |
+| `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales, exige replica set. Ver `tools/db-local/README.md` |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
 

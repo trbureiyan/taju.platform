@@ -8,6 +8,7 @@
     "build:client": "pnpm --filter taju-client build",
     "typecheck": "pnpm --filter taju-client typecheck && pnpm --filter taju-server typecheck",
     "lint": "pnpm --filter taju-client lint && pnpm --filter taju-server lint",
+    "db:local": "pnpm --filter taju-server exec tsx ../tools/db-local/setup.ts",
     "prepare": "husky"
   },
   "engines": {
