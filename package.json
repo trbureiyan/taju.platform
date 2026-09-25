@@ -7,7 +7,9 @@
     "dev:server": "pnpm --filter taju-server dev",
     "build:client": "pnpm --filter taju-client build",
     "typecheck": "pnpm --filter taju-client typecheck && pnpm --filter taju-server typecheck",
-    "lint": "pnpm --filter taju-client lint && pnpm --filter taju-server lint"
+    "lint": "pnpm --filter taju-client lint && pnpm --filter taju-server lint",
+    "db:local": "pnpm --filter taju-server exec tsx ../tools/db-local/setup.ts",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -15,5 +17,8 @@
   },
   "overrides": {
     "qs": "6.16.0"
+  },
+  "devDependencies": {
+    "husky": "9.1.7"
   }
 }

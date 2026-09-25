@@ -16,7 +16,8 @@ Proyecto Integrador II | Ingeniería de Software, Universidad Surcolombiana.
 | Almacenamiento de imágenes | Cloudinary |
 | Autenticación | JWT (en memoria del cliente, sin localStorage) |
 | Seguridad | bcrypt, Zod, validación de entradas en servidor |
-| Package manager | pnpm 9 (monorepo con workspaces) |
+| Package manager | pnpm 11 (monorepo con workspaces) |
+| Testing | Vitest, Supertest, mongodb-memory-server (server), React Testing Library (client) |
 
 ---
 
@@ -28,7 +29,6 @@ taju.platform/
 ├── server/          # API REST Express + Mongoose
 ├── .docs/           # Documentación normativa y branding
 ├── .github/         # Workflows CI, CodeQL, Dependabot, plantilla de PR
-├── .env.example     # Variables de entorno requeridas
 └── AGENTS.md        # Guía de arquitectura y convenciones del proyecto
 ```
 
@@ -36,16 +36,7 @@ taju.platform/
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env` en `server/` y completa los valores:
-
-```env
-PORT=
-MONGO_URI=
-JWT_SECRET=
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-```
+Copia `server/.env.example` a `server/.env` (desarrollo) y completa los valores. Ver el archivo para la lista completa (`NODE_ENV`, `PORT`, `MONGO_URI`, `JWT_SECRET`/`JWT_EXPIRES_IN`, las tres de Cloudinary y `CLIENT_URL`).
 
 ---
 
@@ -65,10 +56,14 @@ pnpm dev:server   # tsx watch — http://localhost:3001
 ## Comandos útiles
 
 ```bash
-pnpm typecheck    # tsc --noEmit en client y server
-pnpm lint         # eslint en client y server
-pnpm build:client # Build de producción del frontend
+pnpm typecheck                    # tsc --noEmit en client y server
+pnpm lint                         # eslint en client y server
+pnpm --filter taju-server test    # Vitest + mongod en memoria
+pnpm --filter taju-client test    # Vitest + jsdom
+pnpm build:client                 # Build de producción del frontend
 ```
+
+`husky` corre `typecheck` + `lint` automáticamente antes de cada `git push` (`.husky/pre-push`), instalado solo via `pnpm install`.
 
 ---
 
@@ -92,8 +87,9 @@ Dos roles diferenciados mediante JWT: `cliente` y `administrador`. Las rutas del
 
 | Herramienta | Función |
 |---|---|
-| GitHub Actions (`ci.yml`) | Lint + typecheck + build en cada push y PR a `main` y `dev` |
+| GitHub Actions (`ci.yml`) | Lint + typecheck + test + build en cada push y PR a `main` y `dev` |
 | GitHub Actions (`codeql.yml`) | Análisis estático de seguridad JS/TS (XSS, injection, JWT) |
+| GitGuardian | Escaneo de secretos hardcodeados en cada PR |
 | Dependabot | Actualizaciones semanales de dependencias agrupadas por workspace |
 | CodeRabbit | Revisión automática de PRs con contexto del dominio taju |
 

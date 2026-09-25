@@ -23,6 +23,7 @@ jobs:
       - run: pnpm --filter taju-client lint
       - run: pnpm --filter taju-client typecheck
       - run: pnpm --filter taju-client build
+      - run: pnpm --filter taju-client test
 
   server:
     name: server | lint - typecheck
@@ -37,3 +38,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter taju-server lint
       - run: pnpm --filter taju-server typecheck
+      # levanta mongod en memoria como replica set (mongodb-memory-server); nunca toca Atlas
+      - run: pnpm --filter taju-server test
+      - run: pnpm --filter taju-server build
