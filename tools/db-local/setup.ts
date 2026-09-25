@@ -12,12 +12,13 @@ import type { Model } from 'mongoose'
 
 // [DECISION] Modulo externo que importa los modelos del server en vez de duplicarlos — los indices siguen al schema sin mantenimiento. Si un modelo cambia de ruta, actualizar MODELOS.
 import { Categoria } from '../../server/src/models/Categoria'
+import { IdempotenciaPedido } from '../../server/src/models/IdempotenciaPedido'
 import { Pedido } from '../../server/src/models/Pedido'
 import { Producto } from '../../server/src/models/Producto'
 import { Usuario } from '../../server/src/models/Usuario'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MODELOS: Model<any>[] = [Categoria, Producto, Usuario, Pedido]
+const MODELOS: Model<any>[] = [Categoria, Producto, Usuario, Pedido, IdempotenciaPedido]
 const URI_POR_DEFECTO = 'mongodb://127.0.0.1:27017/taju'
 const HOSTS_LOCALES = ['localhost', '127.0.0.1', '::1', '[::1]', 'mongo', 'host.docker.internal']
 const COMANDOS_DOCKER = [

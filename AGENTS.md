@@ -33,9 +33,13 @@ taju.platform/
 │       ├── lib/                     # utilidades del cliente (api.ts, formatters, etc.)
 │       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
 ├── server/                          # Node.js 20 LTS + Express + TypeScript
-│   ├── tsconfig.json                # CommonJS, compila a dist/
+│   ├── tsconfig.json                # CommonJS, typecheck incluye los *.test.ts
+│   ├── tsconfig.build.json          # build a dist/, excluye tests y src/test/
+│   ├── vitest.config.mts            # entorno node, JWT_SECRET fijo de prueba
 │   └── src/
-│       ├── index.ts                 # arranque del servidor
+│       ├── index.ts                 # arranque: conecta Mongo y escucha
+│       ├── app.ts                   # crearApp(): middleware + rutas, sin puerto (lo usan los tests)
+│       ├── test/                    # helpers de test: mongod en memoria (replica set), fixtures
 │       ├── routes/                  # router raiz, monta cada modulo bajo /api
 │       ├── modules/                 # slice vertical por dominio: auth/, catalog/, pedidos/
 │       │   └── <dominio>/           # *.routes.ts + *.controller.ts + *.service.ts juntos
@@ -50,7 +54,7 @@ taju.platform/
 │   └── branding/                    # fuentes de verdad de marca
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                   # lint | typecheck | build en main y dev
+│       └── ci.yml                   # lint | typecheck | build | test en main y dev
 └── AGENTS.md
 ```
 
@@ -65,13 +69,17 @@ taju.platform/
 | `pnpm dev:client` | Vite dev server (client) | Puerto 5173 por defecto |
 | `pnpm dev:server` | tsx watch (server) | Puerto 3001 por defecto |
 | `pnpm build:client` | tsc + vite build | Correr antes de todo push |
-| `pnpm typecheck` | tsc --noEmit en client y server | Pre-push check |
-| `pnpm lint` | eslint en client y server | Pre-commit check |
+| `pnpm typecheck` | tsc --noEmit en client y server | Corre en el hook pre-push |
+| `pnpm lint` | eslint en client y server | Corre en el hook pre-push |
 | `pnpm --filter taju-client build` | build directo del client | |
-| `pnpm --filter taju-server build` | tsc compila a server/dist/ | |
+| `pnpm --filter taju-server build` | tsc compila a server/dist/ | Usa `tsconfig.build.json` |
+| `pnpm --filter taju-client test` | Vitest + jsdom | `test:watch` para modo interactivo |
+| `pnpm --filter taju-server test` | Vitest + mongod en memoria | Incluye la prueba de carga de pedidos (autocannon) |
 | `pnpm db:local` | Crea colecciones e indices en MongoDB local | Idempotente, rechaza destinos no locales, exige replica set. Ver `tools/db-local/README.md` |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
+
+**Git hooks:** `husky` gestiona `.husky/pre-push`, que corre `pnpm typecheck && pnpm lint` antes de cada `git push`. Se instala solo via el script `prepare` al correr `pnpm install` — no requiere setup manual. Los tests no están en el hook a propósito: `mongodb-memory-server` agrega latencia de arranque en cada corrida y ya los cubre el CI; el hook solo atrapa el error mas comun (uno que CI hubiera atrapado igual) sin frenar cada push.
 
 ### Dangerous Commands
 
@@ -121,6 +129,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
 - **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
+- **Idempotencia en creación de pedidos**: `crearPedido` (`server/src/modules/pedidos/pedidos.service.ts`) reserva una clave (hash del payload completo, incluido el contenido de cada archivo, + clienteId) en la colección `idempotencia_pedidos` dentro de una transacción junto al `Pedido.create`. Un envío idéntico dentro de 60 s recibe 409. Requiere replica set: Atlas M0 sirve, un mongod standalone local no. Si se agrega un campo al payload de creación, sumarlo a `claveIdempotencia()` o dos pedidos distintos colisionan. El perdedor de una carrera simultánea ya subió sus imágenes a Cloudinary antes de perder — el catch de la clave duplicada las borra con `eliminarImagen` (best-effort, no bloquea la respuesta 409 si Cloudinary falla).
 - **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
 - **TypeScript 7 bloqueado por typescript-eslint**: `typescript-eslint@8.x` soporta TS `>=4.8.4 <6.1.0`. Fijado en `6.0.3` hasta que typescript-eslint soporte TS 7 (tracking: [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). No subir `typescript` a `7.x` en ninguno de los dos `package.json` hasta que ese issue esté cerrado.
 - **Tailwind v4 requiere `@tailwindcss/vite`**: El paquete `tailwindcss@4` no incluye plugin PostCSS. La integración es via `@tailwindcss/vite` registrado en `client/vite.config.ts`. `postcss.config.js` tiene solo `autoprefixer`. El CSS usa `@import "tailwindcss"` y el plugin detecta `client/tailwind.config.js` automáticamente — no usar `@config` en el CSS.
@@ -322,10 +331,11 @@ MANUAL ACTION REQUIRED:
 
 ### Test conventions
 
-- Framework: Vitest (client) + Vitest o Jest (server) — por definir al iniciar Phase 1.
-- Mocking de DB: mongodb-memory-server — por definir al iniciar Phase 1.
-- Mocking de Cloudinary: interceptar el módulo de integración completo; nunca hacer llamadas reales en tests.
-- Cobertura objetivo y estructura de carpetas de tests: por definir al iniciar Phase 1.
+- Framework: Vitest en client (jsdom + Testing Library, setup en `client/src/test/setup.ts`) y en server (entorno node).
+- Ubicación: `*.test.ts(x)` junto al archivo que prueban. Helpers compartidos en `src/test/`.
+- Mocking de DB: mongodb-memory-server como `MongoMemoryReplSet` de un nodo (`server/src/test/mongo.ts`), un `beforeAll`/`afterAll` por archivo y `limpiarColecciones()` en `afterEach`. Un standalone rechaza transacciones y `crearPedido` usa una.
+- Mocking de Cloudinary: interceptar el módulo de integración completo con `vi.mock('../../lib/cloudinary.js')`; nunca hacer llamadas reales en tests.
+- Cobertura objetivo: por definir.
 - Cada test debe ser independiente: sin estado compartido entre tests.
 
 ### Validation before claiming done

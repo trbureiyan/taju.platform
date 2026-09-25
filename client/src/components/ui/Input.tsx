@@ -17,7 +17,8 @@ export function Input({ label, error, hint, id, className = '', ...props }: Inpu
   // distintos de la misma pagina) no deben terminar compartiendo id/aria-describedby
   const idGenerado = useId()
   const inputId = id ?? idGenerado
-  const hintId = hint ? `${inputId}-hint` : undefined
+  // mismo criterio que el render de abajo: con error el hint no se pinta, y aria-describedby no puede apuntar a un id ausente
+  const hintId = hint && !error ? `${inputId}-hint` : undefined
   const errorId = error ? `${inputId}-error` : undefined
 
   return (
