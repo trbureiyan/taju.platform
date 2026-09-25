@@ -92,7 +92,7 @@ Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para c
 
 When assigned a task:
 
-1. Leer `AGENTS.md` primero.
+1. Leer `AGENTS.md` primero. Si el trabajo toca infraestructura, despliegue, Atlas, Render, Cloudinary, o cualquier credencial/cuenta de servicio, leer también `.docs/WALKTHROUGH.md` — gitignoreado a propósito, contiene contexto sensible (estado real de accesos, decisiones interinas de seguridad, credenciales de referencia) que nunca se documenta en este archivo ni en ningún archivo versionado del repo público.
 2. Leer el prompt con atención. Identificar el objetivo, las restricciones y el alcance antes de tocar archivos.
 3. Inspeccionar los archivos relevantes con lecturas exactas y dirigidas. No hacer escaneos amplios de directorios cuando se conocen rutas específicas.
 4. Verificar la implementación actual antes de escribir código. Nunca asumir la estructura: inspeccionarla.
@@ -126,7 +126,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Auth / JWT flow**: Token almacenado en memoria del cliente — sin `localStorage`, sin cookies. Al recargar la página el token se pierde; es intencional. Cualquier cambio en la estructura del payload afecta todas las rutas autenticadas. Modulo de auth: `server/src/modules/auth/`.
 - **RBAC**: Dos roles — `cliente` y `administrador`. El middleware de Express valida el rol en rutas de taller. Middleware: `server/src/middleware/rbac.ts`.
 - **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts`.
-- **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible.
+- **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible. Estado real del Network Access, service accounts y cualquier detalle de acceso: `.docs/WALKTHROUGH.md`, nunca acá.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
 - **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
 - **Idempotencia en creación de pedidos**: `crearPedido` (`server/src/modules/pedidos/pedidos.service.ts`) reserva una clave (hash del payload completo, incluido el contenido de cada archivo, + clienteId) en la colección `idempotencia_pedidos` dentro de una transacción junto al `Pedido.create`. Un envío idéntico dentro de 60 s recibe 409. Requiere replica set: Atlas M0 sirve, un mongod standalone local no. Si se agrega un campo al payload de creación, sumarlo a `claveIdempotencia()` o dos pedidos distintos colisionan. El perdedor de una carrera simultánea ya subió sus imágenes a Cloudinary antes de perder — el catch de la clave duplicada las borra con `eliminarImagen` (best-effort, no bloquea la respuesta 409 si Cloudinary falla).
