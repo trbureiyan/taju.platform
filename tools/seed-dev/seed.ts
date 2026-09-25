@@ -84,24 +84,11 @@ function resolverUri(): string {
   throw new Error('No hay MONGO_URI disponible (ni --uri, ni env de la shell, ni server/.env)')
 }
 
-function nombreDeBase(uri: string): string {
-  const sinQuery = uri.split('?')[0]
-  return sinQuery.slice(sinQuery.lastIndexOf('/') + 1)
-}
-
 async function main(): Promise<number> {
   paso(1, 'Destino')
   const uri = resolverUri()
   const visible = uri.replace(/\/\/[^@]*@/, '//***@')
-  const base = nombreDeBase(uri)
   console.log(`    ${visible}`)
-  console.log(`    base: "${base}"`)
-  const esProduccion = base === 'taju-prod'
-  if (esProduccion && !args.includes('--permitir-prod')) {
-    console.error('    Destino es taju-prod. Sin --permitir-prod, este script no lo toca. Pensado para cargar el catalogo real antes de un lanzamiento, no para datos de prueba - ver AGENTS.md antes de usar esta bandera.')
-    return 1
-  }
-  if (esProduccion) console.error('    [!] ATENCION: destino es produccion. Esto va a crear datos reales visibles para clientes.')
 
   paso(2, 'Conexion')
   try {
@@ -110,7 +97,17 @@ async function main(): Promise<number> {
     console.error('    No se pudo conectar a ese destino.')
     return 1
   }
-  console.log(`    OK, conectado a "${Usuario.db.name}"`)
+  // [DECISION] el nombre de base autoritativo es el que reporta el driver ya conectado, no uno parseado
+  // a mano de la URI antes de conectar - una URI con la base codificada de forma distinta podria hacer
+  // que el parseo manual no coincida con la base real a la que Mongo termina resolviendo, evadiendo la guarda
+  const base = Usuario.db.name
+  console.log(`    OK, conectado a "${base}"`)
+  const esProduccion = base === 'taju-prod'
+  if (esProduccion && !args.includes('--permitir-prod')) {
+    console.error('    Destino es taju-prod. Sin --permitir-prod, este script no lo toca. Pensado para cargar el catalogo real antes de un lanzamiento, no para datos de prueba - ver AGENTS.md antes de usar esta bandera.')
+    return 1
+  }
+  if (esProduccion) console.error('    [!] ATENCION: destino es produccion. Esto va a crear datos reales visibles para clientes.')
 
   paso(3, 'Plan')
   for (const c of CATEGORIAS) {
