@@ -9,6 +9,7 @@
     "typecheck": "pnpm --filter taju-client typecheck && pnpm --filter taju-server typecheck",
     "lint": "pnpm --filter taju-client lint && pnpm --filter taju-server lint",
     "db:local": "pnpm --filter taju-server exec tsx ../tools/db-local/setup.ts",
+    "seed:dev": "pnpm --filter taju-server exec tsx ../tools/seed-dev/seed.ts",
     "prepare": "husky"
   },
   "engines": {
