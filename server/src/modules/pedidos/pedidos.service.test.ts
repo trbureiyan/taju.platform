@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
-import { Types } from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 import { crearPedido, updateEstado } from './pedidos.service.js'
 import { Pedido } from '../../models/Pedido.js'
 import { AppError } from '../../lib/errors.js'
@@ -178,6 +178,48 @@ describe('crearPedido', () => {
     expect(rechazos).toHaveLength(1)
     expect(eliminarImagen).toHaveBeenCalledOnce()
     expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
+  })
+
+  // hallazgo de la revision de seguridad en PR #65: con Promise.all, una subida que si termino entre
+  // varias en paralelo quedaba sin ninguna referencia (la asignacion completa nunca sucedia) y jamas se limpiaba
+  it('si una subida falla y otra tuvo exito, limpia la que si subio y propaga el error', async () => {
+    const { input } = await pedidoBase()
+    const archivo1 = { originalname: 'a.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+    const archivo2 = { originalname: 'b.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+
+    vi.mocked(subirImagen)
+      .mockResolvedValueOnce({ url: 'https://res.cloudinary.test/a.jpg', publicId: 'taju/pedidos/a' })
+      .mockRejectedValueOnce(new Error('cloudinary caido'))
+
+    await expect(
+      crearPedido({ ...input, archivos: [archivo1, archivo2] as Express.Multer.File[] }),
+    ).rejects.toThrow('cloudinary caido')
+
+    expect(eliminarImagen).toHaveBeenCalledOnce()
+    expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/a')
+    expect(await Pedido.countDocuments()).toBe(0)
+  })
+
+  // hallazgo de la revision de seguridad en PR #65: withTransaction puede lanzar por un commit ambiguo
+  // (UnknownTransactionCommitResult) aunque el pedido haya quedado creado de verdad - no hay que borrar
+  // sus imagenes como si hubiera fallado
+  it('si el commit es ambiguo pero el pedido ya se creo, lo devuelve sin borrar sus imagenes', async () => {
+    const { input } = await pedidoBase()
+    const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+
+    const sesionReal = await mongoose.startSession()
+    const withTransactionOriginal = sesionReal.withTransaction.bind(sesionReal)
+    vi.spyOn(sesionReal, 'withTransaction').mockImplementationOnce(async (fn) => {
+      await withTransactionOriginal(fn)
+      throw new Error('UnknownTransactionCommitResult simulado')
+    })
+    vi.spyOn(mongoose, 'startSession').mockResolvedValueOnce(sesionReal)
+
+    const pedido = await crearPedido({ ...input, archivos: [archivo as Express.Multer.File] })
+
+    expect(pedido).toBeTruthy()
+    expect(eliminarImagen).not.toHaveBeenCalled()
+    expect(await Pedido.countDocuments()).toBe(1)
   })
 
   it('50 envios concurrentes del mismo pedido dejan exactamente uno', async () => {

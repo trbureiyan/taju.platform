@@ -89,19 +89,32 @@ export async function crearPedido(input: CrearPedidoInput) {
   // arriesga el limite de 60s de Mongo. Tradeoff: el perdedor de una carrera simultanea sube igual sus imagenes;
   // se limpian en el catch de abajo apenas se confirma que perdio, asi que quedan huerfanas solo el tiempo
   // que dura esa subida, no indefinidamente.
-  // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
-  const imagenesReferencia = await Promise.all(
+  interface ImagenSubida {
+    nombreOriginal: string
+    mimeType: 'image/jpeg'
+    tamano: number
+    url: string
+    publicId: string
+  }
+
+  // [DECISION] allSettled y no Promise.all - con all, si una de varias subidas paralelas falla, las que
+  // si terminaron quedan sin ninguna referencia (la asignacion completa nunca sucede) y jamas se limpian.
+  // Con allSettled se sabe cuales terminaron para poder borrarlas antes de propagar el error.
+  const resultadosSubida = await Promise.allSettled<ImagenSubida>(
     input.archivos.map(async (file) => {
       const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
-      return {
-        nombreOriginal: file.originalname,
-        mimeType: 'image/jpeg' as const,
-        tamano: file.size,
-        url,
-        publicId,
-      }
+      return { nombreOriginal: file.originalname, mimeType: 'image/jpeg', tamano: file.size, url, publicId }
     }),
   )
+  const subidasExitosas = resultadosSubida
+    .filter((r): r is PromiseFulfilledResult<ImagenSubida> => r.status === 'fulfilled')
+    .map((r) => r.value)
+  const subidaFallida = resultadosSubida.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+  if (subidaFallida) {
+    await Promise.allSettled(subidasExitosas.map((img) => eliminarImagen(img.publicId)))
+    throw subidaFallida.reason
+  }
+  const imagenesReferencia = subidasExitosas
 
   // [DECISION] withTransaction en vez de startTransaction/commit a mano - reintenta solo ante
   // TransientTransactionError, que es justo lo que recibe el perdedor de dos inserts simultaneos de la misma
@@ -121,6 +134,13 @@ export async function crearPedido(input: CrearPedidoInput) {
       await Pedido.create([armarPedido(pedidoId, input, producto, categoria, imagenesReferencia)], { session })
     })
   } catch (err) {
+    // [DECISION] withTransaction puede lanzar por UnknownTransactionCommitResult aunque el commit haya
+    // quedado aplicado en el servidor (ambiguedad de red justo despues de confirmar). Antes de asumir que
+    // el pedido no se creo y borrar sus imagenes, verificamos el estado real en vez de confiar en la excepcion.
+    if (pedidoId) {
+      const pedidoQuizasCreado = await Pedido.findById(pedidoId)
+      if (pedidoQuizasCreado) return pedidoQuizasCreado
+    }
     // la transaccion no se confirmo, sea por clave duplicada o cualquier otra causa (validacion,
     // TransientTransactionError agotado, fallo de commit) - las imagenes ya subidas quedan sin
     // pedido que las referencie. allSettled a proposito: si Cloudinary falla ahora, igual
