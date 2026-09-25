@@ -1,0 +1,4 @@
+# test queda fuera a propósito: mongodb-memory-server agrega latencia de arranque
+# en cada corrida, y eso ya lo cubre CI. typecheck + lint son rápidos y evitan
+# el round-trip mas comun (un error que CI hubiera atrapado igual).
+pnpm typecheck && pnpm lint
