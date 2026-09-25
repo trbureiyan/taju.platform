@@ -4,7 +4,7 @@ import { Pedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
-import { subirImagen } from '../../lib/cloudinary.js'
+import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 
@@ -19,7 +19,9 @@ const MENSAJE_PEDIDO_DUPLICADO =
 // [DECISION] clave = hash de clienteId + productoId + fechaEntrega + el resto de la especificacion, no solo los
 // tres primeros - un doble click o un reintento mandan el payload identico, asi que igual se detectan, y un
 // cliente profesional que pide dos variantes del mismo producto para la misma fecha no queda bloqueado.
-// Las imagenes quedan fuera de la clave: un reintento las reenvia iguales y hashear buffers de 5 MB no aporta.
+// Los archivos entran como hash de su contenido, no como nombre/tamano: dos pedidos con el mismo texto pero
+// fotos de referencia distintas son pedidos distintos, y metadata (nombre, peso) no lo garantiza igual que el
+// contenido. El hash es rapido (sha256 sobre <=3 buffers de max 5 MB), no vale la pena optimizarlo.
 function claveIdempotencia(input: CrearPedidoInput): string {
   const partes = [
     input.clienteId,
@@ -32,6 +34,7 @@ function claveIdempotencia(input: CrearPedidoInput): string {
     input.cantidad,
     input.colores.trim(),
     input.materiales.trim(),
+    input.archivos.map((archivo) => createHash('sha256').update(archivo.buffer).digest('hex')),
   ]
   return createHash('sha256').update(JSON.stringify(partes)).digest('hex')
 }
@@ -54,6 +57,14 @@ interface CrearPedidoInput {
   archivos: Express.Multer.File[]
 }
 
+/**
+ * Crea un pedido nuevo con sus imagenes de referencia, protegido contra duplicados.
+ * @param input - Datos del formulario de pedido, incluidos los archivos ya validados por uploadImagen.
+ * @returns El documento del pedido recien creado.
+ * @throws AppError(400) si la categoria o el producto no existen o estan inactivos.
+ * @throws AppError(409) si el mismo pedido (mismo cliente, especificacion y archivos) ya se recibio
+ *         en los ultimos 60 s - ver claveIdempotencia.
+ */
 export async function crearPedido(input: CrearPedidoInput) {
   // no se puede pedir sobre una categoria borrada ni pausada - evita pedidos huerfanos de algo que ya no se vende
   const categoria = await Categoria.findById(input.categoriaId)
@@ -75,15 +86,21 @@ export async function crearPedido(input: CrearPedidoInput) {
   if (reservaVigente) throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
 
   // [DECISION] las subidas van antes y fuera de la transaccion - una transaccion abierta durante I/O externo
-  // arriesga el limite de 60s de Mongo. Tradeoff: duplicados simultaneos pueden dejar imagenes huerfanas en Cloudinary.
+  // arriesga el limite de 60s de Mongo. Tradeoff: el perdedor de una carrera simultanea sube igual sus imagenes;
+  // se limpian en el catch de abajo apenas se confirma que perdio, asi que quedan huerfanas solo el tiempo
+  // que dura esa subida, no indefinidamente.
   // Promise.all para subir las referencias en paralelo, son maximo 3 asi que no vale la pena serializar
   const imagenesReferencia = await Promise.all(
-    input.archivos.map(async (file) => ({
-      nombreOriginal: file.originalname,
-      mimeType: 'image/jpeg' as const,
-      tamano: file.size,
-      url: await subirImagen(file.buffer, file.mimetype),
-    })),
+    input.archivos.map(async (file) => {
+      const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
+      return {
+        nombreOriginal: file.originalname,
+        mimeType: 'image/jpeg' as const,
+        tamano: file.size,
+        url,
+        publicId,
+      }
+    }),
   )
 
   // [DECISION] withTransaction en vez de startTransaction/commit a mano - reintenta solo ante
@@ -107,13 +124,22 @@ export async function crearPedido(input: CrearPedidoInput) {
     if (!pedido) throw new Error('Pedido confirmado en la transaccion pero no encontrado')
     return pedido
   } catch (err) {
-    if (esClaveDuplicada(err)) throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
+    if (esClaveDuplicada(err)) {
+      // perdio la carrera de idempotencia: sus imagenes ya subieron pero ningun pedido las va a referenciar.
+      // allSettled a proposito - si Cloudinary falla ahora igual devolvemos 409, no lo escalamos a 500
+      await Promise.allSettled(imagenesReferencia.map((img) => eliminarImagen(img.publicId)))
+      throw new AppError(409, MENSAJE_PEDIDO_DUPLICADO)
+    }
     throw err
   } finally {
     await session.endSession()
   }
 }
 
+/**
+ * Arma el documento de pedido a partir del input validado y los snapshots de producto/categoria.
+ * No toca la base de datos - solo construye el objeto que crearPedido persiste dentro de la transaccion.
+ */
 function armarPedido(
   pedidoId: Types.ObjectId,
   input: CrearPedidoInput,

@@ -9,7 +9,8 @@ import { conectarMongoDePrueba, desconectarMongoDePrueba } from '../../test/mong
 import { crearCatalogoYCliente } from '../../test/fixtures.js'
 
 vi.mock('../../lib/cloudinary.js', () => ({
-  subirImagen: vi.fn(async () => 'https://res.cloudinary.test/taju/pedidos/ref.jpg'),
+  subirImagen: vi.fn(async () => ({ url: 'https://res.cloudinary.test/taju/pedidos/ref.jpg', publicId: 'taju/pedidos/ref' })),
+  eliminarImagen: vi.fn(async () => undefined),
 }))
 
 const CONCURRENCIA = 50

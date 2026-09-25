@@ -3,14 +3,15 @@ import { Types } from 'mongoose'
 import { crearPedido, updateEstado } from './pedidos.service.js'
 import { Pedido } from '../../models/Pedido.js'
 import { AppError } from '../../lib/errors.js'
-import { subirImagen } from '../../lib/cloudinary.js'
+import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba, limpiarColecciones } from '../../test/mongo.js'
 import { crearCatalogoYCliente, inputPedido } from '../../test/fixtures.js'
 
 // politica de AGENTS.md: ninguna llamada real a Cloudinary en tests
 vi.mock('../../lib/cloudinary.js', () => ({
-  subirImagen: vi.fn(async () => 'https://res.cloudinary.test/taju/pedidos/ref.jpg'),
+  subirImagen: vi.fn(async () => ({ url: 'https://res.cloudinary.test/taju/pedidos/ref.jpg', publicId: 'taju/pedidos/ref' })),
+  eliminarImagen: vi.fn(async () => undefined),
 }))
 
 beforeAll(conectarMongoDePrueba)
@@ -163,6 +164,20 @@ describe('crearPedido', () => {
     await expect(crearPedido(conArchivo)).rejects.toMatchObject({ status: 409 })
 
     expect(subirImagen).not.toHaveBeenCalled()
+  })
+
+  // el perdedor de una carrera simultanea ya subio su imagen antes de perder - no debe quedar huerfana
+  it('limpia en Cloudinary las imagenes del perdedor de una carrera con archivos', async () => {
+    const { input } = await pedidoBase()
+    const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+    const conArchivo = { ...input, archivos: [archivo as Express.Multer.File] }
+
+    const resultados = await Promise.allSettled([crearPedido(conArchivo), crearPedido(conArchivo)])
+
+    const rechazos = resultados.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+    expect(rechazos).toHaveLength(1)
+    expect(eliminarImagen).toHaveBeenCalledOnce()
+    expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
   })
 
   it('50 envios concurrentes del mismo pedido dejan exactamente uno', async () => {

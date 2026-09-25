@@ -304,7 +304,7 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 | CORS | Configuración permisiva en dev | `cors()` sin restricción de origen en `server/src/app.ts` durante etapas de desarrollo | Aceptado temporalmente; parametrizar con `CLIENT_ORIGIN` en variables de entorno al fijar dominio de producción |
 | Catálogo | Miniatura por orden de arreglo | La primera imagen del arreglo `imagenes[0]` actúa como portada del producto | Mitigado por convención operativa de carga; evaluar selector explícito de imagen principal a futuro |
 | Testing Suite | Sin E2E ni cobertura mínima exigida | Vitest cubre unidades e integración (server con mongodb-memory-server, client con jsdom + Testing Library) y corre en CI; no hay pruebas de navegador real | Definir umbral de cobertura y evaluar E2E cuando el flujo de pedidos se estabilice |
-| Pedidos | Imágenes huérfanas ante duplicados simultáneos | `crearPedido` sube a Cloudinary antes de la transacción; si dos envíos idénticos llegan a la vez, el perdedor recibe 409 pero sus imágenes ya quedaron subidas | Aceptado: el chequeo previo de la clave corta los reintentos secuenciales; limpieza de huérfanos pendiente |
+| Pedidos | Ventana breve de imagen huérfana en carreras simultáneas | `crearPedido` sube a Cloudinary antes de la transacción; si dos envíos idénticos llegan a la vez, el perdedor recibe 409 y `eliminarImagen` borra sus imágenes en el catch (best-effort, `Promise.allSettled`) | Mitigado: el chequeo previo corta reintentos secuenciales y el catch limpia el caso simultáneo. Si el borrado en Cloudinary falla, queda huérfana igual — sin reintento ni job de barrido |
 
 ---
 

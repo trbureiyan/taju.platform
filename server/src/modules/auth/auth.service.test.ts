@@ -43,7 +43,7 @@ describe('registrar', () => {
 
   // dos registros simultaneos pasan el findOne antes de que alguno inserte: el indice unico es la ultima defensa
   it('traduce la colision E11000 a AppError(409)', async () => {
-    await Usuario.create({ nombre: 'Ana', email: 'ana@taju.co', password: 'hash-cualquiera' })
+    await Usuario.create({ nombre: 'Ana', email: 'ana@taju.co', password: 'fixture-no-es-un-hash-real' })
     // findOne devuelve una Query (thenable); null alcanza porque el service solo hace await sobre ella
     vi.spyOn(Usuario, 'findOne').mockReturnValueOnce(null as never)
 
