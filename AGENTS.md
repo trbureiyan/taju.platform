@@ -63,12 +63,14 @@ taju.platform/
 | `pnpm dev:client` | Vite dev server (client) | Puerto 5173 por defecto |
 | `pnpm dev:server` | tsx watch (server) | Puerto 3001 por defecto |
 | `pnpm build:client` | tsc + vite build | Correr antes de todo push |
-| `pnpm typecheck` | tsc --noEmit en client y server | Pre-push check |
-| `pnpm lint` | eslint en client y server | Pre-commit check |
+| `pnpm typecheck` | tsc --noEmit en client y server | Corre en el hook pre-push |
+| `pnpm lint` | eslint en client y server | Corre en el hook pre-push |
 | `pnpm --filter taju-client build` | build directo del client | |
 | `pnpm --filter taju-server build` | tsc compila a server/dist/ | |
 
 Workspaces: `pnpm --filter taju-client <script>` o `--filter taju-server` para correr un solo lado.
+
+**Git hooks:** `husky` gestiona `.husky/pre-push`, que corre `pnpm typecheck && pnpm lint` antes de cada `git push`. Se instala solo via el script `prepare` al correr `pnpm install` — no requiere setup manual. Los tests no están en el hook a propósito: `mongodb-memory-server` agrega latencia de arranque en cada corrida y ya los cubre el CI; el hook solo atrapa el error mas comun (uno que CI hubiera atrapado igual) sin frenar cada push.
 
 ### Dangerous Commands
 

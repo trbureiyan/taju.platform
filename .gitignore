@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # internal docs
 .docs/
+
+# worktrees efimeros de agentes de Claude Code, no son parte del proyecto
+.claude/worktrees/
