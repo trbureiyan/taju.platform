@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { FiltroFamilia } from '../components/catalog/FiltroFamilia'
 import { FiltroOcasion } from '../components/catalog/FiltroOcasion'
 import { ProductoCard } from '../components/catalog/ProductoCard'
 import { useCatalogo } from '../hooks/useCatalogo'
+import { familiaDesdeParam } from '../lib/familia'
 import type { Familia } from '../types'
 
 export function CatalogoPage() {
-  const [familia, setFamilia] = useState<Familia | null>(null)
+  // la familia vive en la URL: la Vitrina enlaza directo a /catalogo?familia=... y el filtro sobrevive a recargas
+  const [params, setParams] = useSearchParams()
+  const familia = familiaDesdeParam(params.get('familia'))
+
+  function cambiarFamilia(nueva: Familia | null) {
+    setParams(nueva ? { familia: nueva } : {})
+  }
+
   const [ocasion, setOcasion] = useState<string | null>(null)
   const { productos, cargando, error } = useCatalogo(familia)
 
@@ -30,7 +39,7 @@ export function CatalogoPage() {
       <h1 className="text-2xl font-semibold text-texto-principal mb-6">Catálogo</h1>
 
       <div className="flex flex-col gap-4">
-        <FiltroFamilia seleccionada={familia} onChange={setFamilia} />
+        <FiltroFamilia seleccionada={familia} onChange={cambiarFamilia} />
         <FiltroOcasion ocasiones={ocasiones} seleccionada={ocasion} onChange={setOcasion} />
       </div>
 
@@ -44,7 +53,7 @@ export function CatalogoPage() {
           <div role="alert" className="rounded-tarjeta border border-error-borde bg-error-fondo p-4">
             <p className="text-sm font-medium text-error-texto">No pudimos cargar el catálogo</p>
             <p className="text-sm text-error-texto mt-1">
-              Hubo un problema al conectar con el servidor. Intentá de nuevo en unos segundos.
+              Tuvimos un problema para traer los productos. Prueba de nuevo en unos segundos.
             </p>
           </div>
         )}
