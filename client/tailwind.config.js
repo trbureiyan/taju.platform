@@ -145,10 +145,21 @@ export default {
         'tarjeta-hover': 'var(--sombra-md)',
       },
       maxWidth: { prosa: 'var(--medida-linea)', contenedor: 'var(--ancho-maximo)' },
+      // unica escala de "presion" del sistema - feedback tactil de M3 Expressive en botones, chips y tarjetas.
+      // no es un token de tokens.css porque scale es adimensional, no una medida de la paleta de espaciado/color
+      scale: {
+        97: '0.97',
+      },
       transitionDuration: {
         rapida: 'var(--duracion-rapida)',
         normal: 'var(--duracion-normal)',
         lenta: 'var(--duracion-lenta)',
+      },
+      // curva-estandar existia en tokens.css pero nunca se expuso a Tailwind - los componentes solo tenian
+      // acceso a duration-*, cayendo al ease-in-out generico de Tailwind en vez de la curva de marca
+      transitionTimingFunction: {
+        estandar: 'var(--curva-estandar)',
+        entrada: 'var(--curva-entrada)',
       },
       // [DECISION] los breakpoints quedan como numeros literales, no var(--bp-*): una @media condition se evalua
       // antes de que el CSS custom property exista, asi que Tailwind no puede leer el token aqui. Si cambia
