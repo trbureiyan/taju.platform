@@ -69,7 +69,9 @@ export function ProductoDetailPage() {
 
         <div className="flex flex-col gap-4">
           <div>
-            <span className="text-xs font-medium text-accion uppercase tracking-wide">
+            {/* chip con fondo, no texto amarillo plano: --accion-fondo sobre blanco da ~1.6:1 de contraste,
+            ilegible para texto pequeno. Familia es dato de contexto (turquesa), no una accion (amarillo) */}
+            <span className="inline-block text-xs font-medium text-contexto-texto bg-contexto-suave uppercase tracking-wide px-2 py-0.5 rounded-full">
               {ETIQUETAS_FAMILIA[producto.categoria.familia]}
             </span>
             <h1 className="text-h2 font-semibold text-texto-principal mt-1">

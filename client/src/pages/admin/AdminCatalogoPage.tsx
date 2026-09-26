@@ -76,8 +76,22 @@ function FormProducto({
   const [nombre, setNombre] = useState('')
   const [descripcionTecnica, setDescripcionTecnica] = useState('')
   const [categoriaId, setCategoriaId] = useState('')
+  // pares libres (material, acabado, ocasion, etc) - el modelo ya los soporta como Map, faltaba la UI para cargarlos
+  const [specs, setSpecs] = useState<{ clave: string; valor: string }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
+
+  function agregarSpec() {
+    setSpecs((prev) => [...prev, { clave: '', valor: '' }])
+  }
+
+  function actualizarSpec(i: number, campo: 'clave' | 'valor', valor: string) {
+    setSpecs((prev) => prev.map((s, idx) => (idx === i ? { ...s, [campo]: valor } : s)))
+  }
+
+  function quitarSpec(i: number) {
+    setSpecs((prev) => prev.filter((_, idx) => idx !== i))
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -85,15 +99,21 @@ function FormProducto({
     setError(null)
     setCargando(true)
     try {
+      // claves vacias se descartan - un renglon a medio llenar no debe mandar basura al Map del backend
+      const especificacionesTecnicas = Object.fromEntries(
+        specs.filter((s) => s.clave.trim()).map((s) => [s.clave.trim(), s.valor.trim()]),
+      )
       // [!] sin campo de imagenes: el producto se crea con imagenes: [] (ver Producto.ts) y ProductoCard
       // cae al placeholder hasta que alguien las agregue por otro medio - no hay upload de fotos de producto en admin
       const creado = await api.post<Producto>('/productos', {
         nombre,
         descripcionTecnica,
         categoria: categoriaId,
+        especificacionesTecnicas,
       })
       setNombre('')
       setDescripcionTecnica('')
+      setSpecs([])
       onCreado(creado)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear producto')
@@ -127,6 +147,38 @@ function FormProducto({
         value={descripcionTecnica}
         onChange={(e) => setDescripcionTecnica(e.target.value)}
       />
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm text-texto-secundario">Especificaciones (opcional)</label>
+        {specs.map((s, i) => (
+          <div key={i} className="flex gap-2 items-start">
+            <input
+              placeholder="Clave (ej. ocasion, material)"
+              value={s.clave}
+              onChange={(e) => actualizarSpec(i, 'clave', e.target.value)}
+              className="flex-1 border border-borde-defecto rounded px-3 py-2 text-sm bg-superficie-base text-texto-principal"
+            />
+            <input
+              placeholder="Valor (ej. cumpleanos)"
+              value={s.valor}
+              onChange={(e) => actualizarSpec(i, 'valor', e.target.value)}
+              className="flex-1 border border-borde-defecto rounded px-3 py-2 text-sm bg-superficie-base text-texto-principal"
+            />
+            <button
+              type="button"
+              onClick={() => quitarSpec(i)}
+              aria-label="Quitar especificación"
+              className="text-xs px-3 py-2 rounded border border-borde-defecto text-texto-secundario hover:border-error-borde hover:text-error-texto"
+            >
+              Quitar
+            </button>
+          </div>
+        ))}
+        <Button type="button" variante="secundario" tamano="sm" onClick={agregarSpec} className="self-start">
+          Agregar especificación
+        </Button>
+      </div>
+
       {error && <p className="text-sm text-error-texto">{error}</p>}
       <Button type="submit" cargando={cargando}>Crear producto</Button>
     </form>

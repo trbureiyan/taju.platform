@@ -35,7 +35,7 @@ export function MisPedidosPage() {
           <p className="text-texto-secundario">Aún no tenés pedidos.</p>
           <Link
             to="/catalogo"
-            className="text-sm font-medium text-accion hover:underline"
+            className="text-sm font-medium text-texto-principal hover:underline"
           >
             Explorar el catálogo
           </Link>
