@@ -48,8 +48,10 @@ export function Button({
       disabled={disabled || cargando} // cargando bloquea el click aunque nadie haya pasado disabled explicito
       aria-busy={cargando}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-boton font-medium transition-colors',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        // press feedback de M3 Expressive: leve reduccion de escala en :active, no solo cambio de color
+        'inline-flex items-center justify-center gap-2 rounded-boton font-medium',
+        'transition-[background-color,transform] duration-normal ease-estandar active:scale-97',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
         estilosVariante[variante],
         estilosTamano[tamano],
         className,
