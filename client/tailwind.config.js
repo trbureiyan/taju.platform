@@ -177,6 +177,16 @@ export default {
           '0%': { clipPath: 'inset(0 100% 0 0)' },
           '70%, 100%': { clipPath: 'inset(0 0 0 0)' },
         },
+        // la tarjeta del hero entra primero y sola: titular y boton usables desde el primer instante
+        aparecer: {
+          '0%': { opacity: '0', transform: 'translateY(var(--space-2))' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // la pista tiene el texto dos veces: al llegar a -50% el reinicio es invisible
+        cinta: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
         'corte-linea': {
           '0%': { transform: 'translateX(0)', opacity: '1' },
           '70%': { transform: 'translateX(100%)', opacity: '1' },
@@ -186,6 +196,11 @@ export default {
       animation: {
         corte: 'corte var(--duracion-trazo) var(--curva-estandar) infinite',
         'corte-linea': 'corte-linea var(--duracion-trazo) var(--curva-estandar) infinite',
+        // revelado de una sola vez: la pieza del escenario sale del corte al cambiar de familia
+        revelar: 'corte var(--duracion-lenta) var(--curva-entrada) both',
+        aparecer: 'aparecer var(--duracion-normal) var(--curva-entrada) both',
+        // lineal a proposito: una marquesina con curva acelera y frena, y se lee como tropiezo
+        cinta: 'cinta var(--duracion-cinta) linear infinite',
       },
       // [DECISION] los breakpoints quedan como numeros literales, no var(--bp-*): una @media condition se evalua
       // antes de que el CSS custom property exista, asi que Tailwind no puede leer el token aqui. Si cambia

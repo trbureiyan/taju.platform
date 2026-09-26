@@ -11,7 +11,8 @@ export function Nav() {
       <div className="w-full max-w-contenedor mx-auto px-4 min-h-[64px] flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2">
         {/* 32px de alto, por encima del umbral de 120px de ancho donde tocaria el isotipo solo */}
         <Link to="/" aria-label="TaJú — inicio">
-          <img src="/brand/taju-imagotipo.svg" alt="TaJú" className="h-8 w-auto" />
+          {/* el SVG tiene viewBox cuadrado con aire arriba y abajo: object-cover recorta ese aire sin editar el archivo de marca */}
+          <img src="/brand/taju-imagotipo.svg" alt="TaJú" className="w-36 h-12 object-cover" />
         </Link>
 
         <nav className="flex items-center gap-4">

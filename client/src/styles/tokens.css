@@ -90,6 +90,7 @@
   --duracion-normal: 200ms;
   --duracion-lenta: 320ms;
   --duracion-trazo: 1600ms; /* bucles de espera (corte del isotipo) - no es transicion de interfaz */
+  --duracion-cinta: 40s; /* una vuelta completa de la cinta de la Vitrina: lenta a proposito, es ritmo y no informacion */
   --curva-estandar: cubic-bezier(0.2, 0, 0, 1);
   --curva-entrada: cubic-bezier(0, 0, 0, 1);
 

@@ -13,8 +13,8 @@ export function Footer() {
     <footer className="bg-superficie-invertida text-texto-invertido">
       <div className="w-full max-w-contenedor mx-auto px-4 py-12 flex flex-col gap-8 md:flex-row md:justify-between">
         <div className="flex items-center gap-4">
-          {/* la variante monocromatica existe para fondos oscuros; 48px, por encima del minimo de 24 */}
-          <img src="/brand/taju-isotipo-monocromático.svg" alt="" className="w-12 h-12" />
+          {/* el monocromatico viene en trazo oscuro: sobre tinta se invierte a blanco. 48px, por encima del minimo de 24 */}
+          <img src="/brand/taju-isotipo-monocromático.svg" alt="" className="w-12 h-12 brightness-0 invert" />
           <p className="font-semibold">TaJú · Papelería Creativa</p>
         </div>
 
