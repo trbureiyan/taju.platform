@@ -9,7 +9,7 @@ vi.mock('../hooks/useCatalogo', () => ({ useCatalogo: vi.fn() }))
 
 function Ubicacion() {
   const { search } = useLocation()
-  return <output data-testid="ubicacion">{search}</output>
+  return <span data-testid="ubicacion">{search}</span>
 }
 
 function renderCatalogo(entrada: string) {
@@ -65,5 +65,14 @@ describe('CatalogoPage | familia en la URL', () => {
     renderCatalogo('/catalogo')
     const alerta = screen.getByRole('alert')
     expect(alerta).not.toHaveTextContent(/intentá|servidor/i)
+  })
+})
+
+describe('CatalogoPage | espera', () => {
+  it('mientras carga usa EsperaTaller (region de estado)', () => {
+    vi.mocked(useCatalogo).mockReturnValue({ productos: [], cargando: true, error: null })
+    renderCatalogo('/catalogo')
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByText('Cargando productos...')).not.toBeInTheDocument()
   })
 })

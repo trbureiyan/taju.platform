@@ -171,6 +171,22 @@ export default {
         estandar: 'var(--curva-estandar)',
         entrada: 'var(--curva-entrada)',
       },
+      // "del trazo a la pieza": la pieza se descubre detras de la linea del laser que avanza
+      keyframes: {
+        corte: {
+          '0%': { clipPath: 'inset(0 100% 0 0)' },
+          '70%, 100%': { clipPath: 'inset(0 0 0 0)' },
+        },
+        'corte-linea': {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '70%': { transform: 'translateX(100%)', opacity: '1' },
+          '100%': { transform: 'translateX(100%)', opacity: '0' },
+        },
+      },
+      animation: {
+        corte: 'corte var(--duracion-trazo) var(--curva-estandar) infinite',
+        'corte-linea': 'corte-linea var(--duracion-trazo) var(--curva-estandar) infinite',
+      },
       // [DECISION] los breakpoints quedan como numeros literales, no var(--bp-*): una @media condition se evalua
       // antes de que el CSS custom property exista, asi que Tailwind no puede leer el token aqui. Si cambia
       // --bp-* en tokens.css hay que cambiar este bloque a mano - son los mismos 4 valores en los dos archivos.

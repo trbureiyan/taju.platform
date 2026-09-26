@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { FiltroFamilia } from '../components/catalog/FiltroFamilia'
 import { FiltroOcasion } from '../components/catalog/FiltroOcasion'
 import { ProductoCard } from '../components/catalog/ProductoCard'
+import { EsperaTaller } from '../components/shared/EsperaTaller'
 import { useCatalogo } from '../hooks/useCatalogo'
 import { familiaDesdeParam } from '../lib/familia'
 import type { Familia } from '../types'
@@ -45,9 +46,7 @@ export function CatalogoPage() {
 
       {/* cuatro estados excluyentes: cargando / error / vacio / con resultados - solo uno se pinta a la vez */}
       <div className="mt-8">
-        {cargando && (
-          <p className="text-texto-secundario">Cargando productos...</p>
-        )}
+        {cargando && <EsperaTaller />}
 
         {error && (
           <div role="alert" className="rounded-tarjeta border border-error-borde bg-error-fondo p-4">
