@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
 import { Layout } from './components/shared/Layout'
 import { ProtectedRoute } from './components/shared/ProtectedRoute'
@@ -109,6 +110,7 @@ export default function App() {
           </BrowserRouter>
         </LazyMotion>
       </MotionConfig>
+      <Analytics />
     </AuthProvider>
   )
 }
