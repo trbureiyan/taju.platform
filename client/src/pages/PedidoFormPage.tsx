@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
 import type { Producto, Pedido } from '../types'
 import { ETIQUETAS_FAMILIA } from '../types'
 import { calcularPrecioTotal } from '../lib/precio'
@@ -188,6 +189,16 @@ export function PedidoFormPage() {
 
   // pantalla de exito reemplaza el formulario entero, no se muestran los dos a la vez
   if (pedidoCreado) {
+    // mismo formato de fecha que MisPedidosPage/AdminPedidosPage - "a coordinar" si no se eligio fecha
+    const fechaTexto = pedidoCreado.fechaEntrega
+      ? new Date(pedidoCreado.fechaEntrega).toLocaleDateString('es-CO', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+        })
+      : 'a coordinar'
+    const mensajeWhatsApp = `Hola, quiero confirmar mi pedido #${pedidoCreado._id} de ${pedidoCreado.producto.nombre}. Fecha de entrega: ${fechaTexto}.`
+
     return (
       <div className="max-w-md mx-auto text-center py-12 flex flex-col gap-6">
         <div className="rounded-tarjeta bg-exito-fondo border border-exito-borde p-6">
@@ -207,6 +218,10 @@ export function PedidoFormPage() {
             Seguir viendo
           </Button>
         </div>
+        {/* canal complementario - el pedido ya quedo registrado en la plataforma con trazabilidad, esto es para dudas puntuales */}
+        <BotonWhatsApp variante="linea" mensaje={mensajeWhatsApp}>
+          Confirmar por WhatsApp
+        </BotonWhatsApp>
       </div>
     )
   }
