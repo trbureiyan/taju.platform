@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Button } from '../ui/Button'
+import { EnlaceRodante } from './EnlaceRodante'
 
 export function Nav() {
   const { autenticado, usuario, logout } = useAuth()
@@ -14,9 +15,7 @@ export function Nav() {
         </Link>
 
         <nav className="flex items-center gap-4">
-          <Link to="/catalogo" className="text-sm text-texto-secundario hover:text-texto-principal transition-colors">
-            Catálogo
-          </Link>
+          <EnlaceRodante to="/catalogo">Catálogo</EnlaceRodante>
           {autenticado ? (
             <>
               {usuario?.rol === 'administrador' && (
@@ -33,9 +32,7 @@ export function Nav() {
                 </>
               )}
               {usuario?.rol === 'cliente' && (
-                <Link to="/mis-pedidos" className="text-sm text-texto-secundario hover:text-texto-principal transition-colors">
-                  Mis pedidos
-                </Link>
+                <EnlaceRodante to="/mis-pedidos">Mis pedidos</EnlaceRodante>
               )}
               <Button variante="fantasma" tamano="sm" onClick={logout}>
                 Salir
@@ -46,7 +43,9 @@ export function Nav() {
             // meter <Button> adentro, asi el DOM tiene un solo elemento interactivo
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-boton font-medium transition-colors px-3 py-1 text-sm min-h-boton bg-accion text-accion-texto hover:bg-accion-hover active:bg-accion-activo focus-visible:ring-2"
+              // secundario: en ninguna pantalla publica iniciar sesion es la accion mas importante, y el amarillo
+              // le quitaba el lugar a "Ver el catalogo" o "Enviar mi pedido"
+              className="inline-flex items-center justify-center gap-2 rounded-boton font-medium px-3 py-1 text-sm min-h-boton bg-accion-sec-fondo text-accion-sec-texto border border-accion-sec-borde hover:bg-superficie-hundida transition-[background-color,transform] duration-normal ease-estandar active:scale-97"
             >
               Ingresar
             </Link>
