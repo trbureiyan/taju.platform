@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Nav } from './Nav'
 import { Footer } from './Footer'
 import { BotonWhatsApp } from './BotonWhatsApp'
+import { ScrollAlInicio } from './ScrollAlInicio'
 import { useDespertarServidor } from '../../hooks/useDespertarServidor'
 
 // canal complementario en toda la app - nunca sustituye el registro de pedido en la plataforma (ver BotonWhatsApp)
@@ -27,6 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-superficie-base flex flex-col">
+      <ScrollAlInicio />
       <Nav />
       <main
         className={aSangre ? 'flex-1 w-full' : 'flex-1 w-full max-w-contenedor mx-auto px-4 py-8'}

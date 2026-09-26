@@ -143,3 +143,11 @@ Criterios manuales: 360px sin scroll horizontal; foco visible; navegación por t
 - Mis pedidos y "repetir pedido" (spec aparte).
 - Búsqueda en servidor, paginación e índices (solo si el catálogo supera los 100 productos).
 - Coverflow (Skiper47): descartado para familias y para el listado; puede reevaluarse para destacados.
+
+## 11. Desviaciones durante la implementación
+
+- **Transición tarjeta → detalle retirada**, como preveía el riesgo de la sección 5. En el navegador, además de la imagen elegida, las tarjetas de "Más {familia}" volaban desde sus posiciones en el catálogo (comparten `layoutId`) y la imagen cruzaba por encima del título. Queda la apertura instantánea.
+- **Scroll al navegar**: `BrowserRouter` no maneja el scroll y el detalle se abría a la altura de la tarjeta. `ScrollAlInicio` sube la página al avanzar (PUSH) y respeta la posición al volver (POP).
+- **Catálogo en memoria**: `useCatalogo` recuerda el último resultado; volver del detalle pinta al instante y el navegador puede restaurar la posición en la lista.
+- **Un solo botón amarillo en el detalle móvil**: el botón en línea se oculta en teléfono porque la barra fija ya lleva "Empezar mi pedido".
+- **La búsqueda también mira el nombre de la categoría** ("blonda" encuentra productos de la categoría "Blondas").

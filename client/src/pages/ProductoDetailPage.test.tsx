@@ -6,6 +6,7 @@ import { ProductoDetailPage } from './ProductoDetailPage'
 import { api, ErrorApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { producto } from '../test/productos'
+import { olvidarCatalogo } from '../hooks/useCatalogo'
 import type { Producto } from '../types'
 
 vi.mock('../lib/api', async (original) => {
@@ -43,6 +44,7 @@ function renderDetalle(estado?: { producto: Producto }) {
 
 describe('ProductoDetailPage', () => {
   beforeEach(() => {
+    olvidarCatalogo()
     getMock.mockReset()
     vi.mocked(useAuth).mockReturnValue({
       usuario: null,

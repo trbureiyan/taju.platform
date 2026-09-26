@@ -103,7 +103,8 @@ function DetalleProducto({ id, inicial }: { id: string; inicial?: Producto }) {
 
           <div className="flex flex-col gap-4">
             <BloquePrecio precio={producto.precio} />
-            <Button onClick={alPedir} tamano="lg" className="w-full sm:w-auto">
+            {/* en telefono la accion vive en la barra fija: dos botones amarillos en pantalla romperian la regla */}
+            <Button onClick={alPedir} tamano="lg" className="hidden lg:inline-flex">
               Empezar mi pedido
             </Button>
             {/* WhatsApp contextual: el flotante generico se oculta en esta ruta (Layout), uno solo en pantalla */}
