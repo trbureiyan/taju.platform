@@ -57,7 +57,18 @@ Se usan solo como fondo del escenario de familias de la Vitrina, siempre con tex
   --duracion-cinta: 40s;    /* una vuelta de la cinta de la Vitrina, lineal: ritmo, no informacion */
 ```
 
-**§1.6 Movimiento, springs:** pendiente de la fase 2. Los valores de los springs espacial y de efectos de M3 Expressive se agregan aquí cuando se verifiquen contra la documentación oficial.
+**§1.6 Movimiento, springs (nuevo):** valores de M3 Expressive verificados en `ExpressiveMotionTokens.kt` de androidx (tokens v0_14_0). CSS no tiene springs: la implementación vive en `client/src/lib/movimiento.ts` (`resorte()`), que convierte a la amortiguación absoluta de motion (`2 × ratio × √rigidez`, masa 1).
+
+| Spring | Amortiguación (ratio) | Rigidez | Uso |
+|---|---|---|---|
+| espacial rápido | 0.6 | 800 | Hover, retornos cortos |
+| espacial normal | 0.8 | 380 | Piezas del hero, letras de Tech Text |
+| espacial lento | 0.8 | 200 | Movimientos grandes |
+| efectos rápido | 1.0 | 3800 | Opacidad y color, cambios mínimos |
+| efectos normal | 1.0 | 1600 | Opacidad, desenfoque (frases) |
+| efectos lento | 1.0 | 800 | Fundidos largos |
+
+Los espaciales rebotan; los de efectos están críticamente amortiguados y nunca rebotan.
 
 **§10, agregar fila de versión:**
 
