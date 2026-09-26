@@ -202,7 +202,7 @@ Los valores parten del esquema de movimiento de M3 Expressive. Se verifican cont
 
 ## 8. Enmiendas a tokens y pautas
 
-Autorización: el usuario (TaJú) aprobó en esta sesión ajustar las Pautas de tracking y ampliar los tokens. Las enmiendas se aplican a `.docs/branding/02-pautas-de-marca.md`, `.docs/branding/04-tokens-de-diseno.md`, `client/src/styles/tokens.css` y `client/tailwind.config.js` en el mismo commit, que deben coincidir.
+Autorización: el usuario (TaJú) aprobó en esta sesión ajustar las Pautas de tracking y ampliar los tokens. `client/src/styles/tokens.css` y `client/tailwind.config.js` cambian en el repo. `.docs/` está en `.gitignore` y no se versiona, así que las enmiendas a `02-pautas-de-marca.md` y `04-tokens-de-diseno.md` se entregan en `docs/superpowers/specs/2026-09-26-vitrina-enmiendas-branding.md` para aplicarlas en la copia local. Tokens y documentos deben coincidir.
 
 | Grupo | Token | Valor | Motivo |
 |---|---|---|---|
@@ -256,7 +256,7 @@ Nuevos:
 
 `contenido.ts` es la única fuente del texto por familia (descripción, datos de la franja, texto del CTA, token de fondo, silueta) y se tipa sobre `Familia` partiendo de `ETIQUETAS_FAMILIA`, así el compilador obliga a cubrir las cuatro familias y no existe una segunda lista escrita a mano.
 
-Modificados: `App.tsx` (ruta `/` a `VitrinaPage`, admin con `React.lazy`), `Layout.tsx`, `Nav.tsx`, `CatalogoPage.tsx`, `tokens.css`, `tailwind.config.js`, `.docs/branding/02` y `04`, `AGENTS.md`.
+Modificados: `App.tsx` (ruta `/` a `VitrinaPage`, admin con `React.lazy`), `Layout.tsx`, `Nav.tsx`, `CatalogoPage.tsx`, `tokens.css`, `tailwind.config.js`, `AGENTS.md`. Fuera del repo (copia local de `.docs/`): `02-pautas` y `04-tokens`, con el texto de `2026-09-26-vitrina-enmiendas-branding.md`.
 
 ## 11. Pruebas
 
