@@ -9,3 +9,6 @@ const NUMERO_WHATSAPP = '573192452842'
 export function enlaceWhatsApp(mensaje: string): string {
   return `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`
 }
+
+// mismo numero sin indicativo, agrupado como se dicta en Colombia - sale del de wa.me para no duplicarlo
+export const NUMERO_WHATSAPP_LEGIBLE = NUMERO_WHATSAPP.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')

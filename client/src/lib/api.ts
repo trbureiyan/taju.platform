@@ -1,5 +1,5 @@
 // VITE_API_URL para prod/preview, localhost:3001 como default de desarrollo
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
+export const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api'
 
 // ─── Token en memoria ──────────────────────────────────────────────────────
 // vive solo en memoria del modulo, nada de localStorage ni cookies - si el usuario recarga, se cae la sesion (a proposito)

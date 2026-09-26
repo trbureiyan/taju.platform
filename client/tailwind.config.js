@@ -10,6 +10,7 @@ export default {
           fria: 'var(--superficie-fria)',
           elevada: 'var(--superficie-elevada)',
           hundida: 'var(--superficie-hundida)',
+          invertida: 'var(--superficie-invertida)',
         },
         texto: {
           principal: 'var(--texto-principal)',
@@ -17,6 +18,7 @@ export default {
           tenue: 'var(--texto-tenue)',
           acento: 'var(--texto-sobre-acento)',
           deshabilitado: 'var(--texto-deshabilitado)',
+          invertido: 'var(--texto-invertido)',
         },
         accion: {
           DEFAULT: 'var(--accion-fondo)',
@@ -35,6 +37,12 @@ export default {
           texto: 'var(--contexto-texto)',
         },
         acento: 'var(--acento-fondo)',
+        familia: {
+          toppers: 'var(--familia-toppers-fondo)',
+          superficies: 'var(--familia-superficies-fondo)',
+          senaletica: 'var(--familia-senaletica-fondo)',
+          papeleria: 'var(--familia-papeleria-fondo)',
+        },
         borde: {
           sutil: 'var(--borde-sutil)',
           medio: 'var(--borde-medio)',
@@ -111,6 +119,8 @@ export default {
         h2:      ['var(--texto-h2)',      { lineHeight: 'var(--interlineado-apretado)' }],
         h1:      ['var(--texto-h1)',      { lineHeight: 'var(--interlineado-apretado)' }],
         display: ['var(--texto-display)', { lineHeight: 'var(--interlineado-apretado)' }],
+        'display-xl':  ['var(--texto-display-xl)',  { lineHeight: 'var(--interlineado-display)', letterSpacing: 'var(--tracking-display)' }],
+        'display-2xl': ['var(--texto-display-2xl)', { lineHeight: 'var(--interlineado-display)', letterSpacing: 'var(--tracking-display)' }],
       },
       // escala base 4 nada mas - si falta un numero es a proposito, no se agregan valores arbitrarios
       spacing: {
@@ -160,6 +170,37 @@ export default {
       transitionTimingFunction: {
         estandar: 'var(--curva-estandar)',
         entrada: 'var(--curva-entrada)',
+      },
+      // "del trazo a la pieza": la pieza se descubre detras de la linea del laser que avanza
+      keyframes: {
+        corte: {
+          '0%': { clipPath: 'inset(0 100% 0 0)' },
+          '70%, 100%': { clipPath: 'inset(0 0 0 0)' },
+        },
+        // la tarjeta del hero entra primero y sola: titular y boton usables desde el primer instante
+        aparecer: {
+          '0%': { opacity: '0', transform: 'translateY(var(--space-2))' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // la pista tiene el texto dos veces: al llegar a -50% el reinicio es invisible
+        cinta: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'corte-linea': {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '70%': { transform: 'translateX(100%)', opacity: '1' },
+          '100%': { transform: 'translateX(100%)', opacity: '0' },
+        },
+      },
+      animation: {
+        corte: 'corte var(--duracion-trazo) var(--curva-estandar) infinite',
+        'corte-linea': 'corte-linea var(--duracion-trazo) var(--curva-estandar) infinite',
+        // revelado de una sola vez: la pieza del escenario sale del corte al cambiar de familia
+        revelar: 'corte var(--duracion-lenta) var(--curva-entrada) both',
+        aparecer: 'aparecer var(--duracion-normal) var(--curva-entrada) both',
+        // lineal a proposito: una marquesina con curva acelera y frena, y se lee como tropiezo
+        cinta: 'cinta var(--duracion-cinta) linear infinite',
       },
       // [DECISION] los breakpoints quedan como numeros literales, no var(--bp-*): una @media condition se evalua
       // antes de que el CSS custom property exista, asi que Tailwind no puede leer el token aqui. Si cambia

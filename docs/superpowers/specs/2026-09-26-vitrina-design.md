@@ -202,7 +202,7 @@ Los valores parten del esquema de movimiento de M3 Expressive. Se verifican cont
 
 ## 8. Enmiendas a tokens y pautas
 
-Autorización: el usuario (TaJú) aprobó en esta sesión ajustar las Pautas de tracking y ampliar los tokens. Las enmiendas se aplican a `.docs/branding/02-pautas-de-marca.md`, `.docs/branding/04-tokens-de-diseno.md`, `client/src/styles/tokens.css` y `client/tailwind.config.js` en el mismo commit, que deben coincidir.
+Autorización: el usuario (TaJú) aprobó en esta sesión ajustar las Pautas de tracking y ampliar los tokens. `client/src/styles/tokens.css` y `client/tailwind.config.js` cambian en el repo. `.docs/` está en `.gitignore` y no se versiona, así que las enmiendas a `02-pautas-de-marca.md` y `04-tokens-de-diseno.md` se entregan en `docs/superpowers/specs/2026-09-26-vitrina-enmiendas-branding.md` para aplicarlas en la copia local. Tokens y documentos deben coincidir.
 
 | Grupo | Token | Valor | Motivo |
 |---|---|---|---|
@@ -256,7 +256,7 @@ Nuevos:
 
 `contenido.ts` es la única fuente del texto por familia (descripción, datos de la franja, texto del CTA, token de fondo, silueta) y se tipa sobre `Familia` partiendo de `ETIQUETAS_FAMILIA`, así el compilador obliga a cubrir las cuatro familias y no existe una segunda lista escrita a mano.
 
-Modificados: `App.tsx` (ruta `/` a `VitrinaPage`, admin con `React.lazy`), `Layout.tsx`, `Nav.tsx`, `CatalogoPage.tsx`, `tokens.css`, `tailwind.config.js`, `.docs/branding/02` y `04`, `AGENTS.md`.
+Modificados: `App.tsx` (ruta `/` a `VitrinaPage`, admin con `React.lazy`), `Layout.tsx`, `Nav.tsx`, `CatalogoPage.tsx`, `tokens.css`, `tailwind.config.js`, `AGENTS.md`. Fuera del repo (copia local de `.docs/`): `02-pautas` y `04-tokens`, con el texto de `2026-09-26-vitrina-enmiendas-branding.md`.
 
 ## 11. Pruebas
 
@@ -306,3 +306,17 @@ Marcados `[?]` en `contenido.ts` hasta confirmarse:
 - **Mis pedidos:** "repetir pedido" para el cliente profesional (identidad §3).
 - **Admin:** Swipe Row descartado para escritorio; reevaluar si el panel se usa en móvil.
 - **Hero v2:** constelación estilo Shop cuando existan fotos recortadas.
+
+## 15. Desviaciones durante la implementación
+
+Registradas al implementar en `feature/vitrina`; cada una con su motivo.
+
+- **Tailwind no compilaba el tema.** `tailwind.config.js` no se cargaba (faltaba `@config`), ni en `dev` ni en producción. Se corrigió en una rama propia (`fix/tailwind-config`, PR #81) y también entra aquí.
+- **`EsperaTaller`: revelado por clip-path, no `stroke-dashoffset`.** El isotipo es un SVG de rellenos con clipPaths, sin contornos que animar. La pieza se descubre detrás de una línea de láser que avanza.
+- **Cinta: banda recta inclinada 1°, no onda.** CSS puro, bucle sin costura, sin `motion`. La onda complicaba el bucle a cambio de poco.
+- **Tech Text: trazo por máscara.** Contorno con `-webkit-text-stroke` interrumpido por una máscara diagonal, en HTML y no en SVG, para conservar el layout tipográfico y la accesibilidad.
+- **Reduced-motion con `useMedia`** en vez de `useReducedMotion` de motion, que cachea la preferencia a nivel de módulo.
+- **Frases: el cierre ("Con eso, sale bien." y el botón) queda siempre visible** bajo la frase activa, para que el botón sea alcanzable con teclado sin depender del scroll.
+- **Logo con `object-cover`.** `taju-imagotipo.svg` tiene viewBox cuadrado con aire vertical; el hallazgo de "SVG ya limpios" no aplica a ese archivo.
+- **Tokens extra:** `--duracion-trazo` (1600ms) y `--duracion-cinta` (40s), ambos en el archivo de enmiendas.
+- **Enmiendas a `.docs/`** se entregan en `2026-09-26-vitrina-enmiendas-branding.md` porque `.docs/` no se versiona.
