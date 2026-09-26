@@ -44,6 +44,9 @@
   --peso-medio: 500;
   --peso-semi: 600;
   --texto-display: 3rem;
+  /* siguientes pasos de la escala 1.25 - solo titulares de la Vitrina (hero, nombre de familia) */
+  --texto-display-xl: 3.815rem;
+  --texto-display-2xl: 4.768rem;
   --texto-h1: 2.441rem;
   --texto-h2: 1.953rem;
   --texto-h3: 1.563rem;
@@ -54,6 +57,10 @@
   --interlineado-apretado: 1.2;
   --interlineado-interfaz: 1.4;
   --interlineado-texto: 1.6;
+  /* solo desde display-xl: nunca menos de 1.0, las tildes y la virgulilla de mayusculas chocan con la linea de arriba */
+  --interlineado-display: 1.0;
+  /* correccion optica de Poppins a gran escala - el texto de interfaz y corrido sigue en 0 (Pautas 2.3) */
+  --tracking-display: -0.02em;
   --medida-linea: 68ch;
   --ancho-maximo: 1200px; /* contenedor de pagina (Layout) - mas ancho que prosa, no es texto de lectura */
 
@@ -109,6 +116,7 @@
   --superficie-fria: var(--turquesa-100);
   --superficie-elevada: var(--tinta-000);
   --superficie-hundida: var(--tinta-100);
+  --superficie-invertida: var(--tinta-900); /* footer - tinta no es color de marca de relleno, blanco encima da 14.17 */
 
   /* Texto */
   --texto-principal: var(--tinta-900);
@@ -116,6 +124,7 @@
   --texto-tenue: var(--tinta-500);
   --texto-sobre-acento: var(--tinta-900);
   --texto-deshabilitado: var(--tinta-300);
+  --texto-invertido: var(--tinta-000);
 
   /* Bordes */
   --borde-sutil: var(--tinta-100);
@@ -160,6 +169,16 @@
   --campo-marcador: var(--tinta-500);
   --campo-etiqueta: var(--tinta-900);
   --campo-ayuda: var(--tinta-700);
+}
+
+/* === Familias | fondo del escenario de la Vitrina ============================ */
+
+/* los cuatro con tinta encima pasan AA - rosa queda fuera porque no puede ser estructural */
+:root {
+  --familia-toppers-fondo: var(--amarillo-300);
+  --familia-superficies-fondo: var(--turquesa-300);
+  --familia-senaletica-fondo: var(--amarillo-100);
+  --familia-papeleria-fondo: var(--turquesa-100);
 }
 
 /* === Estados de pedido ======================================================= */

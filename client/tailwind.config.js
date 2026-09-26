@@ -10,6 +10,7 @@ export default {
           fria: 'var(--superficie-fria)',
           elevada: 'var(--superficie-elevada)',
           hundida: 'var(--superficie-hundida)',
+          invertida: 'var(--superficie-invertida)',
         },
         texto: {
           principal: 'var(--texto-principal)',
@@ -17,6 +18,7 @@ export default {
           tenue: 'var(--texto-tenue)',
           acento: 'var(--texto-sobre-acento)',
           deshabilitado: 'var(--texto-deshabilitado)',
+          invertido: 'var(--texto-invertido)',
         },
         accion: {
           DEFAULT: 'var(--accion-fondo)',
@@ -35,6 +37,12 @@ export default {
           texto: 'var(--contexto-texto)',
         },
         acento: 'var(--acento-fondo)',
+        familia: {
+          toppers: 'var(--familia-toppers-fondo)',
+          superficies: 'var(--familia-superficies-fondo)',
+          senaletica: 'var(--familia-senaletica-fondo)',
+          papeleria: 'var(--familia-papeleria-fondo)',
+        },
         borde: {
           sutil: 'var(--borde-sutil)',
           medio: 'var(--borde-medio)',
@@ -111,6 +119,8 @@ export default {
         h2:      ['var(--texto-h2)',      { lineHeight: 'var(--interlineado-apretado)' }],
         h1:      ['var(--texto-h1)',      { lineHeight: 'var(--interlineado-apretado)' }],
         display: ['var(--texto-display)', { lineHeight: 'var(--interlineado-apretado)' }],
+        'display-xl':  ['var(--texto-display-xl)',  { lineHeight: 'var(--interlineado-display)', letterSpacing: 'var(--tracking-display)' }],
+        'display-2xl': ['var(--texto-display-2xl)', { lineHeight: 'var(--interlineado-display)', letterSpacing: 'var(--tracking-display)' }],
       },
       // escala base 4 nada mas - si falta un numero es a proposito, no se agregan valores arbitrarios
       spacing: {
