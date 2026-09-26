@@ -89,6 +89,7 @@ Dos roles diferenciados mediante JWT: `cliente` y `administrador`. Las rutas del
 |---|---|
 | GitHub Actions (`ci.yml`) | Lint + typecheck + test + build en cada push y PR a `main` y `dev` |
 | GitHub Actions (`codeql.yml`) | Análisis estático de seguridad JS/TS (XSS, injection, JWT) |
+| GitHub Actions (`keep-alive.yml`) | Ping a `/health` cada 10 min para evitar el cold start del free tier de Render |
 | GitGuardian | Escaneo de secretos hardcodeados en cada PR |
 | Dependabot | Actualizaciones semanales de dependencias agrupadas por workspace |
 | CodeRabbit | Revisión automática de PRs con contexto del dominio taju |
