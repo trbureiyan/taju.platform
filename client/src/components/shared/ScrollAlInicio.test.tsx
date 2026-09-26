@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
@@ -15,9 +15,10 @@ function Ir() {
 }
 
 describe('ScrollAlInicio', () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it('sube al navegar hacia adelante y respeta la posicion al volver atras', async () => {
-    const scrollTo = vi.fn()
-    window.scrollTo = scrollTo as unknown as typeof window.scrollTo
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     const { getByText } = render(
       <MemoryRouter initialEntries={['/a']}>
         <ScrollAlInicio />

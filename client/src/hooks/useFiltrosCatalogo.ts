@@ -14,7 +14,8 @@ interface Cambios {
 const POR_DEFECTO = { orden: 'recomendados' }
 
 function ordenDesdeParam(valor: string | null): Orden {
-  return valor && valor in ETIQUETAS_ORDEN ? (valor as Orden) : 'recomendados'
+  // `in` acepta claves del prototipo (?orden=constructor); Object.hasOwn pide lib ES2022 y el client compila con ES2020
+  return valor && Object.prototype.hasOwnProperty.call(ETIQUETAS_ORDEN, valor) ? (valor as Orden) : 'recomendados'
 }
 
 /**

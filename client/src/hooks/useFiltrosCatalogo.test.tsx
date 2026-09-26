@@ -43,6 +43,15 @@ describe('useFiltrosCatalogo', () => {
     expect(result.current.hayFiltros).toBe(false)
   })
 
+  it('un orden con nombre de propiedad heredada cae al defecto', () => {
+    for (const valor of ['constructor', 'toString', '__proto__']) {
+      const { result } = renderHook(useFiltrosCatalogo, {
+        wrapper: envolver(`/catalogo?orden=${valor}`),
+      })
+      expect(result.current.orden).toBe('recomendados')
+    }
+  })
+
   it('actualizar escribe en la URL y borra los valores por defecto', () => {
     const { result } = renderHook(useConUbicacion, { wrapper: envolver('/catalogo?orden=nombre') })
     act(() => result.current.actualizar({ q: 'topper', orden: 'recomendados' }))
