@@ -1,60 +1,68 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Producto } from '../../types'
 import { ETIQUETAS_FAMILIA } from '../../types'
-import { formatearPrecio } from '../../lib/precio'
+import { contenidoDe } from '../vitrina/contenido'
+import { ImagenProducto } from './ImagenProducto'
+import { PrecioResumen } from './PrecioResumen'
 
 /**
- * Props de la tarjeta de producto en el catálogo.
- * @prop producto - Producto a mostrar; se espera que venga poblado con su categoría.
+ * Props de la tarjeta de producto.
+ * @prop producto - Producto con su categoría poblada.
+ * @prop mostrarFamilia - true donde se mezclan familias (búsqueda, ocasión); en un estante sería redundante.
  */
 interface ProductoCardProps {
   producto: Producto
+  mostrarFamilia?: boolean
 }
 
-// placeholder externo, no bundleado - se usa tanto cuando no hay fotos como cuando la url guardada falla
-const PLACEHOLDER = 'https://placehold.co/400x400/e2e8f0/94a3b8?text=Sin+imagen'
-
-export function ProductoCard({ producto }: ProductoCardProps) {
-  // el fallback original solo cubria "sin fotos"; si la url de Cloudinary devuelve 404 la imagen se ve rota -
-  // este estado cambia la fuente al primer error y no se vuelve a intentar la url que ya fallo
-  const [imagenRota, setImagenRota] = useState(false)
-  const imagenSrc = !imagenRota && producto.imagenes[0] ? producto.imagenes[0] : PLACEHOLDER
+export function ProductoCard({ producto, mostrarFamilia = false }: ProductoCardProps) {
+  const familia = producto.categoria.familia
+  const ocasion = producto.especificacionesTecnicas.ocasion
 
   return (
     <article
       className={[
-        'rounded-tarjeta border border-borde-defecto bg-superficie-elevada overflow-hidden',
-        // leve elevacion en hover ademas de la sombra - la tarjeta "responde" a la atencion, no solo cambia de sombra
-        'transition-[box-shadow,transform] duration-normal ease-estandar hover:shadow-tarjeta hover:-translate-y-1',
+        'group relative flex flex-col gap-3 rounded-lg',
+        'transition-transform duration-normal ease-estandar hover:-translate-y-1',
+        // el foco vive en el enlace, pero se muestra en toda la tarjeta porque toda la tarjeta es clicable
+        'has-[:focus-visible]:shadow-foco',
       ].join(' ')}
     >
-      <div className="aspect-square overflow-hidden bg-superficie-hundida">
-        <img
-          src={imagenSrc}
-          alt={producto.nombre}
-          className="w-full h-full object-cover"
-          loading="lazy"
-          onError={() => setImagenRota(true)}
-        />
+      <div className="relative aspect-square overflow-hidden rounded-lg">
+        <ImagenProducto producto={producto} className="absolute inset-0 w-full h-full" />
+        {producto.imagenes[1] && (
+          // segunda vista al hover (detalle del grabado o proceso); hover: en Tailwind v4 solo aplica con puntero
+          <ImagenProducto
+            producto={producto}
+            indice={1}
+            className="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-lenta ease-estandar group-hover:opacity-100"
+          />
+        )}
       </div>
-      <div className="p-4 flex flex-col gap-2">
-        {/* chip con fondo, no texto amarillo plano: --accion-fondo sobre blanco da ~1.6:1 de contraste,
-        ilegible para texto pequeno. Familia es dato de contexto (turquesa), no una accion (amarillo) */}
-        <span className="self-start text-xs font-medium text-contexto-texto bg-contexto-suave uppercase tracking-wide px-2 py-0.5 rounded-full">
-          {ETIQUETAS_FAMILIA[producto.categoria.familia]}
-        </span>
-        <h3 className="font-medium text-texto-principal leading-snug">{producto.nombre}</h3>
-        <p className="text-sm text-texto-secundario line-clamp-2">{producto.descripcionTecnica}</p>
-        <p className="text-sm font-medium text-texto-principal tabular-nums">
-          {formatearPrecio(producto.precio)}
-        </p>
-        <Link
-          to={`/catalogo/${producto._id}`}
-          className="mt-auto text-sm font-medium text-texto-principal hover:underline focus-visible:outline-none focus-visible:shadow-foco rounded-sm"
-        >
-          Ver detalles
-        </Link>
+
+      <div className="flex flex-col gap-1">
+        {mostrarFamilia && (
+          <p className="flex items-center gap-2 text-xs font-medium text-texto-secundario">
+            <span
+              aria-hidden="true"
+              className={['w-2 h-2 rounded-full', contenidoDe(familia).claseFondo].join(' ')}
+            />
+            {ETIQUETAS_FAMILIA[familia]}
+          </p>
+        )}
+        <h3 className="font-medium text-texto-principal line-clamp-2">
+          {/* un solo elemento interactivo: el ::after estira el clic a toda la tarjeta sin anidar controles */}
+          <Link
+            to={`/catalogo/${producto._id}`}
+            // el detalle se pinta al instante con estos datos y refresca en segundo plano
+            state={{ producto }}
+            className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:shadow-none"
+          >
+            {producto.nombre}
+          </Link>
+        </h3>
+        <PrecioResumen precio={producto.precio} />
+        {ocasion && <p className="text-xs text-texto-secundario">{ocasion}</p>}
       </div>
     </article>
   )

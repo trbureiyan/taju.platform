@@ -31,7 +31,7 @@ export function getToken(): string | null {
 export class ErrorApi extends Error {
   constructor(
     message: string,
-    public readonly estado: number,
+    public readonly estado: number
   ) {
     super(message)
     this.name = 'ErrorApi'
@@ -76,9 +76,7 @@ export const api = {
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
   /** POST con FormData (para subir archivos); el Content-Type lo pone el navegador con su boundary). */
-  postForm: <T>(path: string, body: FormData) =>
-    request<T>(path, { method: 'POST', body }),
+  postForm: <T>(path: string, body: FormData) => request<T>(path, { method: 'POST', body }),
   /** DELETE; retorna void por defecto (204 No Content). */
   delete: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
 }
-

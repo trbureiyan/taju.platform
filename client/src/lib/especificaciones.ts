@@ -34,5 +34,7 @@ export function etiquetaEspecificacion(clave: string): string {
  */
 export function referenciaMedida(d: DimensionBase): string {
   const etiqueta = d.etiqueta.toLowerCase()
-  return /libra/.test(etiqueta) ? `${d.valor} ${d.unidad}, torta de ${etiqueta}` : `${d.valor} ${d.unidad}, ${etiqueta}`
+  return /libra/.test(etiqueta)
+    ? `${d.valor} ${d.unidad}, torta de ${etiqueta}`
+    : `${d.valor} ${d.unidad}, ${etiqueta}`
 }

@@ -29,7 +29,10 @@ export function formatearPrecio(precio: Precio): string {
  * @param cantidad - Cantidad solicitada (entero positivo).
  * @returns Objeto { total, unitario } o null si no hay información suficiente para cotizar.
  */
-export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: number; unitario: number } | null {
+export function calcularPrecioTotal(
+  precio: Precio,
+  cantidad: number
+): { total: number; unitario: number } | null {
   if (precio.escalas.length > 0) {
     // la escala aplicable es la de mayor cantidadMinima que la cantidad pedida todavia cubre
     const aplicable = [...precio.escalas]
@@ -44,7 +47,6 @@ export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: 
   }
   return null
 }
-
 
 export type PartesPrecio =
   | { tipo: 'unidad'; valor: number }

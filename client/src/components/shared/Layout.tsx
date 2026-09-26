@@ -19,14 +19,16 @@ export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   // panel de Taller: legibilidad operativa sin decoracion (ver AGENTS.md) - ni CTA de WhatsApp ni pie de marca
   const esPanelTaller = pathname.startsWith('/admin')
-  // [DECISION] la Vitrina es la unica pagina a sangre, las demas conservan el contenedor - Layout ya decide por
-  // ruta para el admin. Si otra pagina necesita bandas a sangre, pasar a que cada pagina elija su contenedor.
-  const esVitrina = pathname === '/'
+  // [DECISION] Vitrina, catalogo y detalle van a sangre (bandas de color) y ponen su propio contenedor; el resto
+  // conserva el de Layout. Si otra pagina necesita bandas, sumarla aqui o pasar a que cada pagina elija.
+  const aSangre = pathname === '/' || pathname.startsWith('/catalogo')
 
   return (
     <div className="min-h-screen bg-superficie-base flex flex-col">
       <Nav />
-      <main className={esVitrina ? 'flex-1 w-full' : 'flex-1 w-full max-w-contenedor mx-auto px-4 py-8'}>
+      <main
+        className={aSangre ? 'flex-1 w-full' : 'flex-1 w-full max-w-contenedor mx-auto px-4 py-8'}
+      >
         {children}
       </main>
       {!esPanelTaller && <Footer />}

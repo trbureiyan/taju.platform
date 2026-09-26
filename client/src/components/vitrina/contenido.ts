@@ -22,15 +22,25 @@ const POR_FAMILIA: Record<Familia, Omit<ContenidoFamilia, 'familia' | 'nombre'>>
       'Cake toppers en MDF y acrílico con el nombre, la edad o el personaje que quieras. Te ayudamos a elegir el tamaño según tu torta.',
     datos: ['MDF y acrílico', 'Con nombre y edad', 'A la medida de tu torta'],
     cta: 'Ver los toppers',
-    necesitamos: ['El diámetro de tu torta', 'La altura de tu torta', 'El nombre y la edad', 'La fecha de tu celebración'],
+    necesitamos: [
+      'El diámetro de tu torta',
+      'La altura de tu torta',
+      'El nombre y la edad',
+      'La fecha de tu celebración',
+    ],
     claseFondo: 'bg-familia-toppers',
     silueta: 'topper',
   },
   superficies: {
-    descripcion: 'Blondas de MDF grabadas y bases para tortas, en las medidas de repostería que ya conoces.',
+    descripcion:
+      'Blondas de MDF grabadas y bases para tortas, en las medidas de repostería que ya conoces.',
     datos: ['MDF grabado', 'De 15 a 40 cm', 'Desde 12 unidades'],
     cta: 'Ver blondas y bases',
-    necesitamos: ['La medida, según el tamaño de tu torta', 'La cantidad, desde 12 unidades', 'La fecha de entrega'],
+    necesitamos: [
+      'La medida, según el tamaño de tu torta',
+      'La cantidad, desde 12 unidades',
+      'La fecha de entrega',
+    ],
     claseFondo: 'bg-familia-superficies',
     silueta: 'blonda',
   },
@@ -43,7 +53,8 @@ const POR_FAMILIA: Record<Familia, Omit<ContenidoFamilia, 'familia' | 'nombre'>>
     silueta: 'letras',
   },
   papeleria: {
-    descripcion: 'Invitaciones tipo pase VIP, llaveros, cajas y vasos para que cada detalle combine con la celebración.',
+    descripcion:
+      'Invitaciones tipo pase VIP, llaveros, cajas y vasos para que cada detalle combine con la celebración.',
     datos: ['Invitaciones tipo pase VIP', 'Llaveros y cajas', 'Vasos personalizados'],
     cta: 'Ver la papelería',
     necesitamos: ['La cantidad', 'Los textos y nombres', 'La fecha de tu celebración'],

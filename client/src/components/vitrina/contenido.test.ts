@@ -17,7 +17,12 @@ describe('contenido de la Vitrina', () => {
   })
 
   it('ningun texto usa voseo ni signos de exclamacion', () => {
-    const textos = CONTENIDO_FAMILIAS.flatMap((c) => [c.descripcion, c.cta, ...c.datos, ...c.necesitamos]).join(' ')
+    const textos = CONTENIDO_FAMILIAS.flatMap((c) => [
+      c.descripcion,
+      c.cta,
+      ...c.datos,
+      ...c.necesitamos,
+    ]).join(' ')
     expect(textos).not.toMatch(/[¡!]|\b(querés|podés|tenés|elegí)\b/i)
   })
 })

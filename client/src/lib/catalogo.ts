@@ -23,7 +23,11 @@ export interface FiltrosCatalogo {
  * @returns Texto comparable ("Señalética" → "senaletica").
  */
 export function normalizar(texto: string): string {
-  return texto.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim()
+  return texto
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim()
 }
 
 /**
@@ -32,14 +36,17 @@ export function normalizar(texto: string): string {
  * @param filtros - Familia (null = todas), texto buscado y ocasión (null = todas).
  * @returns Los productos que cumplen todos los filtros, en su orden original.
  */
-export function filtrarProductos(productos: Producto[], { familia, q, ocasion }: FiltrosCatalogo): Producto[] {
+export function filtrarProductos(
+  productos: Producto[],
+  { familia, q, ocasion }: FiltrosCatalogo
+): Producto[] {
   const buscado = normalizar(q)
   return productos.filter(
     (p) =>
       (!familia || p.categoria.familia === familia) &&
       (!ocasion || p.especificacionesTecnicas.ocasion === ocasion) &&
       // en el telefono casi nadie escribe tildes: "cumpleanos" tiene que encontrar "Cumpleaños"
-      (!buscado || normalizar(`${p.nombre} ${p.categoria.nombre}`).includes(buscado)),
+      (!buscado || normalizar(`${p.nombre} ${p.categoria.nombre}`).includes(buscado))
   )
 }
 
@@ -70,7 +77,9 @@ export function ordenarProductos(productos: Producto[], orden: Orden): Producto[
  * @param productos - Productos ya filtrados y ordenados.
  * @returns Un grupo por familia con productos.
  */
-export function agruparPorFamilia(productos: Producto[]): { familia: Familia; productos: Producto[] }[] {
+export function agruparPorFamilia(
+  productos: Producto[]
+): { familia: Familia; productos: Producto[] }[] {
   return FAMILIAS.map((familia) => ({
     familia,
     productos: productos.filter((p) => p.categoria.familia === familia),

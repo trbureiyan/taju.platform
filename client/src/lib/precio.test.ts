@@ -8,7 +8,13 @@ describe('partesPrecio', () => {
 
   it('escala: toma la de menor minimo como punto de entrada', () => {
     expect(
-      partesPrecio({ unitario: null, escalas: [{ cantidadMinima: 100, precioUnitario: 1900 }, { cantidadMinima: 12, precioUnitario: 2500 }] }),
+      partesPrecio({
+        unitario: null,
+        escalas: [
+          { cantidadMinima: 100, precioUnitario: 1900 },
+          { cantidadMinima: 12, precioUnitario: 2500 },
+        ],
+      })
     ).toEqual({ tipo: 'escala', valor: 2500, minimo: 12 })
   })
 

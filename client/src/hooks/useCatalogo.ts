@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
-import type { Producto, Familia } from '../types'
+import type { Producto } from '../types'
 
 interface Estado {
   productos: Producto[]
@@ -8,39 +8,35 @@ interface Estado {
   error: string | null
 }
 
-// null trae el catalogo completo, una familia especifica filtra en el server - ver CatalogoPage
+// [DECISION] todo el catalogo en una llamada y filtros en el cliente - con 30 a 100 productos el volumen es chico y
+// cambiar de familia deja de ser otra espera contra Render. Si el catalogo pasa de ~100, mover busqueda y paginacion al server.
 /**
- * Carga el catálogo de productos, filtrando opcionalmente por familia.
- * @param familia - Familia a filtrar, o null para traer todo el catálogo activo.
- * @returns Estado con productos (array, vacío mientras carga), cargando (bool) y error (string|null).
- *          Actualiza automáticamente cuando cambia la familia.
+ * Carga el catálogo activo completo.
+ * @returns productos, cargando, error (mensaje o null) y reintentar(), que vuelve a pedir sin recargar la página.
  */
-export function useCatalogo(familia: Familia | null) {
+export function useCatalogo() {
   const [estado, setEstado] = useState<Estado>({ productos: [], cargando: true, error: null })
+  const [intento, setIntento] = useState(0)
 
   useEffect(() => {
-    let cancelado = false // evita el "setState en componente desmontado" si cambian de familia rapido
-
-    // muestra "cargando" en cada cambio de familia conservando los productos anteriores visibles
-    // mientras tanto — evita salto a vacío. setState sincrónico aquí es intencional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEstado((prev) => ({ ...prev, cargando: true, error: null }))
-
-    const path = familia ? `/productos?familia=${familia}` : '/productos'
-
+    let cancelado = false
     api
-      .get<Producto[]>(path)
+      .get<Producto[]>('/productos')
       .then((productos) => {
         if (!cancelado) setEstado({ productos, cargando: false, error: null })
       })
       .catch((err: Error) => {
         if (!cancelado) setEstado({ productos: [], cargando: false, error: err.message })
       })
-
     return () => {
       cancelado = true
     }
-  }, [familia])
+  }, [intento])
 
-  return estado
+  const reintentar = useCallback(() => {
+    setEstado((prev) => ({ ...prev, cargando: true, error: null }))
+    setIntento((n) => n + 1)
+  }, [])
+
+  return { ...estado, reintentar }
 }

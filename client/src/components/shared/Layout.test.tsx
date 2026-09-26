@@ -14,7 +14,7 @@ function renderEn(ruta: string) {
       <Layout>
         <p>contenido</p>
       </Layout>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
 }
 
@@ -30,13 +30,16 @@ describe('Layout', () => {
     vi.mocked(useDespertarServidor).mockClear()
   })
 
-  it.each(['/', '/catalogo'])('en %s muestra footer con razon social y WhatsApp flotante', (ruta) => {
-    renderEn(ruta)
-    const footer = screen.getByRole('contentinfo')
-    expect(footer).toHaveTextContent('TaJú · Papelería Creativa')
-    expect(footer).toHaveTextContent('Tajú Neiva')
-    expect(screen.getByRole('link', { name: 'Escríbenos por WhatsApp' })).toBeInTheDocument()
-  })
+  it.each(['/', '/catalogo'])(
+    'en %s muestra footer con razon social y WhatsApp flotante',
+    (ruta) => {
+      renderEn(ruta)
+      const footer = screen.getByRole('contentinfo')
+      expect(footer).toHaveTextContent('TaJú · Papelería Creativa')
+      expect(footer).toHaveTextContent('Tajú Neiva')
+      expect(screen.getByRole('link', { name: 'Escríbenos por WhatsApp' })).toBeInTheDocument()
+    }
+  )
 
   it('en /admin no hay footer ni WhatsApp flotante', () => {
     renderEn('/admin/pedidos')
@@ -44,13 +47,16 @@ describe('Layout', () => {
     expect(screen.queryByRole('link', { name: /whatsapp/i })).not.toBeInTheDocument()
   })
 
-  it('la Vitrina va a sangre; el resto de paginas conserva el contenedor', () => {
-    renderEn('/')
-    expect(screen.getByRole('main')).not.toHaveClass('max-w-contenedor')
-  })
+  it.each(['/', '/catalogo', '/catalogo/abc'])(
+    '%s va a sangre: la pagina pone su contenedor',
+    (ruta) => {
+      renderEn(ruta)
+      expect(screen.getByRole('main')).not.toHaveClass('max-w-contenedor')
+    }
+  )
 
   it('las demas paginas conservan el contenedor', () => {
-    renderEn('/catalogo')
+    renderEn('/mis-pedidos')
     expect(screen.getByRole('main')).toHaveClass('max-w-contenedor')
   })
 

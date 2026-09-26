@@ -14,7 +14,9 @@ describe('etiquetaEspecificacion', () => {
 
 describe('referenciaMedida', () => {
   it('traduce la medida a referencia de torta cuando la etiqueta es de libras', () => {
-    expect(referenciaMedida({ etiqueta: 'Media libra', valor: 22, unidad: 'cm' })).toBe('22 cm, torta de media libra')
+    expect(referenciaMedida({ etiqueta: 'Media libra', valor: 22, unidad: 'cm' })).toBe(
+      '22 cm, torta de media libra'
+    )
   })
 
   it('con otra etiqueta la conserva junto a la medida', () => {
