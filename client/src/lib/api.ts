@@ -24,6 +24,20 @@ export function getToken(): string | null {
 
 // ─── Cliente HTTP ─────────────────────────────────────────────────────────────
 
+/**
+ * Error de una respuesta no-2xx del servidor. Una caída de red no llega aquí: fetch rechaza con TypeError.
+ * @prop estado - Código HTTP, para distinguir por ejemplo un 404 (no existe) de un 500 (falló el servidor).
+ */
+export class ErrorApi extends Error {
+  constructor(
+    message: string,
+    public readonly estado: number,
+  ) {
+    super(message)
+    this.name = 'ErrorApi'
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   // fetch pone su propio boundary de multipart si dejamos que el navegador arme el Content-Type
   const isFormData = init.body instanceof FormData
@@ -38,7 +52,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!res.ok) {
     // el server siempre responde { error: string } en fallos (ver controllers) - .catch cubre el caso raro donde no
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.error ?? `Error ${res.status}`)
+    throw new ErrorApi(body.error ?? `Error ${res.status}`, res.status)
   }
 
   // 204 (DELETE) no trae body - .json() explota con SyntaxError sobre un string vacio
@@ -49,8 +63,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 /**
  * Cliente HTTP tipado. Cada método serializa el cuerpo, añade el token Bearer si hay sesión activa,
- * y lanza un Error con el mensaje del servidor si la respuesta no es 2xx.
- * @throws Error con body.error del servidor, o "Error {status}" si la respuesta no es JSON.
+ * y lanza un ErrorApi con el mensaje y el código del servidor si la respuesta no es 2xx.
+ * @throws ErrorApi con body.error del servidor (o "Error {status}") y el código HTTP; TypeError si falla la red.
  */
 export const api = {
   /** GET al path dado. Infiere T del tipo de retorno esperado. */
