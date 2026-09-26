@@ -271,10 +271,10 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 
 ## Deployment & CI/CD Pipeline
 
-- **Target Platforms**:
-  - Servidor: Node.js 20 LTS (ej. Render, Railway o VPS).
-  - Cliente: SPA estática servida vía CDN (ej. Vercel, Netlify o Cloudflare Pages).
-  - Base de Datos: MongoDB Atlas Cluster.
+- **Target Platforms** (desplegado):
+  - Servidor: Render (free tier), rama `main`.
+  - Cliente: Vercel, rama `main`.
+  - Base de Datos: MongoDB Atlas Cluster (`taju-dev` y `taju-prod` como databases del mismo cluster).
   - Medios: Cloudinary Media Storage.
 - **CI Workflow** (`.github/workflows/ci.yml`):
   El flujo de integración continua se dispara en pushes y PRs hacia las ramas `main` y `dev`, ejecutando dos jobs independientes:
@@ -283,10 +283,14 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
      - `pnpm --filter taju-client lint`
      - `pnpm --filter taju-client typecheck`
      - `pnpm --filter taju-client build`
+     - `pnpm --filter taju-client test`
   2. **Job `server`**:
      - `pnpm install --frozen-lockfile`
      - `pnpm --filter taju-server lint`
      - `pnpm --filter taju-server typecheck`
+     - `pnpm --filter taju-server test`
+     - `pnpm --filter taju-server build`
+- **Keep-alive Workflow** (`.github/workflows/keep-alive.yml`): ping a `/health` cada 10 min para evitar el cold start del free tier de Render durante pruebas de usuario. Ver Known Limitations.
 
 ### Supply Chain Security
 
@@ -305,6 +309,7 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 | Catálogo | Miniatura por orden de arreglo | La primera imagen del arreglo `imagenes[0]` actúa como portada del producto | Mitigado por convención operativa de carga; evaluar selector explícito de imagen principal a futuro |
 | Testing Suite | Sin E2E ni cobertura mínima exigida | Vitest cubre unidades e integración (server con mongodb-memory-server, client con jsdom + Testing Library) y corre en CI; no hay pruebas de navegador real | Definir umbral de cobertura y evaluar E2E cuando el flujo de pedidos se estabilice |
 | Pedidos | Ventana breve de imagen huérfana en carreras simultáneas | `crearPedido` sube a Cloudinary antes de la transacción; si dos envíos idénticos llegan a la vez, el perdedor recibe 409 y `eliminarImagen` borra sus imágenes en el catch (best-effort, `Promise.allSettled`) | Mitigado: el chequeo previo corta reintentos secuenciales y el catch limpia el caso simultáneo. Si el borrado en Cloudinary falla, queda huérfana igual — sin reintento ni job de barrido |
+| Infraestructura | Cold start del free tier de Render | El servidor duerme tras ~15 min sin tráfico; el primer request tras eso puede tardar 30-60s+ o dar timeout del lado del cliente | Mitigado con `keep-alive.yml` (ping cada 10 min). Tradeoff aceptado: consume horas gratis de Render más rápido; definitivo solo con plan pago (sin spin-down) |
 
 ---
 
