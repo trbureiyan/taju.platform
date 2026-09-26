@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import { LazyMotion, MotionConfig } from 'motion/react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { Layout } from './components/shared/Layout'
@@ -23,75 +24,82 @@ const AdminCalendarioPage = lazy(() =>
   import('./pages/admin/AdminCalendarioPage').then((m) => ({ default: m.AdminCalendarioPage }))
 )
 
+const cargarFuncionesMovimiento = () => import('./lib/motionFeatures').then((m) => m.default)
+
 // AuthProvider afuera de BrowserRouter: el estado de sesion no depende de la ruta actual
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Layout>
-          <Suspense
-            fallback={
-              <EsperaTaller
-                mensaje="Estamos abriendo el panel"
-                mensajeLargo="Estamos abriendo el panel. Tarda un poco más la primera vez."
-              />
-            }
-          >
-            <Routes>
-              {/* ─── Publicas ─── */}
-              <Route path="/" element={<VitrinaPage />} />
-              <Route path="/catalogo" element={<CatalogoPage />} />
-              <Route path="/catalogo/:id" element={<ProductoDetailPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/registrar" element={<RegistrarPage />} />
+      {/* reducedMotion="user": con la preferencia activa, motion salta al estado final en vez de animar transformaciones */}
+      <MotionConfig reducedMotion="user">
+        <LazyMotion features={cargarFuncionesMovimiento} strict>
+          <BrowserRouter>
+            <Layout>
+              <Suspense
+                fallback={
+                  <EsperaTaller
+                    mensaje="Estamos abriendo el panel"
+                    mensajeLargo="Estamos abriendo el panel. Tarda un poco más la primera vez."
+                  />
+                }
+              >
+                <Routes>
+                  {/* ─── Publicas ─── */}
+                  <Route path="/" element={<VitrinaPage />} />
+                  <Route path="/catalogo" element={<CatalogoPage />} />
+                  <Route path="/catalogo/:id" element={<ProductoDetailPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/registrar" element={<RegistrarPage />} />
 
-              {/* ─── Cliente autenticado ─── */}
-              <Route
-                path="/pedido/:productoId"
-                element={
-                  <ProtectedRoute rol="cliente">
-                    <PedidoFormPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/mis-pedidos"
-                element={
-                  <ProtectedRoute rol="cliente">
-                    <MisPedidosPage />
-                  </ProtectedRoute>
-                }
-              />
+                  {/* ─── Cliente autenticado ─── */}
+                  <Route
+                    path="/pedido/:productoId"
+                    element={
+                      <ProtectedRoute rol="cliente">
+                        <PedidoFormPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/mis-pedidos"
+                    element={
+                      <ProtectedRoute rol="cliente">
+                        <MisPedidosPage />
+                      </ProtectedRoute>
+                    }
+                  />
 
-              {/* ─── Panel de taller (solo administrador) ─── */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute rol="administrador">
-                    <AdminCatalogoPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/pedidos"
-                element={
-                  <ProtectedRoute rol="administrador">
-                    <AdminPedidosPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/calendario"
-                element={
-                  <ProtectedRoute rol="administrador">
-                    <AdminCalendarioPage />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </Suspense>
-        </Layout>
-      </BrowserRouter>
+                  {/* ─── Panel de taller (solo administrador) ─── */}
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute rol="administrador">
+                        <AdminCatalogoPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/pedidos"
+                    element={
+                      <ProtectedRoute rol="administrador">
+                        <AdminPedidosPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/calendario"
+                    element={
+                      <ProtectedRoute rol="administrador">
+                        <AdminCalendarioPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </Layout>
+          </BrowserRouter>
+        </LazyMotion>
+      </MotionConfig>
     </AuthProvider>
   )
 }
