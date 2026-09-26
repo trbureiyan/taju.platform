@@ -55,7 +55,14 @@ function enviar() {
 
 beforeEach(() => {
   vi.mocked(api.get).mockReset().mockResolvedValue(producto)
-  vi.mocked(api.postForm).mockReset().mockResolvedValue({ _id: 'pedido-1' } as Pedido)
+  // producto y fechaEntrega presentes - la pantalla de confirmacion los usa para el mensaje de WhatsApp
+  vi.mocked(api.postForm)
+    .mockReset()
+    .mockResolvedValue({
+      _id: 'pedido-1',
+      producto: { _id: producto._id, nombre: producto.nombre },
+      fechaEntrega: null,
+    } as Pedido)
 })
 
 describe('PedidoFormPage', () => {
@@ -168,6 +175,12 @@ describe('PedidoFormPage', () => {
 
     expect(await screen.findByText(/pedido-1/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Enviar mi pedido' })).not.toBeInTheDocument()
+
+    // el enlace de WhatsApp lleva el numero real, el id de seguimiento y el nombre del producto prellenados
+    const enlaceWhatsApp = screen.getByRole('link', { name: 'Confirmar por WhatsApp' })
+    expect(enlaceWhatsApp).toHaveAttribute('href', expect.stringContaining('wa.me/573192452842'))
+    expect(decodeURIComponent(enlaceWhatsApp.getAttribute('href')!)).toContain('pedido-1')
+    expect(decodeURIComponent(enlaceWhatsApp.getAttribute('href')!)).toContain(producto.nombre)
   })
 
   it('muestra el error del servidor, por ejemplo el 409 de pedido duplicado', async () => {
