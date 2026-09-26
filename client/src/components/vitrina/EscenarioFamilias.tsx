@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { EnlaceBoton } from '../ui/EnlaceBoton'
 import { PiezaSilueta } from './PiezaSilueta'
+import { TechText } from './TechText'
 import { CONTENIDO_FAMILIAS, rutaFamilia } from './contenido'
 
 const TOTAL = CONTENIDO_FAMILIAS.length
@@ -106,7 +107,10 @@ export function EscenarioFamilias() {
             <p className="cifra text-sm text-texto-secundario">
               {dosCifras(activa + 1)} / {dosCifras(TOTAL)}
             </p>
-            <p className="text-h1 lg:text-display-2xl font-semibold text-texto-principal">{actual.nombre}</p>
+            <p className="text-h1 lg:text-display-2xl font-semibold text-texto-principal">
+              {/* key por familia: cada cambio remonta la palabra y en tactil la vuelve a dibujar */}
+              <TechText key={actual.familia} texto={actual.nombre} />
+            </p>
             <p className="text-texto-principal">{actual.descripcion}</p>
             <EnlaceBoton to={rutaFamilia(actual.familia)} variante="secundario">
               {actual.cta}
