@@ -194,6 +194,9 @@ Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores vi
 
 Arquitectura de dos capas: primitivas (`--amarillo-500`, `--space-4`) y semánticas (`--accion-fondo`, `--texto-principal`). **Los componentes consumen solo la capa semántica.** Si un componente necesita una primitiva, falta un token semántico: crearlo, no usar la primitiva.
 
+> [!IMPORTANT]
+> **Dirección de interacción: Material Design 3 Expressive.** Decisión de metodología, no de identidad — se descartó neo-brutalism por "muy seco, recto y corpo" para el territorio de la marca. M3 Expressive gobierna forma (radios generosos, ya fijados en tokens) y movimiento (feedback de presión, curvas de easing), nunca color ni tipografía: esos siguen fijos e innegociables por `.docs/branding/01-identidad-de-marca.md` y `02-pautas-de-marca.md`. Implementación: `transitionTimingFunction` (`ease-estandar`/`ease-entrada`, mapeados a `--curva-estandar`/`--curva-entrada` de tokens.css) y `scale-97` como única escala de "presión" del sistema, ambos en `client/tailwind.config.js`. Todo componente interactivo nuevo (botones, chips, tarjetas) debe animarse con estos tokens — nunca con el `ease-in-out` genérico de Tailwind ni con transiciones arbitrarias.
+
 Invariantes verificables:
 
 | Regla |
