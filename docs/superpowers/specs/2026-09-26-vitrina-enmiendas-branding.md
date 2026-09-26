@@ -54,10 +54,11 @@ Se usan solo como fondo del escenario de familias de la Vitrina, siempre con tex
 
 ```css
   --duracion-trazo: 1600ms; /* bucles de espera (corte del isotipo), no es transicion de interfaz */
+  --duracion-cinta: 40s;    /* una vuelta de la cinta de la Vitrina, lineal: ritmo, no informacion */
 ```
 
 **§1.6 Movimiento, springs:** pendiente de la fase 2. Los valores de los springs espacial y de efectos de M3 Expressive se agregan aquí cuando se verifiquen contra la documentación oficial.
 
 **§10, agregar fila de versión:**
 
-| 1.1 | 2026-09-26 | Tokens de display grande, tracking e interlineado de display, superficie y texto invertidos, fondos por familia, duración de bucle de espera. |
+| 1.1 | 2026-09-26 | Tokens de display grande, tracking e interlineado de display, superficie y texto invertidos, fondos por familia, duraciones de bucle de espera y de cinta. |
