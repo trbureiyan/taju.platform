@@ -1,140 +1,124 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { api } from '../lib/api'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useProducto } from '../hooks/useProducto'
 import { Button } from '../components/ui/Button'
-import type { Producto } from '../types'
+import { EsperaTaller } from '../components/shared/EsperaTaller'
+import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
+import { GaleriaProducto } from '../components/producto/GaleriaProducto'
+import { BloquePrecio } from '../components/producto/BloquePrecio'
+import { AntesDePedir } from '../components/producto/AntesDePedir'
+import { FranjaEspecificaciones } from '../components/producto/FranjaEspecificaciones'
+import { MasDeFamilia } from '../components/producto/MasDeFamilia'
+import { BarraPedidoMovil } from '../components/producto/BarraPedidoMovil'
 import { ETIQUETAS_FAMILIA } from '../types'
-import { formatearPrecio } from '../lib/precio'
+import type { Producto } from '../types'
+import { rutaFamilia } from '../components/vitrina/contenido'
 
-const PLACEHOLDER = 'https://placehold.co/600x400/f5f0eb/9b8b7a?text=TaJú'
-
+// key por id: pasar de un producto a otro ("Mas toppers") reinicia el estado sin setState dentro de un efecto
 export function ProductoDetailPage() {
-  const { id } = useParams<{ id: string }>()
+  const { id = '' } = useParams<{ id: string }>()
+  const inicial = (useLocation().state as { producto?: Producto } | null)?.producto
+  return <DetalleProducto key={id} id={id} inicial={inicial?._id === id ? inicial : undefined} />
+}
+
+function DetalleProducto({ id, inicial }: { id: string; inicial?: Producto }) {
   const navigate = useNavigate()
   const { autenticado } = useAuth()
-  const [producto, setProducto] = useState<Producto | null>(null)
-  const [cargando, setCargando] = useState(true)
+  const { producto, estado, reintentar } = useProducto(id, inicial)
 
-  useEffect(() => {
-    if (!id) return
-    let cancelado = false
-    // reset explícito: evita mostrar el producto anterior mientras el nuevo aun carga — intencional.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setProducto(null)
-    setCargando(true)
-    api
-      .get<Producto>(`/productos/${id}`)
-      .then((p) => { if (!cancelado) setProducto(p) })
-      .catch(() => { if (!cancelado) navigate('/catalogo', { replace: true }) }) // id invalido o producto dado de baja, no rompemos la pagina
-      .finally(() => { if (!cancelado) setCargando(false) })
-    return () => { cancelado = true }
-  }, [id, navigate])
+  const envoltura = 'w-full max-w-contenedor mx-auto px-4 py-12'
 
-  if (cargando) {
-    return <p className="text-texto-secundario">Cargando producto…</p>
+  if (estado === 'cargando') {
+    return (
+      <div className={envoltura}>
+        <EsperaTaller mensaje="Estamos preparando el producto" />
+      </div>
+    )
   }
 
-  if (!producto) return null // ya redirigio en el catch de arriba, esto es solo el frame intermedio antes de irse
+  if (estado === 'no-encontrado') {
+    return (
+      <div className={[envoltura, 'flex flex-col items-start gap-4'].join(' ')}>
+        <p className="text-lg text-texto-principal">No encontramos este producto. Puede que el taller ya no lo esté ofreciendo.</p>
+        <Link to="/catalogo" className="inline-flex items-center min-h-boton font-medium underline underline-offset-4">
+          Volver al catálogo
+        </Link>
+      </div>
+    )
+  }
 
-  const imagenPrincipal = producto.imagenes[0] ?? PLACEHOLDER
+  if (estado === 'error' || !producto) {
+    return (
+      <div className={envoltura}>
+        <div role="alert" className="flex flex-col items-start gap-4 rounded-tarjeta border border-error-borde bg-error-fondo p-6">
+          <p className="font-medium text-error-texto">No pudimos traer este producto</p>
+          <p className="text-sm text-error-texto">Tuvimos un problema de conexión. Prueba de nuevo en unos segundos.</p>
+          <Button variante="secundario" onClick={reintentar}>
+            Probar de nuevo
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
-  // LoginPage lee ?redirect= y vuelve exactamente aca despues de loguearse (ver client-auth)
-  function handleSolicitar() {
-    if (autenticado) {
-      navigate(`/pedido/${producto!._id}`)
-    } else {
-      navigate(`/login?redirect=/pedido/${producto!._id}`)
-    }
+  const familia = producto.categoria.familia
+  // LoginPage lee ?redirect= y vuelve exactamente al pedido despues de ingresar
+  function alPedir() {
+    navigate(autenticado ? `/pedido/${producto!._id}` : `/login?redirect=/pedido/${producto!._id}`)
   }
 
   return (
-    <article className="max-w-4xl">
-      <nav aria-label="Ruta de navegación" className="mb-6">
-        <ol className="flex items-center gap-2 text-sm text-texto-tenue">
-          <li><Link to="/catalogo" className="hover:text-texto-principal">Catálogo</Link></li>
-          <li aria-hidden="true">/</li>
-          <li className="text-texto-secundario">{producto.nombre}</li>
-        </ol>
-      </nav>
+    // pb extra en telefono: la barra fija inferior no debe tapar el final de la pagina
+    <article className={[envoltura, 'flex flex-col gap-16 pb-24 lg:pb-12'].join(' ')}>
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+        <GaleriaProducto producto={producto} />
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="rounded-tarjeta overflow-hidden bg-superficie-hundida aspect-square">
-          <img
-            src={imagenPrincipal}
-            alt={producto.nombre}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <div className="flex flex-col gap-6">
+          <nav aria-label="Ruta de navegación">
+            <ol className="flex flex-wrap items-center gap-2 text-sm text-texto-secundario">
+              <li>
+                <Link to="/catalogo" className="hover:text-texto-principal">
+                  Catálogo
+                </Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li>
+                <Link to={rutaFamilia(familia)} className="hover:text-texto-principal">
+                  {ETIQUETAS_FAMILIA[familia]}
+                </Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li aria-current="page" className="text-texto-principal">
+                {producto.nombre}
+              </li>
+            </ol>
+          </nav>
 
-        <div className="flex flex-col gap-4">
-          <div>
-            {/* chip con fondo, no texto amarillo plano: --accion-fondo sobre blanco da ~1.6:1 de contraste,
-            ilegible para texto pequeno. Familia es dato de contexto (turquesa), no una accion (amarillo) */}
-            <span className="inline-block text-xs font-medium text-contexto-texto bg-contexto-suave uppercase tracking-wide px-2 py-0.5 rounded-full">
-              {ETIQUETAS_FAMILIA[producto.categoria.familia]}
-            </span>
-            <h1 className="text-h2 font-semibold text-texto-principal mt-1">
-              {producto.nombre}
-            </h1>
-            <p className="text-sm text-texto-secundario mt-1">
-              {producto.categoria.nombre}
-            </p>
+          <div className="flex flex-col gap-2">
+            <h1 className="text-h1 lg:text-display-xl text-texto-principal">{producto.nombre}</h1>
+            <p className="text-sm text-texto-secundario">{producto.categoria.nombre}</p>
           </div>
 
-          <p className="text-base text-texto-principal">{producto.descripcionTecnica}</p>
+          <p className="text-texto-principal">{producto.descripcionTecnica}</p>
 
-          <p className="text-lg font-semibold text-texto-principal tabular-nums">
-            {formatearPrecio(producto.precio)}
-          </p>
-
-          {/* Map -> Record se vuelve objeto plano al pasar por JSON, por eso Object.entries funciona directo */}
-          {Object.keys(producto.especificacionesTecnicas).length > 0 && (
-            <dl className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4 grid grid-cols-2 gap-x-4 gap-y-2">
-              {Object.entries(producto.especificacionesTecnicas).map(([k, v]) => (
-                <div key={k}>
-                  <dt className="text-xs text-texto-tenue">{k}</dt>
-                  <dd className="text-sm font-medium text-texto-principal">{v}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
-
-          {producto.categoria.dimensionesBase.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-texto-principal mb-2">
-                Dimensiones disponibles
-              </p>
-              <ul className="flex flex-wrap gap-2">
-                {producto.categoria.dimensionesBase.map((d) => (
-                  <li
-                    key={d.etiqueta}
-                    className="px-3 py-1 rounded-full border border-borde-medio text-sm text-texto-secundario"
-                  >
-                    {d.etiqueta}: {d.valor} {d.unidad}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="mt-auto pt-4">
-            <Button variante="primario" onClick={handleSolicitar} className="w-full">
-              Solicitar pedido personalizado
+          <div className="flex flex-col gap-4">
+            <BloquePrecio precio={producto.precio} />
+            <Button onClick={alPedir} tamano="lg" className="w-full sm:w-auto">
+              Empezar mi pedido
             </Button>
+            {/* WhatsApp contextual: el flotante generico se oculta en esta ruta (Layout), uno solo en pantalla */}
+            <BotonWhatsApp mensaje={`Hola, tengo una pregunta sobre el ${producto.nombre}.`}>
+              Pregúntanos por WhatsApp
+            </BotonWhatsApp>
           </div>
+
+          <AntesDePedir familia={familia} />
         </div>
       </div>
 
-      {producto.imagenes.length > 1 && (
-        <ul className="flex gap-3 mt-6 overflow-x-auto" aria-label="Galería de imágenes">
-          {producto.imagenes.map((url, i) => (
-            <li key={i} className="shrink-0 w-20 h-20 rounded-md overflow-hidden bg-superficie-hundida">
-              <img src={url} alt={`${producto.nombre} vista ${i + 1}`} className="w-full h-full object-cover" />
-            </li>
-          ))}
-        </ul>
-      )}
+      <FranjaEspecificaciones producto={producto} />
+      <MasDeFamilia producto={producto} />
+      <BarraPedidoMovil precio={producto.precio} alPedir={alPedir} />
     </article>
   )
 }

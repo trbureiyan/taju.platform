@@ -65,3 +65,11 @@ describe('Layout', () => {
     expect(useDespertarServidor).toHaveBeenCalled()
   })
 })
+
+describe('Layout | WhatsApp en el detalle', () => {
+  it('el flotante se oculta en el detalle, que trae su propio WhatsApp contextual', () => {
+    vi.mocked(useAuth).mockReturnValue({ usuario: null, autenticado: false, login: vi.fn(), registrar: vi.fn(), logout: vi.fn() })
+    renderEn('/catalogo/abc')
+    expect(screen.queryByRole('link', { name: 'Escríbenos por WhatsApp' })).not.toBeInTheDocument()
+  })
+})
