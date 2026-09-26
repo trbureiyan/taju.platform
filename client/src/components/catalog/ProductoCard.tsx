@@ -22,7 +22,13 @@ export function ProductoCard({ producto }: ProductoCardProps) {
   const imagenSrc = !imagenRota && producto.imagenes[0] ? producto.imagenes[0] : PLACEHOLDER
 
   return (
-    <article className="rounded-tarjeta border border-borde-defecto bg-superficie-elevada overflow-hidden hover:shadow-tarjeta transition-shadow">
+    <article
+      className={[
+        'rounded-tarjeta border border-borde-defecto bg-superficie-elevada overflow-hidden',
+        // leve elevacion en hover ademas de la sombra - la tarjeta "responde" a la atencion, no solo cambia de sombra
+        'transition-[box-shadow,transform] duration-normal ease-estandar hover:shadow-tarjeta hover:-translate-y-1',
+      ].join(' ')}
+    >
       <div className="aspect-square overflow-hidden bg-superficie-hundida">
         <img
           src={imagenSrc}
