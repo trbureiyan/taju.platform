@@ -39,7 +39,9 @@ export function ProductoCard({ producto }: ProductoCardProps) {
         />
       </div>
       <div className="p-4 flex flex-col gap-2">
-        <span className="text-xs font-medium text-accion uppercase tracking-wide">
+        {/* chip con fondo, no texto amarillo plano: --accion-fondo sobre blanco da ~1.6:1 de contraste,
+        ilegible para texto pequeno. Familia es dato de contexto (turquesa), no una accion (amarillo) */}
+        <span className="self-start text-xs font-medium text-contexto-texto bg-contexto-suave uppercase tracking-wide px-2 py-0.5 rounded-full">
           {ETIQUETAS_FAMILIA[producto.categoria.familia]}
         </span>
         <h3 className="font-medium text-texto-principal leading-snug">{producto.nombre}</h3>
@@ -49,7 +51,7 @@ export function ProductoCard({ producto }: ProductoCardProps) {
         </p>
         <Link
           to={`/catalogo/${producto._id}`}
-          className="mt-auto text-sm font-medium text-accion hover:underline focus-visible:outline-none focus-visible:shadow-foco rounded-sm"
+          className="mt-auto text-sm font-medium text-texto-principal hover:underline focus-visible:outline-none focus-visible:shadow-foco rounded-sm"
         >
           Ver detalles
         </Link>

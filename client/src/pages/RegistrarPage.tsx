@@ -74,7 +74,7 @@ export function RegistrarPage() {
 
       <p className="mt-6 text-sm text-texto-secundario text-center">
         ¿Ya tenés cuenta?{' '}
-        <Link to="/login" className="text-accion hover:underline">
+        <Link to="/login" className="font-medium text-texto-principal hover:underline">
           Ingresá
         </Link>
       </p>
