@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import type { CSSProperties, PointerEvent } from 'react'
-import { m, useInView, useReducedMotion } from 'motion/react'
+import { m, useInView } from 'motion/react'
 import { useMedia } from '../../hooks/useMedia'
 import { resorte } from '../../lib/movimiento'
 
@@ -8,10 +8,11 @@ import { resorte } from '../../lib/movimiento'
 const ALCANCE = 160
 
 // contorno interrumpido por una mascara diagonal: el trazo punteado de la ruta de corte. La mascara solo usa el
-// canal alfa, por eso el color del gradiente no importa; el trazo toma currentColor (tinta)
+// canal alfa, por eso el color del gradiente no importa. El trazo va al token y no a currentColor: con el
+// relleno en transparent, currentColor tambien seria transparent y la letra desapareceria
 const ESTILO_TRAZO: CSSProperties = {
   color: 'transparent',
-  WebkitTextStroke: '2px currentColor',
+  WebkitTextStroke: '2px var(--texto-principal)',
   WebkitMaskImage: 'repeating-linear-gradient(135deg, black 0 6px, transparent 6px 10px)',
   maskImage: 'repeating-linear-gradient(135deg, black 0 6px, transparent 6px 10px)',
 }
@@ -24,7 +25,7 @@ const ESTILO_TRAZO: CSSProperties = {
  */
 export function TechText({ texto, className = '' }: { texto: string; className?: string }) {
   const punteroFino = useMedia('(pointer: fine)')
-  const reducir = useReducedMotion() ?? false
+  const reducir = useMedia('(prefers-reduced-motion: reduce)')
   const interactivo = punteroFino && !reducir
   // en tactil no hay cursor: la palabra se dibuja como trazo una vez al entrar en pantalla y se rellena
   const dibujoUnico = !punteroFino && !reducir
