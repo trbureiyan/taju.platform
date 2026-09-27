@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useCatalogo, olvidarCatalogo } from './useCatalogo'
-import { api } from '../lib/api'
+import { api, getToken } from '../lib/api'
 import { producto } from '../test/productos'
 
-vi.mock('../lib/api', () => ({ api: { get: vi.fn() } }))
+vi.mock('../lib/api', () => ({ api: { get: vi.fn() }, getToken: vi.fn(() => null) }))
 const getMock = vi.mocked(api.get)
+const tokenMock = vi.mocked(getToken)
 
 afterEach(() => {
   vi.clearAllMocks()
+  tokenMock.mockReturnValue(null)
   olvidarCatalogo()
 })
 
@@ -46,5 +48,51 @@ describe('useCatalogo | cache', () => {
     const { result } = renderHook(() => useCatalogo())
     expect(result.current.cargando).toBe(false)
     expect(result.current.productos.map((p) => p.nombre)).toEqual(['a'])
+  })
+})
+
+// con sesion de administrador /productos trae tambien los inactivos: nada de eso puede sobrevivir al cierre de sesion
+describe('useCatalogo | cache por sesion', () => {
+  it('el catalogo de otra sesion no se muestra al volver a montar', async () => {
+    tokenMock.mockReturnValue('admin')
+    getMock.mockResolvedValueOnce([producto({ nombre: 'inactivo' })])
+    const admin = renderHook(() => useCatalogo())
+    await waitFor(() => expect(admin.result.current.cargando).toBe(false))
+    admin.unmount()
+
+    tokenMock.mockReturnValue(null)
+    getMock.mockReturnValueOnce(new Promise(() => {}))
+    const { result } = renderHook(() => useCatalogo())
+    expect(result.current.cargando).toBe(true)
+    expect(result.current.productos).toEqual([])
+  })
+
+  it('una respuesta pedida con otra sesion no llena la cache', async () => {
+    tokenMock.mockReturnValue('admin')
+    let responder: (p: ReturnType<typeof producto>[]) => void = () => {}
+    getMock.mockReturnValueOnce(new Promise((r) => (responder = r)))
+    const admin = renderHook(() => useCatalogo())
+    admin.unmount()
+
+    tokenMock.mockReturnValue(null)
+    await act(async () => responder([producto({ nombre: 'inactivo' })]))
+
+    getMock.mockReturnValueOnce(new Promise(() => {}))
+    const { result } = renderHook(() => useCatalogo())
+    expect(result.current.productos).toEqual([])
+  })
+
+  it('si la sesion cambia con la vista montada, descarta lo mostrado y vuelve a pedir', async () => {
+    tokenMock.mockReturnValue('admin')
+    getMock.mockResolvedValueOnce([producto({ nombre: 'inactivo' })])
+    const { result, rerender } = renderHook(() => useCatalogo())
+    await waitFor(() => expect(result.current.productos).toHaveLength(1))
+
+    tokenMock.mockReturnValue(null)
+    getMock.mockResolvedValueOnce([producto({ nombre: 'publico' })])
+    rerender()
+    expect(result.current.productos).toEqual([])
+    await waitFor(() => expect(result.current.productos.map((p) => p.nombre)).toEqual(['publico']))
+    expect(getMock).toHaveBeenCalledTimes(2)
   })
 })
