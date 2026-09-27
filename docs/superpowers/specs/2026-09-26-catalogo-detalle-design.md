@@ -60,7 +60,7 @@ Una parte de lo "básico" visible en producción viene de otro lado: el bug de T
 
 **Estados.**
 
-- Vacío: "No encontramos productos con ese filtro. Prueba quitando alguno o escríbenos y lo cotizamos a la medida.", botón "Quitar los filtros" y enlace a WhatsApp. Las Pautas asignan aquí la pose de señalamiento de la mascota; ese archivo no existe en `public/brand/`. El componente deja el espacio listo y el activo queda pendiente con el taller. No se sustituye por el isotipo, que tiene otro uso asignado.
+- Vacío: "No encontramos productos con ese filtro. Prueba quitando alguno o escríbenos y lo cotizamos a la medida.", botón "Quitar los filtros" y enlace a WhatsApp. La mascota queda fuera de esta versión del proyecto (decisión de TaJú, 2026-09-27): el estado vacío es solo texto y acciones, sin ilustración. No se sustituye por el isotipo, que tiene otro uso asignado.
 - Error: mensaje sin voseo ni lenguaje de sistema y botón "Probar de nuevo" (`reintentar` de `useCatalogo`).
 - Carga: `EsperaTaller`.
 
@@ -134,7 +134,7 @@ Criterios manuales: 360px sin scroll horizontal; foco visible; navegación por t
 
 ## 9. Pendientes con el taller
 
-- Pose de señalamiento de la mascota (estado vacío).
+- [x] Pose de la mascota para el estado vacío: descartada, la mascota queda fuera de esta versión.
 - Listas de "Antes de pedir" por familia.
 - Confirmar que el orden "Recomendados" (orden en que el taller carga los productos) le sirve, o si prefiere marcar destacados desde el admin (fuera de este spec).
 

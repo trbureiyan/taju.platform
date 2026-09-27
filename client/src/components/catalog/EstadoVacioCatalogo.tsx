@@ -8,7 +8,6 @@ import { BotonWhatsApp } from '../shared/BotonWhatsApp'
 export function EstadoVacioCatalogo({ alLimpiar }: { alLimpiar: () => void }) {
   return (
     <div className="flex flex-col items-start gap-6 py-12">
-      {/* [?] las Pautas asignan aqui la pose de senalamiento de la mascota; el archivo no esta en public/brand todavia */}
       <p className="text-lg text-texto-principal max-w-prosa">
         No encontramos productos con ese filtro. Prueba quitando alguno o escríbenos y lo cotizamos
         a la medida.

@@ -73,3 +73,9 @@ Los espaciales rebotan; los de efectos están críticamente amortiguados y nunca
 **§10, agregar fila de versión:**
 
 | 1.1 | 2026-09-26 | Tokens de display grande, tracking e interlineado de display, superficie y texto invertidos, fondos por familia, duraciones de bucle de espera y de cinta. |
+
+## Mascota fuera de esta versión
+
+Decisión de TaJú (2026-09-27): la versión web actual no usa la mascota. En la copia local de `02-pautas-de-marca.md`, junto al inventario de poses (§4), agregar:
+
+> La versión web 1.x no usa la mascota. Las poses asignadas a pantallas (por ejemplo, señalamiento en el estado vacío del catálogo) quedan sin aplicar hasta una versión que la incorpore.
