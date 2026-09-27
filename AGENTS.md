@@ -25,13 +25,14 @@ taju.platform/
 │       │   └── index.css            # @import tokens + tailwindcss + @config (obligatorio) + reset base
 │       ├── components/
 │       │   ├── ui/                  # primitivos compartidos: Button, Input, Badge...
-│       │   ├── catalog/             # componentes del catalogo de productos
+│       │   ├── catalog/             # catalogo: tarjeta, estantes, barra de filtros, navegacion de familias
+│       │   ├── producto/            # detalle de producto: galeria, precio por escala, antes de pedir, especificaciones
 │       │   ├── orders/              # formulario y flujo de pedidos
 │       │   ├── admin/               # panel de taller — tono neutro, sin acento rosa
 │       │   ├── vitrina/             # bloques de la landing en / + contenido.ts (texto por familia, fuente unica)
 │       │   └── shared/              # layout, nav, footer, EsperaTaller, feedback generico
 │       ├── hooks/                   # un archivo por concern (useDespertarServidor.ts, useMedia.ts, etc.)
-│       ├── lib/                     # utilidades del cliente (api.ts, movimiento.ts, formatters, etc.)
+│       ├── lib/                     # utilidades del cliente (api.ts, catalogo.ts, precio.ts, movimiento.ts, etc.)
 │       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
 ├── server/                          # Node.js 20 LTS + Express + TypeScript
 │   ├── tsconfig.json                # CommonJS, typecheck incluye los *.test.ts
@@ -141,7 +142,8 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Render dormido / despertador**: `useDespertarServidor` (montado en `Layout`) pega a `origen + '/health'` una vez por carga. `/health` cuelga de la raíz del servidor, no de `/api`: concatenar a `VITE_API_URL` da 404. Es la red de seguridad de `keep-alive.yml` (que GitHub desactiva tras 60 días sin push); no borrar uno asumiendo que el otro alcanza.
 - **Reduced-motion con `motion`**: usar `useMedia('(prefers-reduced-motion: reduce)')`, no `useReducedMotion()` de motion, que cachea la preferencia a nivel de módulo (no reacciona a cambios y rompe los tests que simulan la media query). `MotionConfig reducedMotion="user"` en `App.tsx` cubre las transformaciones.
 - **SVG de marca con viewBox cuadrado**: `taju-imagotipo.svg` es 384×384 con aire arriba y abajo; a altura fija se ve diminuto. Se recorta con `object-cover` y ancho/alto fijos (ver `Nav.tsx`). No editar el archivo: re-exportarlo es trabajo pendiente de marca.
-- **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Los dos usos existentes en `useCatalogo.ts` y `ProductoDetailPage.tsx` son intencionales (reset antes del fetch para evitar estado obsoleto visible) y están suprimidos con `// eslint-disable-next-line`. Código nuevo que necesite el mismo patrón debe suprimir con la misma directiva y documentar el motivo.
+- **Catálogo en el cliente**: `useCatalogo()` trae todo `/productos` una vez y guarda el último resultado en memoria (volver del detalle pinta al instante). Esa cache va atada al token: con sesión de administrador la respuesta incluye productos inactivos, así que un cambio de sesión la descarta y vuelve a pedir; cualquier cache nueva de datos del servidor debe seguir la misma regla, y no se pasan datos del servidor por `location.state` (el historial sobrevive al logout; el detalle pinta al instante con `productoEnCatalogo`); familia, búsqueda, orden y ocasión se filtran en el cliente y viven en la URL (`useFiltrosCatalogo`). Diseñado para 30 a 100 productos: si el catálogo pasa de ~100, mover búsqueda y paginación al servidor. `lib/api.ts` lanza `ErrorApi` con el código HTTP; una caída de red llega como `TypeError`, no como `ErrorApi`.
+- **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Ya no quedan usos suprimidos: `useCatalogo.ts` deriva el estado inicial de la cache y resetea durante el render cuando cambia el token, y `ProductoDetailPage.tsx` se remonta con `key={id}` al cambiar de producto. Preferir esos dos patrones; si un caso nuevo de verdad necesita `setState` síncrono en el efecto, suprimir con `// eslint-disable-next-line react-hooks/set-state-in-effect` y documentar el motivo.
 
 ---
 

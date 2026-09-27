@@ -12,8 +12,17 @@ describe('contenido de la Vitrina', () => {
     expect(rutaFamilia(familia)).toBe(`/catalogo?familia=${familia}`)
   })
 
+  it('cada familia dice que datos vamos a pedir antes del formulario', () => {
+    for (const c of CONTENIDO_FAMILIAS) expect(c.necesitamos.length).toBeGreaterThan(0)
+  })
+
   it('ningun texto usa voseo ni signos de exclamacion', () => {
-    const textos = CONTENIDO_FAMILIAS.flatMap((c) => [c.descripcion, c.cta, ...c.datos]).join(' ')
+    const textos = CONTENIDO_FAMILIAS.flatMap((c) => [
+      c.descripcion,
+      c.cta,
+      ...c.datos,
+      ...c.necesitamos,
+    ]).join(' ')
     expect(textos).not.toMatch(/[¡!]|\b(querés|podés|tenés|elegí)\b/i)
   })
 })
