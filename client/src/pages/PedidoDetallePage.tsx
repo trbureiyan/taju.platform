@@ -8,7 +8,6 @@ import { LineaTiempoPedido } from '../components/orders/LineaTiempoPedido'
 import { BloqueEntrega } from '../components/orders/BloqueEntrega'
 import { AccionesPedido } from '../components/orders/AccionesPedido'
 import { FranjaEspecificaciones, type ParEspecificacion } from '../components/producto/FranjaEspecificaciones'
-import { referenciaMedida } from '../lib/especificaciones'
 import { ETIQUETAS_ESTADO, ETIQUETAS_FAMILIA } from '../types'
 import { codigoPedido } from '../lib/pedido'
 import { contenidoDe } from '../components/vitrina/contenido'
@@ -19,7 +18,7 @@ function paresDePedido(pedido: Pedido): ParEspecificacion[] {
       etiqueta: 'Medida',
       valor: pedido.dimensiones.esDimensionPersonalizada
         ? `${pedido.dimensiones.valor} ${pedido.dimensiones.unidad} (medida personalizada)`
-        : referenciaMedida({ etiqueta: '', valor: pedido.dimensiones.valor, unidad: pedido.dimensiones.unidad }),
+        : `${pedido.dimensiones.valor} ${pedido.dimensiones.unidad}`,
     },
     { etiqueta: 'Cantidad', valor: pedido.cantidad },
     { etiqueta: 'Colores', valor: pedido.colores },

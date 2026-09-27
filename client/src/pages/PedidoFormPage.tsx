@@ -100,6 +100,8 @@ export function PedidoFormPage() {
     api
       .get<Pedido>(`/pedidos/${pedidoOrigenId}`)
       .then((original) => {
+        // ?desde= manipulado a mano puede apuntar a un pedido de otro producto - sus datos no aplican aqui
+        if (original.producto._id !== producto._id) return
         const baseCoincidente = producto.categoria.dimensionesBase.find(
           (d) => d.valor === original.dimensiones.valor,
         )

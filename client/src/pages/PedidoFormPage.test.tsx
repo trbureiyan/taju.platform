@@ -198,6 +198,7 @@ describe('PedidoFormPage', () => {
       vi.mocked(api.get).mockImplementation((path: string) =>
         path === '/pedidos/pedido-anterior'
           ? Promise.resolve({
+              producto: { _id: producto._id, nombre: producto.nombre },
               dimensiones: { valor: 22, unidad: 'cm', esDimensionPersonalizada: false },
               descripcion: 'Feliz cumple Ana',
               cantidad: 2,
@@ -229,6 +230,24 @@ describe('PedidoFormPage', () => {
       )
       expect(await screen.findByText(/ya no está disponible/i)).toBeInTheDocument()
       expect(screen.getByRole('link', { name: /ir al catálogo/i })).toBeInTheDocument()
+    })
+
+    it('no precarga si el pedido de origen es de otro producto (?desde= manipulado a mano)', async () => {
+      vi.mocked(api.get).mockImplementation((path: string) =>
+        path === '/pedidos/pedido-anterior'
+          ? Promise.resolve({
+              producto: { _id: 'otro-producto', nombre: 'Otro' },
+              dimensiones: { valor: 22, unidad: 'cm', esDimensionPersonalizada: false },
+              descripcion: 'De otro producto',
+              cantidad: 2,
+              colores: 'rosado',
+              materiales: 'acrílico',
+            } as Pedido)
+          : Promise.resolve(producto),
+      )
+      await renderFormulario('/pedido/prod-1?desde=pedido-anterior')
+
+      expect(screen.getByLabelText('Descripción del pedido')).toHaveValue('')
     })
 
     it('pedido original ilegible abre el formulario vacio con un aviso', async () => {
