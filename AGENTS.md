@@ -222,7 +222,7 @@ Tipografía: **Poppins** (400, 500, 600) para todo, **JetBrains Mono** para cód
 
 Solo una acción primaria por pantalla. El turquesa es color de contexto, nunca de acción. El rosa es acento afectivo, máximo una aparición por pantalla, nunca en elementos estructurales ni de sistema.
 
-En el panel de Taller (admin) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
+La mascota queda fuera de esta versión del proyecto (decisión de TaJú, 2026-09-27): ningún componente la usa ni le reserva espacio, aunque `.docs/branding/` le asigne poses. En el panel de Taller (admin) no se usa el acento rosa. El criterio ahí es legibilidad operativa bajo presión de entrega.
 
 Activos de marca en `public/brand/`:
 
