@@ -11,6 +11,7 @@ import { RegistrarPage } from './pages/RegistrarPage'
 import { ProductoDetailPage } from './pages/ProductoDetailPage'
 import { PedidoFormPage } from './pages/PedidoFormPage'
 import { MisPedidosPage } from './pages/MisPedidosPage'
+import { PedidoDetallePage } from './pages/PedidoDetallePage'
 import { EsperaTaller } from './components/shared/EsperaTaller'
 
 // el panel de taller no viaja en la primera carga: ningun cliente lo abre y la Vitrina es la puerta de entrada
@@ -65,6 +66,14 @@ export default function App() {
                     element={
                       <ProtectedRoute rol="cliente">
                         <MisPedidosPage />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/mis-pedidos/:id"
+                    element={
+                      <ProtectedRoute rol="cliente">
+                        <PedidoDetallePage />
                       </ProtectedRoute>
                     }
                   />

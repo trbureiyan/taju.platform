@@ -8,7 +8,7 @@ import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
 import { GaleriaProducto } from '../components/producto/GaleriaProducto'
 import { BloquePrecio } from '../components/producto/BloquePrecio'
 import { AntesDePedir } from '../components/producto/AntesDePedir'
-import { FranjaEspecificaciones } from '../components/producto/FranjaEspecificaciones'
+import { FranjaEspecificaciones, paresDeProducto } from '../components/producto/FranjaEspecificaciones'
 import { MasDeFamilia } from '../components/producto/MasDeFamilia'
 import { BarraPedidoMovil } from '../components/producto/BarraPedidoMovil'
 import { ETIQUETAS_FAMILIA } from '../types'
@@ -119,7 +119,7 @@ function DetalleProducto({ id, inicial }: { id: string; inicial?: Producto }) {
         </div>
       </div>
 
-      <FranjaEspecificaciones producto={producto} />
+      <FranjaEspecificaciones pares={paresDeProducto(producto)} />
       <MasDeFamilia producto={producto} />
       <BarraPedidoMovil precio={producto.precio} alPedir={alPedir} />
     </article>

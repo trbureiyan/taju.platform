@@ -31,9 +31,9 @@ function fechaLocal(dias: number): string {
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
 }
 
-async function renderFormulario() {
+async function renderFormulario(ruta = '/pedido/prod-1') {
   render(
-    <MemoryRouter initialEntries={['/pedido/prod-1']}>
+    <MemoryRouter initialEntries={[ruta]}>
       <Routes>
         <Route path="/pedido/:productoId" element={<PedidoFormPage />} />
         <Route path="/catalogo" element={<p>catalogo</p>} />
@@ -191,5 +191,73 @@ describe('PedidoFormPage', () => {
     await enviar()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya recibimos este mismo pedido')
+  })
+
+  describe('Pedir de nuevo (?desde=)', () => {
+    it('precarga medida, cantidad, colores, materiales y descripcion, sin fecha ni imagenes', async () => {
+      vi.mocked(api.get).mockImplementation((path: string) =>
+        path === '/pedidos/pedido-anterior'
+          ? Promise.resolve({
+              producto: { _id: producto._id, nombre: producto.nombre },
+              dimensiones: { valor: 22, unidad: 'cm', esDimensionPersonalizada: false },
+              descripcion: 'Feliz cumple Ana',
+              cantidad: 2,
+              colores: 'rosado',
+              materiales: 'acrílico',
+            } as Pedido)
+          : Promise.resolve(producto),
+      )
+      await renderFormulario('/pedido/prod-1?desde=pedido-anterior')
+
+      expect(await screen.findByLabelText('Descripción del pedido')).toHaveValue('Feliz cumple Ana')
+      expect(screen.getByLabelText('Media libra: 22 cm')).toBeChecked()
+      expect(screen.getByLabelText('Cantidad')).toHaveValue(2)
+      expect(screen.getByLabelText('Colores')).toHaveValue('rosado')
+      expect(screen.getByLabelText('Materiales')).toHaveValue('acrílico')
+      expect(screen.getByLabelText('Fecha de entrega')).toHaveValue('')
+      expect(screen.getByText(/adjúntalas de nuevo/i)).toBeInTheDocument()
+    })
+
+    it('producto inactivo muestra el mensaje con enlace al catalogo', async () => {
+      vi.mocked(api.get).mockRejectedValue(new Error('404'))
+      render(
+        <MemoryRouter initialEntries={['/pedido/prod-1?desde=pedido-anterior']}>
+          <Routes>
+            <Route path="/pedido/:productoId" element={<PedidoFormPage />} />
+            <Route path="/catalogo" element={<p>catalogo</p>} />
+          </Routes>
+        </MemoryRouter>,
+      )
+      expect(await screen.findByText(/ya no está disponible/i)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /ir al catálogo/i })).toBeInTheDocument()
+    })
+
+    it('no precarga si el pedido de origen es de otro producto (?desde= manipulado a mano)', async () => {
+      vi.mocked(api.get).mockImplementation((path: string) =>
+        path === '/pedidos/pedido-anterior'
+          ? Promise.resolve({
+              producto: { _id: 'otro-producto', nombre: 'Otro' },
+              dimensiones: { valor: 22, unidad: 'cm', esDimensionPersonalizada: false },
+              descripcion: 'De otro producto',
+              cantidad: 2,
+              colores: 'rosado',
+              materiales: 'acrílico',
+            } as Pedido)
+          : Promise.resolve(producto),
+      )
+      await renderFormulario('/pedido/prod-1?desde=pedido-anterior')
+
+      expect(screen.getByLabelText('Descripción del pedido')).toHaveValue('')
+    })
+
+    it('pedido original ilegible abre el formulario vacio con un aviso', async () => {
+      vi.mocked(api.get).mockImplementation((path: string) =>
+        path === '/pedidos/pedido-anterior' ? Promise.reject(new Error('404')) : Promise.resolve(producto),
+      )
+      await renderFormulario('/pedido/prod-1?desde=pedido-anterior')
+
+      expect(await screen.findByText(/no pudimos traer los datos de tu pedido anterior/i)).toBeInTheDocument()
+      expect(screen.getByLabelText('Descripción del pedido')).toHaveValue('')
+    })
   })
 })

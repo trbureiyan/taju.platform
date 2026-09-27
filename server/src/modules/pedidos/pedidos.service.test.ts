@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
 import mongoose, { Types } from 'mongoose'
-import { crearPedido, updateEstado } from './pedidos.service.js'
+import { crearPedido, updateEstado, getMisPedidos, getPedidoById } from './pedidos.service.js'
 import { Pedido } from '../../models/Pedido.js'
 import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
@@ -284,5 +284,34 @@ describe('crearPedido', () => {
 
     falla.mockRestore()
     expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
+  })
+})
+
+// ─── Consultas del cliente ──────────────────────────────────────────────────
+
+describe('getMisPedidos y getPedidoById', () => {
+  it('devuelven el historial de estados sin el actor', async () => {
+    const { input, cliente } = await pedidoBase()
+    const pedido = await crearPedido(input)
+
+    const lista = await getMisPedidos(cliente.id as string)
+    expect(lista).toHaveLength(1)
+    expect(lista[0].historialEstados[0]).toEqual({
+      estadoAnterior: null,
+      estadoNuevo: 'recibido',
+      fecha: expect.any(Date),
+    })
+    expect(lista[0].historialEstados[0]).not.toHaveProperty('actor')
+
+    const detalle = await getPedidoById(pedido.id as string, cliente.id as string)
+    expect(detalle.historialEstados[0]).not.toHaveProperty('actor')
+  })
+
+  it('getPedidoById responde 404 cuando el pedido es de otro cliente', async () => {
+    const { input } = await pedidoBase()
+    const pedido = await crearPedido(input)
+    const otroCliente = new Types.ObjectId().toString()
+
+    await expect(getPedidoById(pedido.id as string, otroCliente)).rejects.toThrow(AppError)
   })
 })

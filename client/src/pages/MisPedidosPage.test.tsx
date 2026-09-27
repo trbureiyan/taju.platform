@@ -1,0 +1,59 @@
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { MisPedidosPage } from './MisPedidosPage'
+import { api } from '../lib/api'
+import { AuthProvider } from '../contexts/AuthContext'
+import { olvidarMisPedidos } from '../hooks/useMisPedidos'
+import { pedido } from '../test/pedidos'
+
+vi.mock('../lib/api', () => ({
+  api: { get: vi.fn(), post: vi.fn() },
+  getToken: () => null,
+  setToken: () => {},
+}))
+const getMock = vi.mocked(api.get)
+
+afterEach(() => {
+  vi.clearAllMocks()
+  olvidarMisPedidos()
+})
+
+function renderizar() {
+  return render(
+    <MemoryRouter>
+      <AuthProvider>
+        <MisPedidosPage />
+      </AuthProvider>
+    </MemoryRouter>,
+  )
+}
+
+describe('MisPedidosPage', () => {
+  it('muestra el resumen y separa en curso de entregados', async () => {
+    getMock.mockResolvedValueOnce([
+      pedido({ _id: 'a', nombre: 'Topper luna', estado: 'en_produccion' }),
+      pedido({ _id: 'b', nombre: 'Blonda grabada', estado: 'entregado' }),
+    ])
+    renderizar()
+
+    await waitFor(() => expect(screen.getByText('Topper luna')).toBeInTheDocument())
+    expect(screen.getByText('Tienes 1 pedido en camino')).toBeInTheDocument()
+    expect(screen.getByText('Entregados')).toBeInTheDocument()
+    expect(screen.getByText('Blonda grabada')).toBeInTheDocument()
+  })
+
+  it('el vacio tutea y enlaza al catalogo', async () => {
+    getMock.mockResolvedValueOnce([])
+    renderizar()
+    await waitFor(() => expect(screen.getByText(/aún no tienes pedidos/i)).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /explorar el catálogo/i })).toBeInTheDocument()
+  })
+
+  it('el error ofrece probar de nuevo', async () => {
+    getMock.mockRejectedValueOnce(new Error('caido'))
+    renderizar()
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /probar de nuevo/i })).toBeInTheDocument()
+  })
+})
