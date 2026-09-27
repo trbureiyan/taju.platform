@@ -15,8 +15,10 @@ jobs:
     steps:
       - name: Ping /health
         run: |
+          # el shell por defecto de Actions corre con -e: sin || true, un timeout de curl (exit 28)
+          # aborta todo el step en el primer intento y el bucle de reintentos nunca llega a correr
           for i in 1 2 3; do
-            code=$(curl -s -o /dev/null -w "%{http_code}" -m 20 https://taju-server.onrender.com/health)
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 70 https://taju-server.onrender.com/health || true)
             echo "Intento $i: HTTP $code"
             if [ "$code" = "200" ]; then exit 0; fi
             sleep 5
