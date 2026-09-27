@@ -10,12 +10,14 @@ Proyecto Integrador II | Ingeniería de Software, Universidad Surcolombiana.
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS, React Router |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS 4, React Router |
+| Movimiento | `motion` (springs Material Design 3 Expressive), `lucide-react` (iconos) |
 | Backend | Node.js 20 LTS, TypeScript, Express.js |
 | Base de datos | MongoDB Atlas (Mongoose ODM) |
 | Almacenamiento de imágenes | Cloudinary |
 | Autenticación | JWT (en memoria del cliente, sin localStorage) |
 | Seguridad | bcrypt, Zod, validación de entradas en servidor |
+| Analítica | Vercel Web Analytics |
 | Package manager | pnpm 11 (monorepo con workspaces) |
 | Testing | Vitest, Supertest, mongodb-memory-server (server), React Testing Library (client) |
 
@@ -69,9 +71,13 @@ pnpm build:client                 # Build de producción del frontend
 
 ## Módulos principales
 
+**Vitrina** — landing pública en `/`: promesa de marca, familias de producto y llamado a la acción diferenciado por audiencia (cliente final / profesional).
+
 **Catálogo** — exhibición categorizada de productos (toppers, superficies, señalética, papelería), accesible sin autenticación.
 
-**Pedido** — formulario parametrizado con captura de dimensiones, materiales, acabado e imágenes de referencia.
+**Pedido** — formulario parametrizado con captura de dimensiones, materiales, acabado e imágenes de referencia; "Pedir de nuevo" precarga un pedido anterior.
+
+**Mis pedidos** — seguimiento del cliente: código de pedido compartido con el taller, línea de tiempo con el historial de estados y fecha de entrega.
 
 **Taller** — panel del administrador con gestión de órdenes, transición de estados y seguimiento de producción.
 
