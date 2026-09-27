@@ -1,6 +1,7 @@
-import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useProducto } from '../hooks/useProducto'
+import { productoEnCatalogo } from '../hooks/useCatalogo'
 import { Button } from '../components/ui/Button'
 import { EsperaTaller } from '../components/shared/EsperaTaller'
 import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
@@ -17,8 +18,9 @@ import { rutaFamilia } from '../components/vitrina/contenido'
 // key por id: pasar de un producto a otro ("Mas toppers") reinicia el estado sin setState dentro de un efecto
 export function ProductoDetailPage() {
   const { id = '' } = useParams<{ id: string }>()
-  const inicial = (useLocation().state as { producto?: Producto } | null)?.producto
-  return <DetalleProducto key={id} id={id} inicial={inicial?._id === id ? inicial : undefined} />
+  // [DECISION] pintar al instante desde el catalogo en memoria de esta sesion, no desde location.state - el historial
+  // sobrevive al logout y dejaria ver un producto inactivo que abrio el administrador. Entrada directa o recarga: espera a la API.
+  return <DetalleProducto key={id} id={id} inicial={productoEnCatalogo(id)} />
 }
 
 function DetalleProducto({ id, inicial }: { id: string; inicial?: Producto }) {

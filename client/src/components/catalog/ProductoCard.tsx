@@ -54,8 +54,6 @@ export function ProductoCard({ producto, mostrarFamilia = false }: ProductoCardP
           {/* un solo elemento interactivo: el ::after estira el clic a toda la tarjeta sin anidar controles */}
           <Link
             to={`/catalogo/${producto._id}`}
-            // el detalle se pinta al instante con estos datos y refresca en segundo plano
-            state={{ producto }}
             className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:shadow-none"
           >
             {producto.nombre}

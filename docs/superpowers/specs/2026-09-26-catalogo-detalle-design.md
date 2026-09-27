@@ -66,7 +66,7 @@ Una parte de lo "básico" visible en producción viene de otro lado: el bug de T
 
 ## 5. Detalle de producto
 
-**Apertura instantánea.** La tarjeta pasa el producto en el estado de navegación (`Link state`). El detalle se pinta con esos datos en el primer cuadro y refresca desde la API en segundo plano. Solo la entrada directa o la recarga muestran `EsperaTaller`.
+**Apertura instantánea.** El detalle toma el producto del catálogo en memoria de la sesión actual (`productoEnCatalogo`, ver sección 11). Se pinta con esos datos en el primer cuadro y refresca desde la API en segundo plano. Solo la entrada directa o la recarga muestran `EsperaTaller`.
 
 **Transición tarjeta a detalle.** La imagen viaja de la tarjeta al detalle con `layoutId` (container transform de M3). Con reduced-motion el cambio es directo. **Riesgo registrado:** la animación de layout entre rutas es lo más frágil del spec. Si no resulta fiable en volver atrás, recarga o entrada por enlace, se retira y queda solo la apertura instantánea.
 
@@ -100,7 +100,7 @@ Una parte de lo "básico" visible en producción viene de otro lado: el bug de T
 
 - `useFiltrosCatalogo`: lee y escribe `familia`, `q`, `orden`, `ocasion` en la URL; valores inválidos caen al valor por defecto.
 - `useCatalogo()`: sin parámetro, trae todo, expone `reintentar`.
-- `useProducto(id, inicial)`: arranca con el producto del estado de navegación si existe, refresca en segundo plano, distingue cargando, no encontrado y error de red.
+- `useProducto(id, inicial)`: arranca con el producto del catálogo en memoria de esta sesión si existe, refresca en segundo plano, distingue cargando, no encontrado y error de red.
 
 **API.** `lib/api.ts` lanza un error que conserva el código de estado HTTP (`ErrorApi`), para distinguir 404 de caída de red. No toca el módulo de auth.
 
@@ -123,7 +123,7 @@ TDD con Vitest y Testing Library:
 6. `useFiltrosCatalogo`: la URL es la fuente del estado; valores inválidos caen al defecto.
 7. `ProductoCard`: un solo enlace con el nombre del producto; silueta sin foto o con foto rota; etiqueta "Por volumen" en escala.
 8. Catálogo: estantes con "Todas"; grilla al buscar; conteo actualizado; "Quitar los filtros" limpia la URL; "Probar de nuevo" vuelve a pedir.
-9. Detalle: pinta al instante con el estado de navegación; 404 y error de red muestran mensajes distintos; tabla de escalas visible; "Antes de pedir" según familia.
+9. Detalle: pinta al instante con el catálogo en memoria de esta sesión, nunca con un producto guardado en el historial; 404 y error de red muestran mensajes distintos; tabla de escalas visible; "Antes de pedir" según familia.
 10. WhatsApp flotante ausente en `/catalogo/:id` y presente en `/catalogo`.
 
 Criterios manuales: 360px sin scroll horizontal; foco visible; navegación por teclado de familias, buscador, orden y tarjetas; contraste de tinta sobre fondos de familia (ya verificado en la Vitrina).
@@ -148,6 +148,7 @@ Criterios manuales: 360px sin scroll horizontal; foco visible; navegación por t
 
 - **Transición tarjeta → detalle retirada**, como preveía el riesgo de la sección 5. En el navegador, además de la imagen elegida, las tarjetas de "Más {familia}" volaban desde sus posiciones en el catálogo (comparten `layoutId`) y la imagen cruzaba por encima del título. Queda la apertura instantánea.
 - **Scroll al navegar**: `BrowserRouter` no maneja el scroll y el detalle se abría a la altura de la tarjeta. `ScrollAlInicio` sube la página al avanzar (PUSH) y respeta la posición al volver (POP).
-- **Catálogo en memoria**: `useCatalogo` recuerda el último resultado; volver del detalle pinta al instante y el navegador puede restaurar la posición en la lista.
+- **Catálogo en memoria**: `useCatalogo` recuerda el último resultado; volver del detalle pinta al instante y el navegador puede restaurar la posición en la lista. La memoria va atada al token de sesión: con sesión de administrador `/productos` incluye inactivos, y un login o logout la descarta y vuelve a pedir.
+- **Apertura instantánea sin `Link state`**: el producto en el estado de navegación queda en el historial del navegador y sobrevive al cierre de sesión, así que volver atrás podía pintar un producto inactivo que abrió el administrador. El detalle lo toma del catálogo en memoria de la sesión actual; `useProducto` también descarta el producto cuando cambia la sesión.
 - **Un solo botón amarillo en el detalle móvil**: el botón en línea se oculta en teléfono porque la barra fija ya lleva "Empezar mi pedido".
 - **La búsqueda también mira el nombre de la categoría** ("blonda" encuentra productos de la categoría "Blondas").

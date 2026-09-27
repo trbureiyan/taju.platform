@@ -1,20 +1,32 @@
 import { useEffect, useState, useCallback } from 'react'
-import { api, ErrorApi } from '../lib/api'
+import { api, ErrorApi, getToken } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 import type { Producto } from '../types'
 
 type Estado = 'cargando' | 'listo' | 'no-encontrado' | 'error'
 
 /**
- * Carga un producto. Si llega el producto desde la tarjeta, se muestra de inmediato y se refresca en segundo plano.
+ * Carga un producto. Si ya está en el catálogo de esta sesión, se muestra de inmediato y se refresca en segundo plano.
  * Montar con key={id}: cambiar de producto reinicia el estado sin setState dentro del efecto.
  * @param id - Id del producto.
- * @param inicial - Producto recibido por el estado de navegación, si existe.
+ * @param inicial - Producto del catálogo en memoria de esta sesión (`productoEnCatalogo`), si existe.
  * @returns producto, estado ('cargando' | 'listo' | 'no-encontrado' | 'error') y reintentar().
  */
 export function useProducto(id: string, inicial?: Producto) {
+  // mismo criterio que useCatalogo: con sesion de administrador el detalle puede traer un producto inactivo,
+  // y un cambio de sesion (suscrito via useAuth) lo descarta y vuelve a pedir
+  useAuth()
+  const token = getToken()
   const [producto, setProducto] = useState<Producto | null>(inicial ?? null)
   const [estado, setEstado] = useState<Estado>(inicial ? 'listo' : 'cargando')
+  const [tokenMostrado, setTokenMostrado] = useState(token)
   const [intento, setIntento] = useState(0)
+
+  if (tokenMostrado !== token) {
+    setTokenMostrado(token)
+    setProducto(null)
+    setEstado('cargando')
+  }
 
   useEffect(() => {
     let cancelado = false
@@ -35,7 +47,7 @@ export function useProducto(id: string, inicial?: Producto) {
     return () => {
       cancelado = true
     }
-  }, [id, intento])
+  }, [id, intento, token])
 
   const reintentar = useCallback(() => {
     setEstado('cargando')

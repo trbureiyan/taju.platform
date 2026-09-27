@@ -22,6 +22,22 @@ export function olvidarCatalogo() {
   cache = null
 }
 
+/** Guarda un catálogo como si lo hubiera traído la sesión actual. Para tests. */
+export function guardarCatalogo(productos: Producto[]) {
+  cache = { token: getToken(), productos }
+}
+
+/**
+ * Producto del catálogo en memoria, solo si lo trajo la sesión actual.
+ * El detalle lo usa para pintar al instante: a diferencia del historial del navegador, no sobrevive a un cierre de sesión.
+ * @param id - Id del producto.
+ * @returns El producto, o undefined si no está en el catálogo de esta sesión.
+ */
+export function productoEnCatalogo(id: string): Producto | undefined {
+  if (!cache || cache.token !== getToken()) return undefined
+  return cache.productos.find((p) => p._id === id)
+}
+
 function estadoInicial(token: string | null): Estado {
   return cache && cache.token === token
     ? { productos: cache.productos, cargando: false, error: null }
