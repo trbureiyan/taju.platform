@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, getToken } from '../lib/api'
+import { useAuth } from '../contexts/AuthContext'
 import type { Producto } from '../types'
 
 interface Estado {
@@ -32,7 +33,9 @@ function estadoInicial(token: string | null): Estado {
  * @returns productos, cargando, error (mensaje o null) y reintentar(), que vuelve a pedir sin recargar la página.
  */
 export function useCatalogo() {
-  // el token vive fuera de React: se lee en cada render para notar un cierre de sesion con la vista montada
+  // suscripcion a la sesion: login y logout re-renderizan este hook aunque la pagina no use AuthContext.
+  // El token (que vive fuera de React) es la clave real, porque es lo que decide que devuelve /productos
+  useAuth()
   const token = getToken()
   const [estado, setEstado] = useState<Estado>(() => estadoInicial(token))
   const [tokenMostrado, setTokenMostrado] = useState(token)
@@ -53,8 +56,10 @@ export function useCatalogo() {
         if (!cancelado) setEstado({ productos, cargando: false, error: null })
       })
       .catch((err: Error) => {
-        // con catalogo en memoria, un refresco fallido no borra lo que la persona ya esta viendo
-        if (!cancelado && cache?.token !== token) setEstado({ productos: [], cargando: false, error: err.message })
+        if (cancelado) return
+        // con catalogo en memoria de esta sesion, un refresco fallido muestra eso en vez del error
+        if (cache?.token === token) setEstado({ productos: cache.productos, cargando: false, error: null })
+        else setEstado({ productos: [], cargando: false, error: err.message })
       })
     return () => {
       cancelado = true
