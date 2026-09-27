@@ -13,6 +13,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@vercel/analytics": "2.0.1",
     "lucide-react": "1.48.0",
     "motion": "13.4.4",
     "react": "18.3.1",
