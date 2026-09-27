@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import type { PedidoAdmin, EstadoPedido } from '../../types'
 import { ETIQUETAS_ESTADO, CLASES_ESTADO } from '../../types'
 import { Button } from '../../components/ui/Button'
+import { codigoPedido } from '../../lib/pedido'
 
 // mapa lineal a proposito - el admin solo puede avanzar un paso, nunca saltar ni retroceder (ver pedidos.service)
 const SIGUIENTE_ESTADO: Partial<Record<EstadoPedido, EstadoPedido>> = {
@@ -103,6 +104,7 @@ export function AdminPedidosPage() {
           <table className="w-full text-sm" aria-label="Pedidos">
             <thead>
               <tr className="border-b border-borde-medio">
+                <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Código</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Cliente</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Producto</th>
                 <th className="text-left py-3 pr-4 font-medium text-texto-secundario">Categoría</th>
@@ -123,6 +125,9 @@ export function AdminPedidosPage() {
                     key={pedido._id}
                     className="border-b border-borde-sutil hover:bg-superficie-hundida transition-colors"
                   >
+                    <td className="py-3 pr-4 font-mono text-xs text-texto-secundario">
+                      {codigoPedido(pedido._id)}
+                    </td>
                     <td className="py-3 pr-4 text-texto-principal">
                       {pedido.cliente.email}
                     </td>
