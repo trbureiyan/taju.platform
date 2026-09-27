@@ -1,4 +1,4 @@
-# taju.platform
+<img width="2560" height="1280" alt="Tajú Platform" src="https://github.com/user-attachments/assets/f6855e83-4749-4bf1-a454-3aa3b241c339" />
 
 Plataforma web para **TaJú** — taller de corte y grabado láser en Neiva (Huila) que produce
 papelería y objetos personalizados para celebraciones y eventos. Centraliza la exhibición del
@@ -10,6 +10,8 @@ Proyecto Integrador II | Ingeniería de Software, Universidad Surcolombiana.
 [![CodeQL](https://github.com/trbureiyan/taju.platform/actions/workflows/codeql.yml/badge.svg)](https://github.com/trbureiyan/taju.platform/actions/workflows/codeql.yml)
 
 ---
+
+<img width="2560" height="400" alt="Divisor Stack@2x" src="https://github.com/user-attachments/assets/ce1aff5a-3dc5-45cd-83eb-d6bf9678a787" />
 
 ## Stack
 
