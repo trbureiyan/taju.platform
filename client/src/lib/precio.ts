@@ -29,7 +29,10 @@ export function formatearPrecio(precio: Precio): string {
  * @param cantidad - Cantidad solicitada (entero positivo).
  * @returns Objeto { total, unitario } o null si no hay información suficiente para cotizar.
  */
-export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: number; unitario: number } | null {
+export function calcularPrecioTotal(
+  precio: Precio,
+  cantidad: number
+): { total: number; unitario: number } | null {
   if (precio.escalas.length > 0) {
     // la escala aplicable es la de mayor cantidadMinima que la cantidad pedida todavia cubre
     const aplicable = [...precio.escalas]
@@ -45,3 +48,40 @@ export function calcularPrecioTotal(precio: Precio, cantidad: number): { total: 
   return null
 }
 
+export type PartesPrecio =
+  | { tipo: 'unidad'; valor: number }
+  | { tipo: 'escala'; valor: number; minimo: number }
+  | { tipo: 'consultar' }
+
+/**
+ * Descompone el precio para que la tarjeta y el detalle le den pesos visuales distintos a cada parte.
+ * @param precio - Objeto Precio con unitario y/o escalas.
+ * @returns Unidad, escala (con el punto de entrada: la escala de menor mínimo) o "consultar".
+ */
+export function partesPrecio(precio: Precio): PartesPrecio {
+  if (precio.escalas.length > 0) {
+    const entrada = [...precio.escalas].sort((a, b) => a.cantidadMinima - b.cantidadMinima)[0]
+    return { tipo: 'escala', valor: entrada.precioUnitario, minimo: entrada.cantidadMinima }
+  }
+  if (precio.unitario != null) return { tipo: 'unidad', valor: precio.unitario }
+  return { tipo: 'consultar' }
+}
+
+/**
+ * Precio comparable para ordenar el catálogo.
+ * @param precio - Objeto Precio.
+ * @returns El precio unitario o el de entrada de la escala; null si no tiene precio.
+ */
+export function precioParaOrden(precio: Precio): number | null {
+  const partes = partesPrecio(precio)
+  return partes.tipo === 'consultar' ? null : partes.valor
+}
+
+/**
+ * Formatea pesos colombianos: separador de miles con punto, sin decimales.
+ * @param valor - Monto entero en pesos.
+ * @returns Ej. "$45.000".
+ */
+export function formatearPesos(valor: number): string {
+  return `$${valor.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
+}

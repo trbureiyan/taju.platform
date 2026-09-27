@@ -10,7 +10,7 @@ interface FiltroOcasionProps {
   onChange: (ocasion: string | null) => void
 }
 
-// mismo lenguaje visual que FiltroFamilia, pero es contexto (turquesa) no accion (rosa/marca) -
+// mismo lenguaje de chip que la navegacion de familias, pero es contexto (turquesa) no accion (rosa/marca) -
 // la ocasion es una lente secundaria sobre el catalogo, la familia sigue siendo el filtro principal
 const CLASE_BASE_CHIP =
   'px-4 py-2 rounded-full text-sm font-medium min-h-[44px] border transition-[background-color,border-color,transform] duration-normal ease-estandar active:scale-97'

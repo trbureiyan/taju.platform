@@ -83,6 +83,14 @@ export interface ImagenReferencia {
   url: string
 }
 
+// sin actor: el server lo quita en la proyeccion (ver pedidos.service.ts), el cliente no necesita saber
+// quien del taller movio el estado, solo cuando
+export interface HistorialEstadoPedido {
+  estadoAnterior: EstadoPedido | null
+  estadoNuevo: EstadoPedido
+  fecha: string
+}
+
 // cliente union type: string cuando viene sin populate, objeto cuando el admin lo pide populado -
 // PedidoAdmin abajo fija el segundo caso para no repetir el chequeo en cada componente de admin
 export interface Pedido {
@@ -111,6 +119,7 @@ export interface Pedido {
   fechaSolicitud: string
   fechaEntrega: string | null
   confirmacionDimensionPersonalizada: boolean
+  historialEstados: HistorialEstadoPedido[]
 }
 
 // en el panel de admin el pedido siempre viene con el cliente populado, nunca solo el id

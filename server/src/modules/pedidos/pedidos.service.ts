@@ -210,13 +210,16 @@ function armarPedido(
 
 // ─── Consultas del cliente ──────────────────────────────────────────────────
 
+// el cliente ve su propio historial, pero no quien lo movio - actor es dato interno del taller
+const PROYECCION_SIN_ACTOR = { 'historialEstados.actor': 0 }
+
 export async function getMisPedidos(clienteId: string) {
-  return Pedido.find({ cliente: clienteId }).sort({ fechaSolicitud: -1 }).lean()
+  return Pedido.find({ cliente: clienteId }, PROYECCION_SIN_ACTOR).sort({ fechaSolicitud: -1 }).lean()
 }
 
 // el filtro por clienteId no es solo prolijidad: es lo unico que impide que un cliente lea el pedido de otro
 export async function getPedidoById(pedidoId: string, clienteId: string) {
-  const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId }).lean()
+  const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId }, PROYECCION_SIN_ACTOR).lean()
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
   return pedido
 }

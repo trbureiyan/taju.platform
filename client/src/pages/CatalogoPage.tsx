@@ -1,73 +1,96 @@
-import { useMemo, useState } from 'react'
-import { FiltroFamilia } from '../components/catalog/FiltroFamilia'
-import { FiltroOcasion } from '../components/catalog/FiltroOcasion'
-import { ProductoCard } from '../components/catalog/ProductoCard'
+import { useMemo } from 'react'
 import { useCatalogo } from '../hooks/useCatalogo'
-import type { Familia } from '../types'
+import { useFiltrosCatalogo } from '../hooks/useFiltrosCatalogo'
+import { filtrarProductos, ordenarProductos, agruparPorFamilia } from '../lib/catalogo'
+import { CabeceraCatalogo } from '../components/catalog/CabeceraCatalogo'
+import { NavFamilias } from '../components/catalog/NavFamilias'
+import { BarraCatalogo } from '../components/catalog/BarraCatalogo'
+import { EstanteFamilia } from '../components/catalog/EstanteFamilia'
+import { GrillaProductos } from '../components/catalog/GrillaProductos'
+import { EstadoVacioCatalogo } from '../components/catalog/EstadoVacioCatalogo'
+import { EsperaTaller } from '../components/shared/EsperaTaller'
+import { Button } from '../components/ui/Button'
 
 export function CatalogoPage() {
-  const [familia, setFamilia] = useState<Familia | null>(null)
-  const [ocasion, setOcasion] = useState<string | null>(null)
-  const { productos, cargando, error } = useCatalogo(familia)
+  const { productos, cargando, error, reintentar } = useCatalogo()
+  const { familia, q, orden, ocasion, actualizar, limpiar, hrefFamilia } = useFiltrosCatalogo()
 
   // coleccion por ocasion es una lente de UI sobre especificacionesTecnicas, no una entidad de dominio nueva -
-  // las 4 familias siguen siendo el taxonomia real (ver AGENTS.md); esto solo agrupa lo que el taller ya etiqueto
+  // las 4 familias siguen siendo la taxonomia real (ver AGENTS.md); esto solo agrupa lo que el taller ya etiqueto
   const ocasiones = useMemo(() => {
     const vistas = new Set<string>()
-    for (const p of productos) {
+    for (const p of filtrarProductos(productos, { familia, q: '', ocasion: null })) {
       const valor = p.especificacionesTecnicas.ocasion
       if (valor) vistas.add(valor)
     }
-    return [...vistas].sort()
-  }, [productos])
+    return [...vistas].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [productos, familia])
 
-  const productosFiltrados = ocasion
-    ? productos.filter((p) => p.especificacionesTecnicas.ocasion === ocasion)
-    : productos
+  const visibles = useMemo(
+    () => ordenarProductos(filtrarProductos(productos, { familia, q, ocasion }), orden),
+    [productos, familia, q, ocasion, orden]
+  )
+  // estantes solo en la vista abierta: apenas hay busqueda u ocasion, una sola grilla es mas facil de recorrer
+  const enEstantes = !familia && !q && !ocasion
 
   return (
-    <section>
-      <h1 className="text-2xl font-semibold text-texto-principal mb-6">Catálogo</h1>
+    <>
+      <CabeceraCatalogo familia={familia}>
+        <NavFamilias activa={familia} href={hrefFamilia} />
+      </CabeceraCatalogo>
 
-      <div className="flex flex-col gap-4">
-        <FiltroFamilia seleccionada={familia} onChange={setFamilia} />
-        <FiltroOcasion ocasiones={ocasiones} seleccionada={ocasion} onChange={setOcasion} />
-      </div>
+      <BarraCatalogo
+        q={q}
+        orden={orden}
+        ocasiones={ocasiones}
+        ocasion={ocasion}
+        total={cargando || error ? null : visibles.length}
+        alBuscar={(texto) => actualizar({ q: texto }, true)}
+        alOrdenar={(nuevo) => actualizar({ orden: nuevo })}
+        alElegirOcasion={(nueva) => actualizar({ ocasion: nueva })}
+      />
 
-      {/* cuatro estados excluyentes: cargando / error / vacio / con resultados - solo uno se pinta a la vez */}
-      <div className="mt-8">
-        {cargando && (
-          <p className="text-texto-secundario">Cargando productos...</p>
-        )}
+      {/* cuatro estados excluyentes: cargando / error / vacio / con resultados */}
+      <div className="w-full max-w-contenedor mx-auto px-4 py-12">
+        {cargando && <EsperaTaller />}
 
         {error && (
-          <div role="alert" className="rounded-tarjeta border border-error-borde bg-error-fondo p-4">
-            <p className="text-sm font-medium text-error-texto">No pudimos cargar el catálogo</p>
-            <p className="text-sm text-error-texto mt-1">
-              Hubo un problema al conectar con el servidor. Intentá de nuevo en unos segundos.
+          <div
+            role="alert"
+            className="flex flex-col items-start gap-4 rounded-tarjeta border border-error-borde bg-error-fondo p-6"
+          >
+            <p className="font-medium text-error-texto">No pudimos traer el catálogo</p>
+            <p className="text-sm text-error-texto">
+              Tuvimos un problema para traer los productos. Prueba de nuevo en unos segundos.
             </p>
+            <Button variante="secundario" onClick={reintentar}>
+              Probar de nuevo
+            </Button>
           </div>
         )}
 
-        {!cargando && !error && productosFiltrados.length === 0 && (
-          <p className="text-texto-secundario">
-            No hay productos en esta categoría por el momento.
-          </p>
+        {!cargando && !error && visibles.length === 0 && (
+          <EstadoVacioCatalogo alLimpiar={limpiar} />
         )}
 
-        {!cargando && !error && productosFiltrados.length > 0 && (
-          <ul
-            className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            aria-label="Productos del catálogo"
-          >
-            {productosFiltrados.map((p) => (
-              <li key={p._id}>
-                <ProductoCard producto={p} />
-              </li>
-            ))}
-          </ul>
-        )}
+        {!cargando &&
+          !error &&
+          visibles.length > 0 &&
+          (enEstantes ? (
+            <div className="flex flex-col gap-16">
+              {agruparPorFamilia(visibles).map((g) => (
+                <EstanteFamilia
+                  key={g.familia}
+                  familia={g.familia}
+                  productos={g.productos}
+                  href={hrefFamilia(g.familia)}
+                />
+              ))}
+            </div>
+          ) : (
+            <GrillaProductos productos={visibles} mostrarFamilia={!familia} />
+          ))}
       </div>
-    </section>
+    </>
   )
 }

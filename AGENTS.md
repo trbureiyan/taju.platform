@@ -22,15 +22,17 @@ taju.platform/
 │       ├── App.tsx                  # router root (por definir en Phase 1)
 │       ├── styles/
 │       │   ├── tokens.css           # fuente unica de tokens — ver 04-tokens-de-diseno.md
-│       │   └── index.css            # @import tokens + @tailwind layers + reset base
+│       │   └── index.css            # @import tokens + tailwindcss + @config (obligatorio) + reset base
 │       ├── components/
 │       │   ├── ui/                  # primitivos compartidos: Button, Input, Badge...
-│       │   ├── catalog/             # componentes del catalogo de productos
-│       │   ├── orders/              # formulario y flujo de pedidos
+│       │   ├── catalog/             # catalogo: tarjeta, estantes, barra de filtros, navegacion de familias
+│       │   ├── producto/            # detalle de producto: galeria, precio por escala, antes de pedir, especificaciones
+│       │   ├── orders/              # seguimiento de pedidos: tarjeta, linea de avance, linea de tiempo, entrega, acciones
 │       │   ├── admin/               # panel de taller — tono neutro, sin acento rosa
-│       │   └── shared/              # layout, nav, feedback generico
-│       ├── hooks/                   # un archivo por concern (useOrderStatus.ts, etc.)
-│       ├── lib/                     # utilidades del cliente (api.ts, formatters, etc.)
+│       │   ├── vitrina/             # bloques de la landing en / + contenido.ts (texto por familia, fuente unica)
+│       │   └── shared/              # layout, nav, footer, EsperaTaller, feedback generico
+│       ├── hooks/                   # un archivo por concern (useDespertarServidor.ts, useMedia.ts, etc.)
+│       ├── lib/                     # utilidades del cliente (api.ts, catalogo.ts, precio.ts, movimiento.ts, etc.)
 │       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
 ├── server/                          # Node.js 20 LTS + Express + TypeScript
 │   ├── tsconfig.json                # CommonJS, typecheck incluye los *.test.ts
@@ -134,10 +136,15 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Idempotencia en creación de pedidos**: `crearPedido` (`server/src/modules/pedidos/pedidos.service.ts`) reserva una clave (hash del payload completo, incluido el contenido de cada archivo, + clienteId) en la colección `idempotencia_pedidos` dentro de una transacción junto al `Pedido.create`. Un envío idéntico dentro de 60 s recibe 409. Requiere replica set: Atlas M0 sirve, un mongod standalone local no. Si se agrega un campo al payload de creación, sumarlo a `claveIdempotencia()` o dos pedidos distintos colisionan. El perdedor de una carrera simultánea ya subió sus imágenes a Cloudinary antes de perder — el catch de la clave duplicada las borra con `eliminarImagen` (best-effort, no bloquea la respuesta 409 si Cloudinary falla).
 - **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
 - **TypeScript 7 bloqueado por typescript-eslint**: `typescript-eslint@8.x` soporta TS `>=4.8.4 <6.1.0`. Fijado en `6.0.3` hasta que typescript-eslint soporte TS 7 (tracking: [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). No subir `typescript` a `7.x` en ninguno de los dos `package.json` hasta que ese issue esté cerrado.
-- **Tailwind v4 requiere `@tailwindcss/vite`**: El paquete `tailwindcss@4` no incluye plugin PostCSS. La integración es via `@tailwindcss/vite` registrado en `client/vite.config.ts`. `postcss.config.js` tiene solo `autoprefixer`. El CSS usa `@import "tailwindcss"` y el plugin detecta `client/tailwind.config.js` automáticamente — no usar `@config` en el CSS.
+- **Tailwind v4 requiere `@tailwindcss/vite`**: El paquete `tailwindcss@4` no incluye plugin PostCSS. La integración es via `@tailwindcss/vite` registrado en `client/vite.config.ts`. `postcss.config.js` tiene solo `autoprefixer`. El CSS usa `@import "tailwindcss"` seguido de `@config "../../tailwind.config.js"` en `client/src/styles/index.css`. Tailwind v4 **no** detecta el archivo JS por su cuenta: sin `@config` ninguna clase del sistema (`bg-accion`, `rounded-tarjeta`, `text-h1`...) se compila y el sitio se ve sin estilos de marca, sin error de build. Verificar con `grep -c '\.bg-accion' client/dist/assets/*.css` tras `pnpm build:client`.
 - **Zod v4 — `z.record()` requiere dos args**: En Zod v3 `z.record(z.string())` infería `Record<string, string>`. En v4 el único argumento es el key schema y los valores quedan como `unknown`. Forma correcta: `z.record(z.string(), z.string())`. Buscar `z\.record\([^,)]+\)` si se agrega código nuevo con Zod.
 - **Zod v4 — `error.flatten()` removido**: `ZodError.prototype.flatten()` no existe en v4. Reemplazar con `z.flattenError(error)`. Cualquier código nuevo que acceda a errores Zod debe usar la función standalone.
-- **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Los dos usos existentes en `useCatalogo.ts` y `ProductoDetailPage.tsx` son intencionales (reset antes del fetch para evitar estado obsoleto visible) y están suprimidos con `// eslint-disable-next-line`. Código nuevo que necesite el mismo patrón debe suprimir con la misma directiva y documentar el motivo.
+- **Render dormido / despertador**: `useDespertarServidor` (montado en `Layout`) pega a `origen + '/health'` una vez por carga. `/health` cuelga de la raíz del servidor, no de `/api`: concatenar a `VITE_API_URL` da 404. Es la red de seguridad de `keep-alive.yml` (que GitHub desactiva tras 60 días sin push); no borrar uno asumiendo que el otro alcanza.
+- **Reduced-motion con `motion`**: usar `useMedia('(prefers-reduced-motion: reduce)')`, no `useReducedMotion()` de motion, que cachea la preferencia a nivel de módulo (no reacciona a cambios y rompe los tests que simulan la media query). `MotionConfig reducedMotion="user"` en `App.tsx` cubre las transformaciones.
+- **SVG de marca con viewBox cuadrado**: `taju-imagotipo.svg` es 384×384 con aire arriba y abajo; a altura fija se ve diminuto. Se recorta con `object-cover` y ancho/alto fijos (ver `Nav.tsx`). No editar el archivo: re-exportarlo es trabajo pendiente de marca.
+- **Catálogo en el cliente**: `useCatalogo()` trae todo `/productos` una vez y guarda el último resultado en memoria (volver del detalle pinta al instante). Esa cache va atada al token: con sesión de administrador la respuesta incluye productos inactivos, así que un cambio de sesión la descarta y vuelve a pedir; cualquier cache nueva de datos del servidor debe seguir la misma regla, y no se pasan datos del servidor por `location.state` (el historial sobrevive al logout; el detalle pinta al instante con `productoEnCatalogo`); familia, búsqueda, orden y ocasión se filtran en el cliente y viven en la URL (`useFiltrosCatalogo`). Diseñado para 30 a 100 productos: si el catálogo pasa de ~100, mover búsqueda y paginación al servidor. `lib/api.ts` lanza `ErrorApi` con el código HTTP; una caída de red llega como `TypeError`, no como `ErrorApi`.
+- **Mis pedidos en el cliente**: `useMisPedidos()` y `usePedido()` calcan el mismo patrón de `useCatalogo`/`useProducto` (cache en memoria atada al token, `pedidoEnMemoria(id)` pinta el detalle al instante desde la lista de la sesión). El server nunca manda `actor` en `historialEstados` al cliente (`getMisPedidos`/`getPedidoById` proyectan sin ese campo); si se agrega un campo nuevo al historial que el taller no quiera exponer, sumarlo a la misma proyección. `codigoPedido()` (`lib/pedido.ts`) es el único lugar que deriva el código `TJ-XXXXXX`; el panel de Taller y el cliente lo llaman a partir del mismo `_id`, nunca lo formatean por su cuenta.
+- **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Ya no quedan usos suprimidos: `useCatalogo.ts` deriva el estado inicial de la cache y resetea durante el render cuando cambia el token, y `ProductoDetailPage.tsx` se remonta con `key={id}` al cambiar de producto. Preferir esos dos patrones; si un caso nuevo de verdad necesita `setState` síncrono en el efecto, suprimir con `// eslint-disable-next-line react-hooks/set-state-in-effect` y documentar el motivo.
 
 ---
 
@@ -195,7 +202,7 @@ Fuente única de verdad: `.docs/branding/04-tokens-de-diseno.md`. Los valores vi
 Arquitectura de dos capas: primitivas (`--amarillo-500`, `--space-4`) y semánticas (`--accion-fondo`, `--texto-principal`). **Los componentes consumen solo la capa semántica.** Si un componente necesita una primitiva, falta un token semántico: crearlo, no usar la primitiva.
 
 > [!IMPORTANT]
-> **Dirección de interacción: Material Design 3 Expressive.** Decisión de metodología, no de identidad — se descartó neo-brutalism por "muy seco, recto y corpo" para el territorio de la marca. M3 Expressive gobierna forma (radios generosos, ya fijados en tokens) y movimiento (feedback de presión, curvas de easing), nunca color ni tipografía: esos siguen fijos e innegociables por `.docs/branding/01-identidad-de-marca.md` y `02-pautas-de-marca.md`. Implementación: `transitionTimingFunction` (`ease-estandar`/`ease-entrada`, mapeados a `--curva-estandar`/`--curva-entrada` de tokens.css) y `scale-97` como única escala de "presión" del sistema, ambos en `client/tailwind.config.js`. Todo componente interactivo nuevo (botones, chips, tarjetas) debe animarse con estos tokens — nunca con el `ease-in-out` genérico de Tailwind ni con transiciones arbitrarias.
+> **Dirección de interacción: Material Design 3 Expressive.** Decisión de metodología, no de identidad — se descartó neo-brutalism por "muy seco, recto y corpo" para el territorio de la marca. M3 Expressive gobierna forma (radios generosos, ya fijados en tokens) y movimiento (feedback de presión, curvas de easing), nunca color ni tipografía: esos siguen fijos e innegociables por `.docs/branding/01-identidad-de-marca.md` y `02-pautas-de-marca.md`. Implementación: `transitionTimingFunction` (`ease-estandar`/`ease-entrada`, mapeados a `--curva-estandar`/`--curva-entrada` de tokens.css) y `scale-97` como única escala de "presión" del sistema, ambos en `client/tailwind.config.js`. Todo componente interactivo nuevo (botones, chips, tarjetas) debe animarse con estos tokens — nunca con el `ease-in-out` genérico de Tailwind ni con transiciones arbitrarias. **Springs:** lo que se anima con `motion` (única librería de animación) usa `resorte()` de `client/src/lib/movimiento.ts`, con los valores de `ExpressiveMotionTokens.kt` de androidx: espacial (rebota, para posición/tamaño/giro) y efectos (sin rebote, para opacidad/color), cada uno rápido/normal/lento. CSS primero; `motion` solo para springs, efectos atados al scroll y arrastre.
 
 Invariantes verificables:
 
@@ -216,7 +223,7 @@ Tipografía: **Poppins** (400, 500, 600) para todo, **JetBrains Mono** para cód
 
 Solo una acción primaria por pantalla. El turquesa es color de contexto, nunca de acción. El rosa es acento afectivo, máximo una aparición por pantalla, nunca en elementos estructurales ni de sistema.
 
-En el panel de Taller (admin) no se usan el acento rosa ni la mascota. El criterio ahí es legibilidad operativa bajo presión de entrega.
+La mascota queda fuera de esta versión del proyecto (decisión de TaJú, 2026-09-27): ningún componente la usa ni le reserva espacio, aunque `.docs/branding/` le asigne poses. En el panel de Taller (admin) no se usa el acento rosa. El criterio ahí es legibilidad operativa bajo presión de entrega.
 
 Activos de marca en `public/brand/`:
 

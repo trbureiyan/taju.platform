@@ -27,7 +27,7 @@ export function BotonWhatsApp({ mensaje, variante = 'linea', children }: BotonWh
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Escribinos por WhatsApp"
+        aria-label="Escríbenos por WhatsApp"
         className={[
           'fixed bottom-6 right-6 z-elevado flex items-center justify-center w-14 h-14 rounded-full',
           'bg-accion-sec-fondo text-accion-sec-texto border border-accion-sec-borde shadow-lg',

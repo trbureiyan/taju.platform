@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
@@ -47,11 +47,16 @@ const MAX_ARCHIVOS = 3
 
 export function PedidoFormPage() {
   const { productoId } = useParams<{ productoId: string }>()
+  const [searchParams] = useSearchParams()
+  const pedidoOrigenId = searchParams.get('desde')
   const navigate = useNavigate()
 
   // producto sobre el que se pide + su carga inicial
   const [producto, setProducto] = useState<Producto | null>(null)
+  const [productoInactivo, setProductoInactivo] = useState(false)
   const [cargando, setCargando] = useState(true)
+  // "Pedir de nuevo": aviso si el pedido de origen no se pudo leer (404 o red) - el formulario igual abre, vacio
+  const [avisoOrigenIlegible, setAvisoOrigenIlegible] = useState(false)
 
   // imagenes de referencia, por fuera de "campos" porque File no es serializable como el resto del form
   const [archivos, setArchivos] = useState<File[]>([])
@@ -85,9 +90,35 @@ export function PedidoFormPage() {
     api
       .get<Producto>(`/productos/${productoId}`)
       .then((p) => setProducto(p))
-      .catch(() => navigate('/catalogo', { replace: true })) // id invalido o producto de baja
+      .catch(() => setProductoInactivo(true)) // id invalido o producto de baja
       .finally(() => setCargando(false))
-  }, [productoId, navigate])
+  }, [productoId])
+
+  // "Pedir de nuevo": precarga desde el pedido original, sin fecha (ya paso) ni imagenes (ver spec §5)
+  useEffect(() => {
+    if (!pedidoOrigenId || !producto) return
+    api
+      .get<Pedido>(`/pedidos/${pedidoOrigenId}`)
+      .then((original) => {
+        // ?desde= manipulado a mano puede apuntar a un pedido de otro producto - sus datos no aplican aqui
+        if (original.producto._id !== producto._id) return
+        const baseCoincidente = producto.categoria.dimensionesBase.find(
+          (d) => d.valor === original.dimensiones.valor,
+        )
+        const personalizada = original.dimensiones.esDimensionPersonalizada || !baseCoincidente
+        setCampos((prev) => ({
+          ...prev,
+          dimensionSeleccionada: personalizada ? 'personalizada' : baseCoincidente!.etiqueta,
+          dimensionCustom: personalizada ? String(original.dimensiones.valor) : '',
+          descripcion: original.descripcion,
+          cantidad: String(original.cantidad),
+          colores: original.colores,
+          materiales: original.materiales,
+        }))
+      })
+      .catch(() => setAvisoOrigenIlegible(true)) // 404 o red: el formulario abre vacio, sin bloquear
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pedidoOrigenId, producto?._id])
 
   // ─── Handlers de campos ───────────────────────────────────────────────────
 
@@ -131,7 +162,7 @@ export function PedidoFormPage() {
     if (!campos.materiales.trim()) next.materiales = 'Indicá los materiales'
     // fechaEntrega es opcional, pero si la eligen tiene que respetar el minimo de produccion
     if (campos.fechaEntrega && campos.fechaEntrega < fechaMinimaEntrega()) {
-      next.fechaEntrega = `Elegí una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
+      next.fechaEntrega = `Elige una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
     }
     setErrores(next)
     return Object.keys(next).length === 0
@@ -185,7 +216,23 @@ export function PedidoFormPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   if (cargando) return <p className="text-texto-secundario">Cargando…</p>
-  if (!producto) return null // ya redirigio en el catch del effect
+
+  if (productoInactivo) {
+    return (
+      <div className="max-w-md mx-auto text-center py-12 flex flex-col gap-4">
+        <p className="text-texto-principal">
+          {pedidoOrigenId
+            ? 'Ese producto ya no está disponible. Mira lo que tenemos parecido en el catálogo.'
+            : 'No encontramos este producto. Puede que el taller ya no lo esté ofreciendo.'}
+        </p>
+        <Link to="/catalogo" className="text-sm font-medium text-texto-principal hover:underline">
+          Ir al catálogo
+        </Link>
+      </div>
+    )
+  }
+
+  if (!producto) return null
 
   // pantalla de exito reemplaza el formulario entero, no se muestran los dos a la vez
   if (pedidoCreado) {
@@ -256,6 +303,12 @@ export function PedidoFormPage() {
         <p className="font-semibold text-texto-principal">{producto.nombre}</p>
         <p className="text-sm text-texto-secundario">{producto.categoria.nombre}</p>
       </div>
+
+      {avisoOrigenIlegible && (
+        <p className="mb-6 text-sm text-texto-secundario rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-3">
+          No pudimos traer los datos de tu pedido anterior. Puedes completar el formulario igual.
+        </p>
+      )}
 
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
         {/* radios de dimensionesBase + opcion "personalizada" - o el input libre solo si no hay dimensiones sugeridas */}
@@ -373,6 +426,11 @@ export function PedidoFormPage() {
             Imágenes de referencia
             <span className="ml-1 font-normal text-texto-tenue">(opcional, hasta 3 JPG, máx 5 MB c/u)</span>
           </label>
+          {pedidoOrigenId && (
+            <p className="text-xs text-texto-tenue">
+              Si quieres usar las mismas imágenes de referencia, adjúntalas de nuevo.
+            </p>
+          )}
           <input
             type="file"
             accept="image/jpeg"
