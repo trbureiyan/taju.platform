@@ -120,6 +120,9 @@ importers:
       express-rate-limit:
         specifier: 7.5.0
         version: 7.5.0(express@4.22.3(supports-color@7.2.0))
+      helmet:
+        specifier: 8.0.0
+        version: 8.0.0
       jsonwebtoken:
         specifier: 9.0.3
         version: 9.0.3
@@ -1689,6 +1692,10 @@ packages:
 
   hdr-histogram-percentiles-obj@3.0.0:
     resolution: {integrity: sha512-7kIufnBqdsBGcSZLPJwqHT3yhk1QTsSlFsVD3kx5ixH/AlgBs9yM1q6DPhXZ8f8gtdqgh7N7/5btRLpQsS2gHw==}
+
+  helmet@8.0.0:
+    resolution: {integrity: sha512-VyusHLEIIO5mjQPUI1wpOAEu+wl6Q0998jzTxqUYGE45xCIcAxy3MsbEK/yyJUJ3ADeMoB6MornPH6GMWAf+Pw==}
+    engines: {node: '>=18.0.0'}
 
   hermes-estree@0.25.1:
     resolution: {integrity: sha512-0wUoCcLp+5Ev5pDW2OriHC2MJCbwLwuRx+gAqMTOkGKJJiBCLjtrvy4PWUGn6MIVefecRpzoOZ/UV6iGdOr+Cw==}
@@ -4231,6 +4238,8 @@ snapshots:
       pako: 1.0.11
 
   hdr-histogram-percentiles-obj@3.0.0: {}
+
+  helmet@8.0.0: {}
 
   hermes-estree@0.25.1: {}
 

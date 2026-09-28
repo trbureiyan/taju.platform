@@ -2,6 +2,29 @@ import { describe, it, expect, afterEach } from 'vitest'
 import request from 'supertest'
 import { crearApp } from './app.js'
 
+describe('cabeceras de seguridad (helmet)', () => {
+  it('incluye X-Content-Type-Options: nosniff', async () => {
+    const res = await request(crearApp()).get('/health')
+    expect(res.headers['x-content-type-options']).toBe('nosniff')
+  })
+
+  it('no expone X-Powered-By', async () => {
+    const res = await request(crearApp()).get('/health')
+    expect(res.headers['x-powered-by']).toBeUndefined()
+  })
+})
+
+describe('body limit (express.json)', () => {
+  it('rechaza body JSON mayor a 100 KB con 413', async () => {
+    const payload = JSON.stringify({ campo: 'x'.repeat(110 * 1024) })
+    const res = await request(crearApp())
+      .post('/api/auth/login')
+      .set('Content-Type', 'application/json')
+      .send(payload)
+    expect(res.status).toBe(413)
+  })
+})
+
 const ENV_ORIGINAL = { ...process.env }
 
 afterEach(() => {

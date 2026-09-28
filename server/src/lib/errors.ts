@@ -35,6 +35,22 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     res.status(err.status).json({ error: err.message })
     return
   }
+
+  // errores HTTP de Express/body-parser (PayloadTooLargeError, SyntaxError de JSON malformado, etc.)
+  // traen un campo .status numerico que es el codigo HTTP correcto a propagar
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'status' in err &&
+    typeof (err as { status: unknown }).status === 'number'
+  ) {
+    const status = (err as { status: number }).status
+    if (status >= 400 && status < 500) {
+      res.status(status).json({ error: 'Solicitud inválida' })
+      return
+    }
+  }
+
   console.error('Error no manejado:', err)
   res.status(500).json({ error: 'Error interno del servidor' })
 }
