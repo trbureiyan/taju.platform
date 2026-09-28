@@ -114,6 +114,7 @@ When assigned a task:
 
 ### Documentation Maintenance
 
+- `docs/superpowers/` — planes, specs y artefactos de sesiones de agente — está en `.gitignore` y no se commitea. Es trabajo efímero de sesión. No agregar sus archivos con `git add -f` ni moverlos fuera del directorio para versionarlos.
 - `AGENTS.md` es documentación versionada del proyecto, no una nota local desechable.
 - Todo cambio grande en arquitectura, auth, seguridad, base de datos, despliegue, dependencias, rutas o flujo de trabajo debe revisar este archivo y los docs relacionados.
 - Si el cambio modifica una instrucción, un riesgo, un comando o una descripción de arquitectura, actualizar la documentación en el mismo commit.
