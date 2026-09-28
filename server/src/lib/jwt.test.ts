@@ -17,10 +17,10 @@ describe('signToken / verifyToken', () => {
     expect(() => verifyToken(token)).toThrow()
   })
 
-  it('rechaza un token con firma valida pero payload incompleto', () => {
-    // firmado con el mismo secreto que usa la app, pero sin email ni rol
+  it('rechaza un token con firma valida pero sin iss/aud ni payload completo', () => {
+    // firmado con el mismo secreto que usa la app, pero sin email, rol, iss ni aud
     const token = jwt.sign({ sub: 'user-1' }, process.env.JWT_SECRET!, { expiresIn: '8h' })
-    expect(() => verifyToken(token)).toThrow('Token con payload invalido')
+    expect(() => verifyToken(token)).toThrow()
   })
 
   // signToken fija 8h a proposito (ver jwt.ts) - pasado ese margen el token debe dejar de servir
@@ -44,5 +44,30 @@ describe('signToken / verifyToken', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('el token incluye iss=taju-server y aud=taju-client', () => {
+    const token = signToken(payload)
+    const decoded = jwt.decode(token) as Record<string, unknown>
+    expect(decoded.iss).toBe('taju-server')
+    expect(decoded.aud).toBe('taju-client')
+  })
+
+  it('verifyToken rechaza un token con issuer distinto', () => {
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: '8h',
+      issuer: 'otro-servicio',
+      audience: 'taju-client',
+    })
+    expect(() => verifyToken(token)).toThrow()
+  })
+
+  it('verifyToken rechaza un token con audience distinto', () => {
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: '8h',
+      issuer: 'taju-server',
+      audience: 'otro-cliente',
+    })
+    expect(() => verifyToken(token)).toThrow()
   })
 })
