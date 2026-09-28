@@ -7,7 +7,7 @@ import { requireAuth } from '../../middleware/auth.js'
 const limiteAuth = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
-  standardHeaders: true,
+  standardHeaders: false,
   legacyHeaders: false,
   // en tests el limiter se salta para no contaminar requests entre tests de integración;
   // los tests de comportamiento del limiter usan su propia mini-app (auth.routes.test.ts)
