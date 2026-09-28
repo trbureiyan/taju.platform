@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
 import mongoose, { Types } from 'mongoose'
-import { crearPedido, updateEstado, getMisPedidos, getPedidoById } from './pedidos.service.js'
+import { crearPedido, updateEstado, getMisPedidos, getPedidoById, getAllPedidos } from './pedidos.service.js'
 import { Pedido } from '../../models/Pedido.js'
 import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
@@ -313,5 +313,39 @@ describe('getMisPedidos y getPedidoById', () => {
     const otroCliente = new Types.ObjectId().toString()
 
     await expect(getPedidoById(pedido.id as string, otroCliente)).rejects.toThrow(AppError)
+  })
+})
+
+// ─── Panel de taller (admin) ────────────────────────────────────────────────
+
+describe('getAllPedidos — paginación', () => {
+  async function crearPedidosDistintos(n: number) {
+    const { input } = await pedidoBase()
+    for (let i = 0; i < n; i++) {
+      // variar cantidad para obtener claves de idempotencia distintas
+      await crearPedido({ ...input, cantidad: i + 1 })
+    }
+  }
+
+  it('devuelve como máximo N pedidos por página', async () => {
+    await crearPedidosDistintos(3)
+    const pagina1 = await getAllPedidos(2, 1)
+    expect(pagina1.length).toBeLessThanOrEqual(2)
+  })
+
+  it('pagina 2 no contiene los mismos pedidos que pagina 1', async () => {
+    await crearPedidosDistintos(3)
+    const p1 = await getAllPedidos(2, 1)
+    const p2 = await getAllPedidos(2, 2)
+    expect(p1).toHaveLength(2)
+    expect(p2).toHaveLength(1)
+    const idsP1 = new Set(p1.map((p) => (p._id as { toString(): string }).toString()))
+    expect(p2.every((p) => !idsP1.has((p._id as { toString(): string }).toString()))).toBe(true)
+  })
+
+  it('sin parámetros retorna hasta 50 pedidos por defecto', async () => {
+    await crearPedidosDistintos(3)
+    const todos = await getAllPedidos()
+    expect(todos.length).toBeLessThanOrEqual(50)
   })
 })

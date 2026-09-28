@@ -16,7 +16,7 @@ function secret(): string {
  * @returns Cadena JWT firmada.
  */
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, secret(), { expiresIn: '8h' })
+  return jwt.sign(payload, secret(), { expiresIn: '8h', issuer: 'taju-server', audience: 'taju-client' })
 }
 
 // jwt.verify solo garantiza la firma, no la forma del payload - un token viejo o
@@ -38,7 +38,7 @@ function esJwtPayload(payload: unknown): payload is JwtPayload {
  * @throws Error si el token es inválido, expiró, o el payload no cumple JwtPayload.
  */
 export function verifyToken(token: string): JwtPayload {
-  const decoded = jwt.verify(token, secret())
+  const decoded = jwt.verify(token, secret(), { issuer: 'taju-server', audience: 'taju-client' })
   if (!esJwtPayload(decoded)) throw new Error('Token con payload invalido')
   return decoded
 }

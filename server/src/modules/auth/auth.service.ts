@@ -40,22 +40,30 @@ export async function registrar(nombre: string, email: string, password: string)
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 
+// hash ficticio de "placeholder" (bcrypt, 12 rondas) — se usa cuando el email no existe para que
+// bcrypt.compare tarde lo mismo en ambas ramas y no haya diferencia de tiempo que permita enumerar emails
+const HASH_FICTICIO = '$2b$12$Gz.eleFiOKys0PbvYxnkFOJ1EZ.dJf5NJs2.K53ANvhw6Dfx58TfS'
+
 /**
  * Autentica a un usuario existente.
  * @param email - Correo registrado.
  * @param password - Contraseña en texto plano a comparar con el hash almacenado.
  * @returns Token JWT y datos públicos del usuario.
  * @throws AppError(401) con mensaje genérico tanto si el correo no existe como si la clave es incorrecta,
- *         para no revelar cuál campo falló.
+ *         para no revelar cuál campo falló ni dar información de timing sobre si el email existe.
  */
 export async function iniciarSesion(email: string, password: string) {
   // +password: el campo es select:false por defecto (ver Usuario.ts)
   const usuario = await Usuario.findOne({ email }).select('+password')
-  // mismo mensaje si el correo no existe o si la clave esta mal, no le decimos a nadie cual campo fallo
-  if (!usuario) throw new AppError(401, 'Credenciales incorrectas')
 
-  const valida = await bcrypt.compare(password, usuario.password)
-  if (!valida) throw new AppError(401, 'Credenciales incorrectas')
+  // siempre comparar contra un hash para igualar el tiempo de respuesta:
+  // sin esto, la ausencia del usuario retorna en ~5ms y la clave incorrecta en ~150ms (bcrypt cost 12),
+  // lo que delata si el email existe o no sin importar que el mensaje de error sea identico
+  const hashAComparar = usuario?.password ?? HASH_FICTICIO
+  const valida = await bcrypt.compare(password, hashAComparar)
+
+  // mismo mensaje en los tres casos: email no existe, hash ficticio, clave incorrecta
+  if (!usuario || !valida) throw new AppError(401, 'Credenciales incorrectas')
 
   const token = signToken({ sub: usuario.id, email: usuario.email, rol: usuario.rol })
   return { token, usuario: { _id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } }
