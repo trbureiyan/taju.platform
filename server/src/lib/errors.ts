@@ -1,4 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express'
+import mongoose from 'mongoose'
 
 /**
  * Error de negocio con estado HTTP específico. Atrapado por errorHandler para
@@ -33,6 +34,14 @@ export function asyncHandler(
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
   if (err instanceof AppError) {
     res.status(err.status).json({ error: err.message })
+    return
+  }
+
+  // CastError de Mongoose en _id: el parámetro de ruta no era un ObjectId válido
+  // retornar 404 en vez de 500 — el recurso no existe desde la perspectiva del cliente
+  // solo aplica cuando err.path === '_id' para no convertir otros CastErrors en 404
+  if (err instanceof mongoose.Error.CastError && err.path === '_id') {
+    res.status(404).json({ error: 'Recurso no encontrado' })
     return
   }
 
