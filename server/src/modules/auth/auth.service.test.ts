@@ -53,6 +53,12 @@ describe('registrar', () => {
 })
 
 describe('iniciarSesion', () => {
+  it('llama a bcrypt.compare aunque el email no exista — previene timing oracle', async () => {
+    const spy = vi.spyOn(bcrypt, 'compare')
+    await iniciarSesion('fantasma@taju.co', 'cualquier-clave').catch(() => {})
+    expect(spy).toHaveBeenCalledOnce()
+  })
+
   it('retorna un token valido con credenciales correctas', async () => {
     await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
 

@@ -229,9 +229,25 @@ export async function getPedidoById(pedidoId: string, clienteId: string) {
 // el orden de la constante canonica ES la maquina de estados - updateEstado solo permite moverse al siguiente indice
 const ORDEN_ESTADOS: readonly EstadoPedido[] = ESTADOS_PEDIDO
 
+const LIMITE_MAXIMO_ADMIN = 100
+
+/**
+ * Lista pedidos del panel de taller con paginación.
+ * @param limite - Pedidos por página. Default 50, máximo 100. Valores fuera de rango se sanitizan.
+ * @param pagina - Página a devolver (base 1). Default 1. Valores menores a 1 se tratan como 1.
+ * @returns Array de pedidos ordenados por fechaSolicitud desc, _id desc como desempate.
+ */
 // sin filtro de cliente: esta vista es solo para el rol administrador (ver requireRol en las rutas)
-export async function getAllPedidos() {
-  return Pedido.find().sort({ fechaSolicitud: -1 }).populate('cliente', 'email').lean()
+export async function getAllPedidos(limite = 50, pagina = 1) {
+  const limiteSanitizado = Math.min(Math.max(1, limite), LIMITE_MAXIMO_ADMIN)
+  const paginaSanitizada = Math.max(1, pagina)
+  return Pedido.find()
+    // _id como desempate: dos pedidos con la misma fechaSolicitud mantienen orden total y estable entre páginas
+    .sort({ fechaSolicitud: -1, _id: -1 })
+    .skip((paginaSanitizada - 1) * limiteSanitizado)
+    .limit(limiteSanitizado)
+    .populate('cliente', 'email')
+    .lean()
 }
 
 // null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
