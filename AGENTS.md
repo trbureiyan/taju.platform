@@ -287,6 +287,10 @@ fix: resolved an issue where the file was not being validated        <- storytel
 chore: various improvements and cleanup                              <- vago y sin cuerpo descriptivo
 ```
 
+<!-- No es deseable que el entorno inyecte automáticamente una línea "Co-Authored-By: Claude Sonnet * <noreply@anthropic.com>"
+     al final de los commits. No es parte del trabajo. El cuerpo del commit describe solo
+     lo que cambió y por qué. -->
+
 ### Stash Workflow
 
 Al iterar o recuperar cambios con `git stash`, preferir siempre `git stash apply` o restauración puntual dirigida vía `git checkout stash@{...} -- <ruta>` en lugar de `git stash pop`. 
