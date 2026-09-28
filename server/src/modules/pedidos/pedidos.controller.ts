@@ -71,8 +71,12 @@ export const setFechaEntrega = asyncHandler(async (req: Request, res: Response) 
   res.json(pedido)
 })
 
-export const getAllPedidos = asyncHandler(async (_req: Request, res: Response) => {
-  const pedidos = await pedidosService.getAllPedidos()
+export const getAllPedidos = asyncHandler(async (req: Request, res: Response) => {
+  const limiteRaw = Number(req.query.limite ?? 50)
+  const paginaRaw = Number(req.query.pagina ?? 1)
+  const limite = Number.isFinite(limiteRaw) ? limiteRaw : 50
+  const pagina = Number.isFinite(paginaRaw) ? paginaRaw : 1
+  const pedidos = await pedidosService.getAllPedidos(limite, pagina)
   res.json(pedidos)
 })
 

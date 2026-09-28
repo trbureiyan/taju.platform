@@ -229,9 +229,18 @@ export async function getPedidoById(pedidoId: string, clienteId: string) {
 // el orden de la constante canonica ES la maquina de estados - updateEstado solo permite moverse al siguiente indice
 const ORDEN_ESTADOS: readonly EstadoPedido[] = ESTADOS_PEDIDO
 
+const LIMITE_MAXIMO_ADMIN = 100
+
 // sin filtro de cliente: esta vista es solo para el rol administrador (ver requireRol en las rutas)
-export async function getAllPedidos() {
-  return Pedido.find().sort({ fechaSolicitud: -1 }).populate('cliente', 'email').lean()
+export async function getAllPedidos(limite = 50, pagina = 1) {
+  const limiteSanitizado = Math.min(Math.max(1, limite), LIMITE_MAXIMO_ADMIN)
+  const paginaSanitizada = Math.max(1, pagina)
+  return Pedido.find()
+    .sort({ fechaSolicitud: -1 })
+    .skip((paginaSanitizada - 1) * limiteSanitizado)
+    .limit(limiteSanitizado)
+    .populate('cliente', 'email')
+    .lean()
 }
 
 // null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
