@@ -147,6 +147,7 @@ vite.config.ts.timestamp-*
 
 # planes, specs y artefactos de agentes — trabajo de sesión, no parte del repo
 docs/superpowers/
+.superpowers/sdd/
 
 # worktrees efimeros de agentes de Claude Code, no son parte del proyecto
 .claude/worktrees/
