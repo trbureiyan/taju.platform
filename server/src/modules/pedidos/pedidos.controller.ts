@@ -71,11 +71,22 @@ export const setFechaEntrega = asyncHandler(async (req: Request, res: Response) 
   res.json(pedido)
 })
 
+/**
+ * GET /api/pedidos — panel de taller (requiere rol administrador).
+ * Query params opcionales: ?limite=N (entero positivo, default 50, max 100) y ?pagina=N (entero positivo, default 1).
+ * Valores no enteros o negativos se ignoran y se usan los defaults.
+ */
 export const getAllPedidos = asyncHandler(async (req: Request, res: Response) => {
-  const limiteRaw = Number(req.query.limite ?? 50)
-  const paginaRaw = Number(req.query.pagina ?? 1)
-  const limite = Number.isFinite(limiteRaw) ? limiteRaw : 50
-  const pagina = Number.isFinite(paginaRaw) ? paginaRaw : 1
+  // parseInt rechaza floats y strings con letras; typeof protege contra arrays de query (?limite=1&limite=2)
+  const limiteRaw = typeof req.query.limite === 'string' ? parseInt(req.query.limite, 10) : NaN
+  const paginaRaw = typeof req.query.pagina === 'string' ? parseInt(req.query.pagina, 10) : NaN
+  const limite = Number.isInteger(limiteRaw) && limiteRaw > 0 ? limiteRaw : 50
+  const pagina = Number.isInteger(paginaRaw) && paginaRaw > 0 ? paginaRaw : 1
+  // (pagina - 1) * limite puede desbordar Number.MAX_SAFE_INTEGER con valores extremos
+  if (!Number.isSafeInteger((pagina - 1) * limite)) {
+    res.json([])
+    return
+  }
   const pedidos = await pedidosService.getAllPedidos(limite, pagina)
   res.json(pedidos)
 })

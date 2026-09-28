@@ -337,6 +337,8 @@ describe('getAllPedidos — paginación', () => {
     await crearPedidosDistintos(3)
     const p1 = await getAllPedidos(2, 1)
     const p2 = await getAllPedidos(2, 2)
+    expect(p1).toHaveLength(2)
+    expect(p2).toHaveLength(1)
     const idsP1 = new Set(p1.map((p) => (p._id as { toString(): string }).toString()))
     expect(p2.every((p) => !idsP1.has((p._id as { toString(): string }).toString()))).toBe(true)
   })

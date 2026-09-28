@@ -8,7 +8,7 @@ function crearAppConLimiter(max: number) {
   const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max,
-    standardHeaders: true,
+    standardHeaders: false,
     legacyHeaders: false,
     message: { error: 'Demasiados intentos. Esperá unos minutos antes de volver a intentarlo.' },
   })
@@ -45,12 +45,12 @@ describe('rate limiting — auth routes', () => {
     expect(res.body.error).toMatch(/Demasiados intentos/)
   })
 
-  it('la cabecera RateLimit-Limit refleja el máximo configurado', async () => {
+  it('no expone RateLimit-Limit en la respuesta (standardHeaders: false)', async () => {
     const app = crearAppConLimiter(10)
     const res = await request(app)
       .post('/login')
       .set('X-Forwarded-For', '10.0.0.3')
       .send({})
-    expect(res.headers['ratelimit-limit']).toBe('10')
+    expect(res.headers['ratelimit-limit']).toBeUndefined()
   })
 })
