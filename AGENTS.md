@@ -32,7 +32,7 @@ taju.platform/
 │       │   ├── vitrina/             # bloques de la landing en / + contenido.ts (texto por familia, fuente unica)
 │       │   └── shared/              # layout, nav, footer, EsperaTaller, feedback generico
 │       ├── hooks/                   # un archivo por concern (useDespertarServidor.ts, useMedia.ts, etc.)
-│       ├── lib/                     # utilidades del cliente (api.ts, catalogo.ts, precio.ts, movimiento.ts, etc.)
+│       ├── lib/                     # utilidades del cliente (api.ts, catalogo.ts, precio.ts, movimiento.ts, politicas.ts, horario.ts, etc.)
 │       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
 ├── server/                          # Node.js 20 LTS + Express + TypeScript
 │   ├── tsconfig.json                # CommonJS, typecheck incluye los *.test.ts
@@ -149,6 +149,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Pedidos anteriores a la solicitud**: `contacto` y `entrega` son obligatorios en el modelo `Pedido`. Los documentos de `Pedido` creados antes de ese cambio no los tienen, así que cualquier `save()` sobre ellos (cambiar el estado, marcar el contacto, registrar un acuerdo, cancelar) lanza `ValidationError` y `errorHandler` responde 500. No hay migración en código: limpiarlos es una acción manual del usuario, en cada base que tenga pedidos (`taju-dev` y `taju-prod`), borrando esos pedidos o completándoles `contacto` y `entrega`. Tiene que hacerse antes de desplegar este server; un agente no la ejecuta (ver Manual Actions).
 - **Concurrencia optimista en `Pedido`**: el schema usa `optimisticConcurrency: true`. Los servicios leen el pedido, validan en memoria y guardan; si otro cambio se guardó en el medio, el `save()` perdedor lanza `VersionError` y `errorHandler` responde 409 con "Este pedido cambió hace un momento... Recarga la página y vuelve a intentarlo." Todo código nuevo que escriba un `Pedido` con leer-modificar-guardar tiene que contar con ese 409.
 - **Requisitos por familia**: qué exige cada familia para aceptar una solicitud (fecha para todas, imagen de referencia para `toppers`) vive en `server/src/modules/pedidos/pedidos.requisitos.ts` y se espejará en `client/src/lib/requisitos.ts` (pendiente en la tarea de cliente; ese archivo todavía no existe). Cambiar una sin la otra deja al formulario avisando algo distinto de lo que el server rechaza.
+- **Políticas del taller y promesa de contacto**: horario, plazo de contacto, anticipo y días sin respuesta viven en `client/src/lib/politicas.ts`; ningún otro archivo repite esos números. `client/src/lib/horario.ts` calcula todo en hora de Colombia (`America/Bogota`, sin horario de verano) con `Intl`, no con la zona del dispositivo: `promesaContacto()` es la única frase de "te escribimos" y `limiteDeContacto()` mide si el taller la cumplió. La lista `FESTIVOS` (2026 a 2028) es fija: se extiende cada diciembre; sin ella un festivo se trata como día de atención y la promesa se adelanta un día, sin romper nada.
 
 ---
 
