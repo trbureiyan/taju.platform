@@ -36,4 +36,11 @@ describe('TarjetaPedido', () => {
     renderizar(sinFecha)
     expect(screen.getByText(/recibimos tu solicitud/i)).toBeInTheDocument()
   })
+
+  // [Review Focus] un pedido cancelado no promete fecha aunque el taller la hubiera acordado
+  it('un pedido cancelado con fecha acordada dice que se cancelo y no promete entrega', () => {
+    renderizar(pedido({ estado: 'cancelado', fechaEntrega: '2026-10-18T12:00:00.000Z' }))
+    expect(screen.getByText(/este pedido se canceló/i)).toBeInTheDocument()
+    expect(screen.queryByText(/te lo entregamos/i)).not.toBeInTheDocument()
+  })
 })

@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PedidoDetallePage } from './PedidoDetallePage'
 import { api, ErrorApi } from '../lib/api'
 import { AuthProvider } from '../contexts/AuthContext'
+import { SnackbarProvider } from '../components/ui/Snackbar'
 import { olvidarMisPedidos } from '../hooks/useMisPedidos'
 import { pedido } from '../test/pedidos'
 import { codigoPedido } from '../lib/pedido'
@@ -23,9 +24,11 @@ function renderizar(id: string) {
   return render(
     <MemoryRouter initialEntries={[`/mis-pedidos/${id}`]}>
       <AuthProvider>
-        <Routes>
-          <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
-        </Routes>
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/mis-pedidos/:id" element={<PedidoDetallePage />} />
+          </Routes>
+        </SnackbarProvider>
       </AuthProvider>
     </MemoryRouter>,
   )
@@ -55,5 +58,23 @@ describe('PedidoDetallePage', () => {
     renderizar('abc123')
 
     await waitFor(() => expect(screen.getByRole('button', { name: /probar de nuevo/i })).toBeInTheDocument())
+  })
+
+  it('una solicitud recibida ofrece cancelar y muestra fecha pedida y entrega', async () => {
+    getMock.mockResolvedValueOnce(pedido({ _id: 'abc123', estado: 'recibido' }))
+    renderizar('abc123')
+
+    expect((await screen.findAllByRole('button', { name: 'Cancelar mi solicitud' })).length).toBeGreaterThan(0)
+    expect(screen.getByText(/fecha que pediste/i)).toBeInTheDocument()
+    expect(screen.getByText('La recoges en el taller')).toBeInTheDocument()
+  })
+
+  // [Review Focus] un pedido cancelado se lee como cancelado y no ofrece cancelar de nuevo
+  it('un pedido cancelado se lee como cancelado y no ofrece cancelar', async () => {
+    getMock.mockResolvedValueOnce(pedido({ _id: 'abc123', estado: 'cancelado' }))
+    renderizar('abc123')
+
+    expect(await screen.findByText(/este pedido se canceló/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cancelar mi solicitud' })).not.toBeInTheDocument()
   })
 })

@@ -1,12 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, ErrorApi } from '../lib/api'
 import { Input } from '../components/ui/Input'
+import { Select } from '../components/ui/Select'
 import { Button } from '../components/ui/Button'
 import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
 import type { Producto, Pedido } from '../types'
 import { ETIQUETAS_FAMILIA } from '../types'
 import { calcularPrecioTotal } from '../lib/precio'
+import { codigoPedido } from '../lib/pedido'
+import { mensajeResumenPedido } from '../lib/mensajePedido'
+import { HORAS_DE_ENTREGA, esFestivo } from '../lib/politicas'
+import { horaEnPalabras, promesaContacto, relojBogota } from '../lib/horario'
+import {
+  exigeReferencia,
+  normalizarCelular,
+  MENSAJE_CELULAR,
+  MENSAJE_FALTA_FECHA,
+  MENSAJE_FALTA_REFERENCIA,
+  REGEX_CELULAR,
+} from '../lib/requisitos'
 
 interface Campos {
   dimensionSeleccionada: string
@@ -15,7 +28,11 @@ interface Campos {
   cantidad: string
   colores: string
   materiales: string
-  fechaEntrega: string
+  telefono: string
+  entregaMetodo: string
+  entregaDetalle: string
+  fechaDeseada: string
+  horaDeseada: string
 }
 
 interface Errores {
@@ -24,24 +41,73 @@ interface Errores {
   cantidad?: string
   colores?: string
   materiales?: string
-  fechaEntrega?: string
+  telefono?: string
+  fechaDeseada?: string
+  horaDeseada?: string
 }
 
-// un dia habil de margen minimo - da tiempo al taller a reaccionar antes de empezar a cortar
+// un dia calendario de margen minimo (hoy no alcanza) - da tiempo al taller a reaccionar antes de empezar a cortar
 const DIAS_MINIMOS_ENTREGA = 1
 
+// "hoy" es el del taller en Bogota, no el del dispositivo: un cliente en otra zona no corre la fecha minima
 function fechaMinimaEntrega(): string {
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + DIAS_MINIMOS_ENTREGA)
-  // toISOString() convierte a UTC — en GMT-5 antes de las 19:00 la fecha UTC es un dia atras
-  // getFullYear/Month/Date leen la zona local del dispositivo, que es donde opera el taller
-  const y = fecha.getFullYear()
-  const m = String(fecha.getMonth() + 1).padStart(2, '0')
-  const d = String(fecha.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  const [y, m, d] = relojBogota(new Date()).fecha.split('-').map(Number)
+  // aritmetica en UTC puro para sumar dias sin que la zona del dispositivo mueva la fecha
+  return new Date(Date.UTC(y, m - 1, d + DIAS_MINIMOS_ENTREGA)).toISOString().slice(0, 10)
+}
+
+// mediodia de Bogota para que ningun corrimiento de zona cambie el dia que se muestra
+function fechaEnPalabras(fecha: string): string {
+  return new Date(`${fecha}T12:00:00-05:00`).toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Bogota',
+  })
+}
+
+const MENSAJE_ERROR_ENVIO =
+  'No pudimos enviar tu pedido porque algo falló en la conexión con el taller. Tus datos siguen aquí: prueba de nuevo en unos segundos o escríbenos por WhatsApp.'
+
+// 400 del server que ya estan escritos para el cliente: requisitos (pedidos.requisitos.ts) y subida (middleware/upload.ts)
+const MENSAJES_REQUISITOS = [MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA, MENSAJE_CELULAR]
+const MENSAJES_SUBIDA = new Set([
+  'Cada imagen debe pesar menos de 5 MB',
+  'Uno de los archivos no es una imagen JPG válida',
+  'Solo se aceptan imágenes JPG (image/jpeg)',
+])
+
+// el server junta los requisitos faltantes con un espacio: pasa solo si el texto entero son requisitos conocidos
+function sonSoloRequisitos(texto: string): boolean {
+  let resto = texto
+  for (const m of MENSAJES_REQUISITOS) resto = resto.split(m).join('')
+  return resto !== texto && resto.trim() === ''
+}
+
+// [DECISION] lista blanca que falla cerrada: el texto del server llega tal cual solo en el 409 o en un 400 conocido;
+// red caida (TypeError), 5xx y cualquier otro 400 ("Solicitud inválida", errores de multer) reciben el de respaldo.
+// Si el server agrega un 400 escrito para el cliente, sumarlo aqui a mano o el cliente vera el de respaldo.
+function mensajeDeErrorDeEnvio(err: unknown): string {
+  if (!(err instanceof ErrorApi)) return MENSAJE_ERROR_ENVIO
+  if (err.estado === 409) return err.message
+  if (err.estado === 400 && (MENSAJES_SUBIDA.has(err.message) || sonSoloRequisitos(err.message))) {
+    return err.message
+  }
+  return MENSAJE_ERROR_ENVIO
 }
 
 const MAX_ARCHIVOS = 3
+const MAX_DESCRIPCION = 500
+
+// hora de Colombia fija (-05:00, sin horario de verano): la fecha pedida no depende de la zona del dispositivo
+function instanteDeseado(fecha: string, hora: string): string {
+  return new Date(`${fecha}T${hora}:00-05:00`).toISOString()
+}
+
+const OPCIONES_HORA = HORAS_DE_ENTREGA.map((h) => ({
+  valor: `${String(h).padStart(2, '0')}:00`,
+  texto: horaEnPalabras(h),
+}))
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -75,9 +141,19 @@ export function PedidoFormPage() {
     cantidad: '1',
     colores: '',
     materiales: '',
-    fechaEntrega: '',
+    telefono: '',
+    entregaMetodo: 'recoger',
+    entregaDetalle: '',
+    fechaDeseada: '',
+    horaDeseada: '',
   })
   const [errores, setErrores] = useState<Errores>({})
+  const tituloExito = useRef<HTMLHeadingElement>(null)
+
+  // el formulario se desmonta al crear el pedido: sin mover el foco, el lector de pantalla no anuncia nada
+  useEffect(() => {
+    if (pedidoCreado) tituloExito.current?.focus()
+  }, [pedidoCreado])
 
   // sin categoria (sin radios) o eligiendo "personalizada" a mano - ambos casos piden el input libre
   const esDimensionPersonalizada =
@@ -114,6 +190,10 @@ export function PedidoFormPage() {
           cantidad: String(original.cantidad),
           colores: original.colores,
           materiales: original.materiales,
+          // el celular y la entrega casi siempre se repiten; la fecha no (ya paso) ni las imagenes
+          telefono: original.contacto?.telefono ?? prev.telefono,
+          entregaMetodo: original.entrega?.metodo ?? prev.entregaMetodo,
+          entregaDetalle: original.entrega?.detalle ?? prev.entregaDetalle,
         }))
       })
       .catch(() => setAvisoOrigenIlegible(true)) // 404 o red: el formulario abre vacio, sin bloquear
@@ -133,12 +213,12 @@ export function PedidoFormPage() {
     setArchivoError(null)
     const files = Array.from(e.target.files ?? []).slice(0, MAX_ARCHIVOS)
     if (files.some((f) => f.type !== 'image/jpeg')) {
-      setArchivoError('Solo se aceptan imágenes JPG')
+      setArchivoError('Solo aceptamos imágenes JPG. Si tu referencia está en otro formato, conviértela o envíanosla por WhatsApp.')
       e.target.value = ''
       return
     }
     if (files.some((f) => f.size > 5 * 1024 * 1024)) {
-      setArchivoError('Cada imagen debe pesar menos de 5 MB')
+      setArchivoError('Cada imagen debe pesar menos de 5 MB. Redúcela o envíanosla por WhatsApp.')
       e.target.value = ''
       return
     }
@@ -146,33 +226,45 @@ export function PedidoFormPage() {
   }
 
   // ─── Validacion ───────────────────────────────────────────────────────────
-  // espejo del crearPedidoSchema del server - mismas reglas duplicadas para dar feedback antes del POST
+  // espejo de crearPedidoSchema y pedidos.requisitos del server - mismas reglas para dar feedback antes del POST
 
-  function validar(): boolean {
+  function validar(p: Producto): boolean {
     const next: Errores = {}
     if (esDimensionPersonalizada && !campos.dimensionCustom.trim()) {
-      next.dimensionCustom = 'Ingresá el valor en cm'
+      next.dimensionCustom = 'Nos falta la medida en centímetros. Sin ella no podemos calcular la proporción de tu pieza.'
     } else if (esDimensionPersonalizada && parseFloat(campos.dimensionCustom) <= 0) {
       next.dimensionCustom = 'El valor debe ser mayor a 0'
     }
-    if (!campos.descripcion.trim()) next.descripcion = 'Describí tu pedido'
+    if (!campos.descripcion.trim()) next.descripcion = 'Cuéntanos qué necesitas. Con eso podemos cotizarlo.'
     const qty = parseInt(campos.cantidad, 10)
     if (!campos.cantidad || isNaN(qty) || qty < 1) next.cantidad = 'La cantidad mínima es 1'
-    if (!campos.colores.trim()) next.colores = 'Indicá los colores'
-    if (!campos.materiales.trim()) next.materiales = 'Indicá los materiales'
-    // fechaEntrega es opcional, pero si la eligen tiene que respetar el minimo de produccion
-    if (campos.fechaEntrega && campos.fechaEntrega < fechaMinimaEntrega()) {
-      next.fechaEntrega = `Elige una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
+    if (!campos.colores.trim()) next.colores = 'Indica los colores que quieres. Los necesitamos para cotizar y producir.'
+    if (!campos.materiales.trim()) {
+      next.materiales = 'Indica el material. Si no lo sabes, cuéntanos para qué lo vas a usar y te asesoramos.'
     }
+    if (!REGEX_CELULAR.test(normalizarCelular(campos.telefono))) next.telefono = MENSAJE_CELULAR
+
+    if (!campos.fechaDeseada) {
+      next.fechaDeseada = MENSAJE_FALTA_FECHA
+    } else if (campos.fechaDeseada < fechaMinimaEntrega()) {
+      next.fechaDeseada = `Esa fecha es muy pronto para producirla. Elige una a partir del ${fechaEnPalabras(fechaMinimaEntrega())}, que es lo mínimo que necesitamos.`
+    } else if (esFestivo(campos.fechaDeseada)) {
+      next.fechaDeseada = 'Ese día es festivo y el taller no atiende. Elige otro día.'
+    }
+    if (!campos.horaDeseada) next.horaDeseada = 'Elige la hora en que la necesitas. Con ella coordinamos la entrega.'
+
+    const faltaReferencia = exigeReferencia(p.categoria.familia) && archivos.length === 0
+    if (faltaReferencia) setArchivoError(MENSAJE_FALTA_REFERENCIA)
+
     setErrores(next)
-    return Object.keys(next).length === 0
+    return Object.keys(next).length === 0 && !faltaReferencia
   }
 
   // ─── Envio ────────────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!producto || !validar()) return
+    if (!producto || !validar(producto)) return
 
     setEnviando(true)
     setErrorEnvio(null)
@@ -196,10 +288,11 @@ export function PedidoFormPage() {
     fd.append('cantidad', campos.cantidad)
     fd.append('colores', campos.colores)
     fd.append('materiales', campos.materiales)
-    // mediodia local evita que la conversion a UTC cruce a la fecha anterior (ver AdminPedidosPage)
-    if (campos.fechaEntrega) {
-      fd.append('fechaEntrega', new Date(`${campos.fechaEntrega}T12:00:00`).toISOString())
-    }
+    fd.append('telefono', normalizarCelular(campos.telefono))
+    fd.append('entregaMetodo', campos.entregaMetodo)
+    // la direccion escrita antes de volver a "recoger" no debe llegar al pedido ni a la clave de idempotencia
+    fd.append('entregaDetalle', campos.entregaMetodo === 'domicilio' ? campos.entregaDetalle : '')
+    fd.append('fechaDeseada', instanteDeseado(campos.fechaDeseada, campos.horaDeseada))
     archivos.forEach((f) => fd.append('imagenes', f))
 
     try {
@@ -207,7 +300,7 @@ export function PedidoFormPage() {
       const pedido = await api.postForm<Pedido>('/pedidos', fd)
       setPedidoCreado(pedido)
     } catch (err) {
-      setErrorEnvio(err instanceof Error ? err.message : 'Error al enviar el pedido')
+      setErrorEnvio(mensajeDeErrorDeEnvio(err))
     } finally {
       setEnviando(false)
     }
@@ -236,26 +329,19 @@ export function PedidoFormPage() {
 
   // pantalla de exito reemplaza el formulario entero, no se muestran los dos a la vez
   if (pedidoCreado) {
-    // mismo formato de fecha que MisPedidosPage/AdminPedidosPage - "a coordinar" si no se eligio fecha
-    const fechaTexto = pedidoCreado.fechaEntrega
-      ? new Date(pedidoCreado.fechaEntrega).toLocaleDateString('es-CO', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })
-      : 'a coordinar'
-    const mensajeWhatsApp = `Hola, quiero confirmar mi pedido #${pedidoCreado._id} de ${pedidoCreado.producto.nombre}. Fecha de entrega: ${fechaTexto}.`
-
     return (
       <div className="max-w-md mx-auto text-center py-12 flex flex-col gap-6">
         <div className="rounded-tarjeta bg-exito-fondo border border-exito-borde p-6">
-          <p className="text-sm font-medium text-exito-texto mb-1">¡Pedido enviado con éxito!</p>
-          <p className="text-xs text-exito-texto opacity-75">
-            Número de seguimiento: {pedidoCreado._id}
+          <h1 ref={tituloExito} tabIndex={-1} className="text-sm font-medium text-exito-texto mb-1">
+            Recibimos tu solicitud
+          </h1>
+          <p className="text-xs text-exito-texto">
+            Código: <span className="font-mono">{codigoPedido(pedidoCreado._id)}</span>
           </p>
         </div>
         <p className="text-sm text-texto-secundario">
-          Te avisaremos cuando tu pedido avance. Podés ver el estado en Mis pedidos.
+          {promesaContacto(new Date())} Hasta que confirmemos contigo el precio, la fecha y el anticipo, no empezamos a
+          producir.
         </p>
         <div className="flex gap-3 justify-center">
           <Button variante="primario" onClick={() => navigate('/mis-pedidos')}>
@@ -265,9 +351,9 @@ export function PedidoFormPage() {
             Seguir viendo
           </Button>
         </div>
-        {/* canal complementario - el pedido ya quedo registrado en la plataforma con trazabilidad, esto es para dudas puntuales */}
-        <BotonWhatsApp variante="linea" mensaje={mensajeWhatsApp}>
-          Confirmar por WhatsApp
+        {/* comodidad, no mecanismo: la solicitud ya existe en la plataforma aunque el cliente no envie este mensaje */}
+        <BotonWhatsApp variante="linea" mensaje={mensajeResumenPedido(pedidoCreado)}>
+          Enviar el resumen por WhatsApp
         </BotonWhatsApp>
       </div>
     )
@@ -279,6 +365,7 @@ export function PedidoFormPage() {
     !isNaN(cantidadNumerica) && cantidadNumerica > 0
       ? calcularPrecioTotal(producto.precio, cantidadNumerica)
       : null
+  const referenciaObligatoria = exigeReferencia(producto.categoria.familia)
 
   return (
     <section className="max-w-xl">
@@ -318,7 +405,7 @@ export function PedidoFormPage() {
           {dimensiones.length > 0 && (
             <div className="flex flex-col gap-2">
               {dimensiones.map((d) => (
-                <label key={d.etiqueta} className="flex items-center gap-2 cursor-pointer">
+                <label key={d.etiqueta} className="flex items-center gap-2 min-h-boton cursor-pointer">
                   <input
                     type="radio"
                     name="dimensionSeleccionada"
@@ -332,7 +419,7 @@ export function PedidoFormPage() {
                   </span>
                 </label>
               ))}
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 min-h-boton cursor-pointer">
                 <input
                   type="radio"
                   name="dimensionSeleccionada"
@@ -363,7 +450,9 @@ export function PedidoFormPage() {
         <Input
           label="Descripción del pedido"
           type="text"
-          placeholder="Describí qué necesitás y para qué ocasión"
+          maxLength={MAX_DESCRIPCION}
+          placeholder="Cuéntanos qué necesitas y para qué ocasión"
+          hint="Hasta 500 caracteres. Deja lo esencial (estilo, mensaje, detalles) y el resto lo hablamos por WhatsApp."
           value={campos.descripcion}
           onChange={(e) => set('descripcion', e.target.value)}
           error={errores.descripcion}
@@ -383,7 +472,7 @@ export function PedidoFormPage() {
           label="Colores"
           type="text"
           placeholder="Ej: dorado y blanco"
-          hint="Indicá los colores principales que querés"
+          hint="Indica los colores principales que quieres"
           value={campos.colores}
           onChange={(e) => set('colores', e.target.value)}
           error={errores.colores}
@@ -393,20 +482,84 @@ export function PedidoFormPage() {
           label="Materiales"
           type="text"
           placeholder="Ej: acrílico 3mm, madera terciada"
-          hint="Si no sabés qué material, describí el uso y te asesoramos"
+          hint="Si no sabes qué material, describe el uso y te asesoramos"
           value={campos.materiales}
           onChange={(e) => set('materiales', e.target.value)}
           error={errores.materiales}
         />
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            label="Fecha en que la necesitas"
+            type="date"
+            min={fechaMinimaEntrega()}
+            hint="Es la fecha que deseas. La acordamos contigo antes de confirmar."
+            value={campos.fechaDeseada}
+            onChange={(e) => set('fechaDeseada', e.target.value)}
+            error={errores.fechaDeseada}
+          />
+          <Select
+            label="Hora en que la necesitas"
+            value={campos.horaDeseada}
+            onChange={(e) => set('horaDeseada', e.target.value)}
+            error={errores.horaDeseada}
+          >
+            <option value="">Elige una hora</option>
+            {OPCIONES_HORA.map((o) => (
+              <option key={o.valor} value={o.valor}>
+                {o.texto}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <fieldset className="flex flex-col gap-3">
+          <legend className="text-sm font-medium text-texto-principal">Cómo recibes tu pedido</legend>
+          <label className="flex items-center gap-2 min-h-boton cursor-pointer">
+            <input
+              type="radio"
+              name="entregaMetodo"
+              value="recoger"
+              checked={campos.entregaMetodo === 'recoger'}
+              onChange={(e) => set('entregaMetodo', e.target.value)}
+              className="accent-accion"
+            />
+            <span className="text-sm text-texto-principal">Lo recojo en el taller</span>
+          </label>
+          <label className="flex items-center gap-2 min-h-boton cursor-pointer">
+            <input
+              type="radio"
+              name="entregaMetodo"
+              value="domicilio"
+              checked={campos.entregaMetodo === 'domicilio'}
+              onChange={(e) => set('entregaMetodo', e.target.value)}
+              className="accent-accion"
+            />
+            <span className="text-sm text-texto-principal">Lo quiero a domicilio en Neiva</span>
+          </label>
+          {campos.entregaMetodo === 'domicilio' && (
+            <Input
+              label="Barrio o dirección"
+              type="text"
+              autoComplete="street-address"
+              maxLength={200}
+              hint="Puedes dejarlo para después: la dirección exacta la confirmamos contigo antes de fijar la fecha."
+              value={campos.entregaDetalle}
+              onChange={(e) => set('entregaDetalle', e.target.value)}
+            />
+          )}
+        </fieldset>
+
         <Input
-          label="Fecha de entrega"
-          type="date"
-          min={fechaMinimaEntrega()}
-          hint="Opcional - si no la sabés todavía, te la confirmamos por WhatsApp"
-          value={campos.fechaEntrega}
-          onChange={(e) => set('fechaEntrega', e.target.value)}
-          error={errores.fechaEntrega}
+          label="Tu celular"
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          placeholder="Ej: 319 245 2842"
+          hint="Es el número por el que te escribimos para confirmar precio, fecha y anticipo."
+          value={campos.telefono}
+          onChange={(e) => set('telefono', e.target.value)}
+          error={errores.telefono}
         />
 
         {precioEstimado && (
@@ -416,15 +569,20 @@ export function PedidoFormPage() {
               ${precioEstimado.total.toLocaleString('es-CO')}
             </p>
             <p className="text-xs text-texto-tenue">
-              ${precioEstimado.unitario.toLocaleString('es-CO')} c/u × {campos.cantidad}
+              ${precioEstimado.unitario.toLocaleString('es-CO')} c/u × {campos.cantidad}. Es una referencia: el
+              precio final lo confirmamos contigo.
             </p>
           </div>
         )}
 
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-texto-principal">
+          <label htmlFor="imagenes-referencia" className="text-sm font-medium text-texto-principal">
             Imágenes de referencia
-            <span className="ml-1 font-normal text-texto-tenue">(opcional, hasta 3 JPG, máx 5 MB c/u)</span>
+            <span className="ml-1 font-normal text-texto-tenue">
+              {referenciaObligatoria
+                ? '(obligatoria, hasta 3 JPG, máx 5 MB c/u)'
+                : '(opcional, hasta 3 JPG, máx 5 MB c/u)'}
+            </span>
           </label>
           {pedidoOrigenId && (
             <p className="text-xs text-texto-tenue">
@@ -432,6 +590,7 @@ export function PedidoFormPage() {
             </p>
           )}
           <input
+            id="imagenes-referencia"
             type="file"
             accept="image/jpeg"
             multiple
@@ -452,14 +611,14 @@ export function PedidoFormPage() {
           </div>
         )}
 
-        <Button
-          type="submit"
-          variante="primario"
-          disabled={enviando}
-          className="w-full"
-        >
-          {enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido'}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button type="submit" variante="primario" disabled={enviando} className="w-full">
+            {enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido'}
+          </Button>
+          <p className="text-xs text-texto-secundario text-center">
+            Enviar no te compromete a nada: primero confirmamos contigo el precio, la fecha y el anticipo.
+          </p>
+        </div>
       </form>
     </section>
   )

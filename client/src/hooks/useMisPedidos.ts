@@ -29,6 +29,16 @@ export function pedidoEnMemoria(id: string): Pedido | undefined {
   return cache.pedidos.find((p) => p._id === id)
 }
 
+/**
+ * Cambia un pedido en la lista en memoria (p. ej. tras cancelarlo) para que Mis pedidos y el detalle
+ * no pinten el estado viejo. No hace nada si la sesión cambió o el pedido no está en la lista.
+ * @param actualizado - Pedido tal como lo devolvió el server.
+ */
+export function actualizarEnMemoria(actualizado: Pedido) {
+  if (!cache || cache.token !== getToken()) return
+  cache = { ...cache, pedidos: cache.pedidos.map((p) => (p._id === actualizado._id ? actualizado : p)) }
+}
+
 function estadoInicial(token: string | null): Estado {
   return cache && cache.token === token
     ? { pedidos: cache.pedidos, cargando: false, error: null }
