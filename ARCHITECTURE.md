@@ -132,8 +132,10 @@ La API organiza sus rutas bajo el prefijo `/api`:
   - `GET /mis-pedidos`: Historial de pedidos del cliente autenticado (`requireAuth`).
   - `GET /:id`: Consulta individual de pedido asegurando aislamiento por `clienteId` o acceso de administrador.
   - `GET /`: Listado completo de pedidos para el taller (`requireRol('administrador')`).
-  - `PATCH /:id/estado`: Transición controlada en la máquina de estados (`requireRol('administrador')`).
-  - `PATCH /:id/fecha-entrega`: Asignación de fecha estimada de entrega (`requireRol('administrador')`).
+  - `PATCH /:id/estado`: Transición controlada en la máquina de estados (tabla `TRANSICIONES`; `confirmado` y `en_produccion` exigen lo registrado) (`requireRol('administrador')`).
+  - `POST /:id/contacto`: Marca el primer contacto con el cliente; desde `recibido` pasa a `en_revision` (`requireRol('administrador')`).
+  - `PATCH /:id/acuerdo`: Registra lo acordado por fuera: fecha de entrega, entrega y anticipo (`requireRol('administrador')`).
+  - `PATCH /:id/cancelar`: El cliente cancela su solicitud hasta `en_revision` (`requireAuth`, solo el dueño; ajeno da 404).
 - **Healthcheck**:
   - `GET /health`: Endpoint liviano sin autenticación para monitoreo y verificación de despliegue.
 
@@ -147,7 +149,7 @@ La lógica de negocio reside estrictamente en los servicios desacoplados de los 
 |---|---|
 | `auth.service.ts` | Normalización de email, verificación de no duplicidad, hasheo con bcrypt, comparación de hashes y firma de tokens JWT. |
 | `catalog.service.ts` | Filtrado por familia y visibilidad (`activo`), validación de unicidad, borrado lógico/físico de productos y actualización de dimensiones base. |
-| `pedidos.service.ts` | Validación de existencia y estado activo de producto/categoría, subida paralela a Cloudinary, persistencia de snapshots embebidos, verificación de transiciones de estado secuenciales, control de aprobación de dimensiones personalizadas y registro atómico de auditoría en `historialEstados`. |
+| `pedidos.service.ts` | Validación de existencia y estado activo de producto/categoría, subida paralela a Cloudinary, persistencia de snapshots embebidos, tabla `TRANSICIONES` de la máquina de estados, compuertas de `confirmado` y `en_produccion` (`faltantesParaAvanzar`), requisitos por familia (`pedidos.requisitos.ts`), concurrencia optimista (un `save()` que pierde la carrera da 409), control de aprobación de dimensiones personalizadas y registro atómico de auditoría en `historialEstados`. |
 
 ### 4. Data Access Layer & Persistence (`server/src/models/`)
 
@@ -208,8 +210,13 @@ erDiagram
         string materiales
         Array imagenesReferencia "subdocumentos IImagenReferencia"
         string estado "enum EstadoPedido"
+        Object contacto "snapshot: nombre, telefono"
+        Object entrega "metodo, detalle"
         Date fechaSolicitud
-        Date fechaEntrega
+        Date fechaDeseada "lo que pidio el cliente"
+        Date fechaEntrega "acordada, la fija el taller"
+        Object pago "anticipo: monto, medio, registradoEn"
+        Date contactadoEn "primer contacto del taller"
         boolean confirmacionDimensionPersonalizada
         Array historialEstados "subdocumentos IHistorialEstado"
     }

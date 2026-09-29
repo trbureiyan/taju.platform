@@ -19,7 +19,7 @@ taju.platform/
 │   ├── tsconfig.json
 │   └── src/
 │       ├── main.tsx                 # render root
-│       ├── App.tsx                  # router root (por definir en Phase 1)
+│       ├── App.tsx                  # router root
 │       ├── styles/
 │       │   ├── tokens.css           # fuente unica de tokens — ver 04-tokens-de-diseno.md
 │       │   └── index.css            # @import tokens + tailwindcss + @config (obligatorio) + reset base
@@ -133,7 +133,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts`.
 - **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible. Estado real del Network Access, service accounts y cualquier detalle de acceso: `.docs/WALKTHROUGH.md`, nunca acá.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
-- **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
+- **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas. La máquina de estados es la tabla `TRANSICIONES` de `server/src/modules/pedidos/pedidos.service.ts`, no el orden del enum: `cancelado` no es el siguiente de ningún estado. Las compuertas de `confirmado` y `en_produccion` viven en `faltantesParaAvanzar` (`pedidos.service.ts`) y se espejarán en el cliente en `client/src/lib/pedidoAdmin.ts` con los mismos textos (pendiente en la tarea de cliente; ese archivo todavía no existe). `registrarAcuerdo` aplica la misma compuerta de `confirmado` a un pedido ya confirmado o más avanzado: un acuerdo posterior no puede dejarlo sin fecha ni dirección.
 - **Idempotencia en creación de pedidos**: `crearPedido` (`server/src/modules/pedidos/pedidos.service.ts`) reserva una clave (hash del payload completo, incluido el contenido de cada archivo, + clienteId) en la colección `idempotencia_pedidos` dentro de una transacción junto al `Pedido.create`. Un envío idéntico dentro de 60 s recibe 409. Requiere replica set: Atlas M0 sirve, un mongod standalone local no. Si se agrega un campo al payload de creación, sumarlo a `claveIdempotencia()` o dos pedidos distintos colisionan. El perdedor de una carrera simultánea ya subió sus imágenes a Cloudinary antes de perder — el catch de la clave duplicada las borra con `eliminarImagen` (best-effort, no bloquea la respuesta 409 si Cloudinary falla).
 - **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
 - **TypeScript 7 bloqueado por typescript-eslint**: `typescript-eslint@8.x` soporta TS `>=4.8.4 <6.1.0`. Fijado en `6.0.3` hasta que typescript-eslint soporte TS 7 (tracking: [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). No subir `typescript` a `7.x` en ninguno de los dos `package.json` hasta que ese issue esté cerrado.
@@ -146,6 +146,9 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Catálogo en el cliente**: `useCatalogo()` trae todo `/productos` una vez y guarda el último resultado en memoria (volver del detalle pinta al instante). Esa cache va atada al token: con sesión de administrador la respuesta incluye productos inactivos, así que un cambio de sesión la descarta y vuelve a pedir; cualquier cache nueva de datos del servidor debe seguir la misma regla, y no se pasan datos del servidor por `location.state` (el historial sobrevive al logout; el detalle pinta al instante con `productoEnCatalogo`); familia, búsqueda, orden y ocasión se filtran en el cliente y viven en la URL (`useFiltrosCatalogo`). Diseñado para 30 a 100 productos: si el catálogo pasa de ~100, mover búsqueda y paginación al servidor. `lib/api.ts` lanza `ErrorApi` con el código HTTP; una caída de red llega como `TypeError`, no como `ErrorApi`.
 - **Mis pedidos en el cliente**: `useMisPedidos()` y `usePedido()` calcan el mismo patrón de `useCatalogo`/`useProducto` (cache en memoria atada al token, `pedidoEnMemoria(id)` pinta el detalle al instante desde la lista de la sesión). El server nunca manda `actor` en `historialEstados` al cliente (`getMisPedidos`/`getPedidoById` proyectan sin ese campo); si se agrega un campo nuevo al historial que el taller no quiera exponer, sumarlo a la misma proyección. `codigoPedido()` (`lib/pedido.ts`) es el único lugar que deriva el código `TJ-XXXXXX`; el panel de Taller y el cliente lo llaman a partir del mismo `_id`, nunca lo formatean por su cuenta.
 - **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Ya no quedan usos suprimidos: `useCatalogo.ts` deriva el estado inicial de la cache y resetea durante el render cuando cambia el token, y `ProductoDetailPage.tsx` se remonta con `key={id}` al cambiar de producto. Preferir esos dos patrones; si un caso nuevo de verdad necesita `setState` síncrono en el efecto, suprimir con `// eslint-disable-next-line react-hooks/set-state-in-effect` y documentar el motivo.
+- **Pedidos anteriores a la solicitud**: `contacto` y `entrega` son obligatorios en el modelo `Pedido`. Los documentos de `Pedido` creados antes de ese cambio no los tienen, así que cualquier `save()` sobre ellos (cambiar el estado, marcar el contacto, registrar un acuerdo, cancelar) lanza `ValidationError` y `errorHandler` responde 500. No hay migración en código: limpiarlos es una acción manual del usuario, en cada base que tenga pedidos (`taju-dev` y `taju-prod`), borrando esos pedidos o completándoles `contacto` y `entrega`. Tiene que hacerse antes de desplegar este server; un agente no la ejecuta (ver Manual Actions).
+- **Concurrencia optimista en `Pedido`**: el schema usa `optimisticConcurrency: true`. Los servicios leen el pedido, validan en memoria y guardan; si otro cambio se guardó en el medio, el `save()` perdedor lanza `VersionError` y `errorHandler` responde 409 con "Este pedido cambió hace un momento... Recarga la página y vuelve a intentarlo." Todo código nuevo que escriba un `Pedido` con leer-modificar-guardar tiene que contar con ese 409.
+- **Requisitos por familia**: qué exige cada familia para aceptar una solicitud (fecha para todas, imagen de referencia para `toppers`) vive en `server/src/modules/pedidos/pedidos.requisitos.ts` y se espejará en `client/src/lib/requisitos.ts` (pendiente en la tarea de cliente; ese archivo todavía no existe). Cambiar una sin la otra deja al formulario avisando algo distinto de lo que el server rechaza.
 
 ---
 
@@ -166,7 +169,7 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico. Mismo valor en base de datos, API y UI. Los valores exactos permitidos son: `recibido`, `en_revision`, `confirmado`, `en_produccion`, `listo_para_entrega`, `entregado`.
+Enum canónico. Mismo valor en base de datos, API y UI. Los valores exactos permitidos son: `recibido`, `en_revision`, `confirmado`, `en_produccion`, `listo_para_entrega`, `entregado`, `cancelado`.
 
 ```ts
 type EstadoPedido =
@@ -175,14 +178,17 @@ type EstadoPedido =
   | 'confirmado'
   | 'en_produccion'
   | 'listo_para_entrega'
-  | 'entregado';
+  | 'entregado'
+  | 'cancelado';
 ```
 
-Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
+Los seis primeros son el flujo (`FLUJO_PEDIDO`, en ese orden); `cancelado` es una salida, no un paso. Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado, Cancelado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
+
+**Solicitud y compromiso.** Lo que el cliente envía es una solicitud: `recibido` y `en_revision` no comprometen producción. `confirmado` exige contacto registrado, fecha de entrega acordada y, si es domicilio, dirección. `en_produccion` exige anticipo registrado. La plataforma no cobra: el anticipo es una constancia que registra el taller. `cancelado` sale de `recibido`, `en_revision` y `confirmado`; el cliente cancela hasta `en_revision`. WhatsApp es la conversación y la plataforma es el registro canónico: lo que se acuerde y afecte fecha, entrega o pago lo asienta el taller en el pedido.
 
 ### Vocabulario de especificación
 
-`diametro` y `altura` en centímetros, enteros. `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaEntrega`, `nota`.
+`diametro` y `altura` en centímetros, enteros. `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaDeseada` (lo que pide el cliente), `fechaEntrega` (la acordada, solo la fija el taller), `nota`.
 
 Los campos del formulario replican el vocabulario que el negocio ya usa con sus clientes. No inventar terminología nueva donde existe una compartida.
 

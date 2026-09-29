@@ -57,14 +57,15 @@ type EstadoPedido =
   | 'confirmado'
   | 'en_produccion'
   | 'listo_para_entrega'
-  | 'entregado';
+  | 'entregado'
+  | 'cancelado';
 ```
 
-Etiquetas: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado — derivadas de `ETIQUETAS_ESTADO`, nunca escritas sueltas en un componente. El cliente ve su `historialEstados` sin el campo `actor` (dato interno del taller); el código de pedido compartido con el taller por WhatsApp sale de `codigoPedido()` (`lib/pedido.ts`), derivado del `_id` (`TJ-XXXXXX`), nunca formateado a mano.
+Etiquetas: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado, Cancelado (los seis primeros son el flujo, `FLUJO_PEDIDO`; `cancelado` es una salida) — derivadas de `ETIQUETAS_ESTADO`, nunca escritas sueltas en un componente. El cliente ve su `historialEstados` sin el campo `actor` (dato interno del taller); el código de pedido compartido con el taller por WhatsApp sale de `codigoPedido()` (`lib/pedido.ts`), derivado del `_id` (`TJ-XXXXXX`), nunca formateado a mano.
 
 ### Vocabulario de especificación
 
-`diametro` y `altura` en centímetros, enteros. Campos canónicos: `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaEntrega`, `nota`.
+`diametro` y `altura` en centímetros, enteros. Campos canónicos: `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaDeseada` (lo que pide el cliente), `fechaEntrega` (la acordada, solo la fija el taller), `nota`.
 
 ### Dos audiencias
 
