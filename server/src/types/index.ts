@@ -1,4 +1,5 @@
-// vocabulario compartido con el cliente (ver client/src/types/index.ts) - ambos deben decir lo mismo
+// vocabulario compartido con el cliente (ver client/src/types/index.ts) - ambos deben decir lo mismo.
+// cancelado, FLUJO_PEDIDO, METODOS_ENTREGA y MEDIOS_PAGO todavia no estan alla: pendiente en la tarea de cliente
 export const ROLES = ['cliente', 'administrador'] as const
 export type Rol = (typeof ROLES)[number]
 

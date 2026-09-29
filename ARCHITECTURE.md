@@ -149,7 +149,7 @@ La lógica de negocio reside estrictamente en los servicios desacoplados de los 
 |---|---|
 | `auth.service.ts` | Normalización de email, verificación de no duplicidad, hasheo con bcrypt, comparación de hashes y firma de tokens JWT. |
 | `catalog.service.ts` | Filtrado por familia y visibilidad (`activo`), validación de unicidad, borrado lógico/físico de productos y actualización de dimensiones base. |
-| `pedidos.service.ts` | Validación de existencia y estado activo de producto/categoría, subida paralela a Cloudinary, persistencia de snapshots embebidos, verificación de transiciones de estado secuenciales, control de aprobación de dimensiones personalizadas y registro atómico de auditoría en `historialEstados`. |
+| `pedidos.service.ts` | Validación de existencia y estado activo de producto/categoría, subida paralela a Cloudinary, persistencia de snapshots embebidos, tabla `TRANSICIONES` de la máquina de estados, compuertas de `confirmado` y `en_produccion` (`faltantesParaAvanzar`), requisitos por familia (`pedidos.requisitos.ts`), concurrencia optimista (un `save()` que pierde la carrera da 409), control de aprobación de dimensiones personalizadas y registro atómico de auditoría en `historialEstados`. |
 
 ### 4. Data Access Layer & Persistence (`server/src/models/`)
 

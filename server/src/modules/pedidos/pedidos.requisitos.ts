@@ -1,7 +1,7 @@
 import type { Familia } from '../../types/index.js'
 
-// [DECISION] que se exige para aceptar una solicitud vive aqui, por familia y en un solo lugar (espejo en
-// client/src/lib/requisitos.ts). Toppers exige referencia: sin ver el diseno no se puede cotizar. La fecha se
+// [DECISION] que se exige para aceptar una solicitud vive aqui, por familia y en un solo lugar (se espejara en
+// client/src/lib/requisitos.ts; pendiente en la tarea de cliente). Toppers exige referencia: sin ver el diseno no se puede cotizar. La fecha se
 // pide a todas porque es una celebracion. Cambiar la regla es tocar esta lista, no el flujo.
 const FAMILIAS_CON_REFERENCIA_OBLIGATORIA: readonly Familia[] = ['toppers']
 
