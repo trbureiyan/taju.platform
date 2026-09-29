@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createElement, type ReactNode } from 'react'
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { useMisPedidos, olvidarMisPedidos, pedidoEnMemoria } from './useMisPedidos'
+import { useMisPedidos, olvidarMisPedidos, pedidoEnMemoria, actualizarEnMemoria } from './useMisPedidos'
 import { api } from '../lib/api'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { pedido } from '../test/pedidos'
@@ -89,5 +89,32 @@ describe('pedidoEnMemoria', () => {
 
     expect(pedidoEnMemoria('abc')?._id).toBe('abc')
     expect(pedidoEnMemoria('otro')).toBeUndefined()
+  })
+})
+
+describe('actualizarEnMemoria', () => {
+  it('cambia el pedido en la lista de la sesion y pedidoEnMemoria lo devuelve actualizado', async () => {
+    sesion.token = 'cliente-1'
+    getMock.mockResolvedValueOnce([pedido({ _id: 'a', estado: 'recibido' }), pedido({ _id: 'b' })])
+    const { result } = usarMisPedidos()
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+
+    actualizarEnMemoria(pedido({ _id: 'a', estado: 'cancelado' }))
+
+    expect(pedidoEnMemoria('a')?.estado).toBe('cancelado')
+    expect(pedidoEnMemoria('b')?.estado).toBe('recibido')
+  })
+
+  it('no hace nada si la sesion cambio', async () => {
+    sesion.token = 'cliente-1'
+    getMock.mockResolvedValueOnce([pedido({ _id: 'a', estado: 'recibido' })])
+    const { result } = usarMisPedidos()
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+
+    sesion.token = 'cliente-2'
+    actualizarEnMemoria(pedido({ _id: 'a', estado: 'cancelado' }))
+    sesion.token = 'cliente-1'
+
+    expect(pedidoEnMemoria('a')?.estado).toBe('recibido')
   })
 })

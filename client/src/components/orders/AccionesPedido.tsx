@@ -29,6 +29,7 @@ const ERROR_CANCELAR = 'No pudimos cancelar tu solicitud. Prueba de nuevo o escr
  * @prop codigo - Código del pedido (`codigoPedido()`), para que el taller lo identifique de inmediato.
  * @prop estado - Estado actual; decide si se ofrece cancelar.
  * @prop onCancelado - Recibe el pedido ya cancelado que devolvió el server.
+ * @prop onRechazado - Se llama cuando el server rechaza con 409: el estado que vio el cliente ya no es el real.
  */
 export function AccionesPedido({
   productoId,
@@ -37,6 +38,7 @@ export function AccionesPedido({
   codigo,
   estado,
   onCancelado,
+  onRechazado,
 }: {
   productoId: string
   pedidoId: string
@@ -44,6 +46,7 @@ export function AccionesPedido({
   codigo: string
   estado: EstadoPedido
   onCancelado: (pedido: Pedido) => void
+  onRechazado: () => void
 }) {
   const rutaPedirDeNuevo = `/pedido/${productoId}?desde=${pedidoId}`
   const mensajeWhatsApp = `Hola, les escribo por mi pedido ${codigo} (${nombreProducto}).`
@@ -62,7 +65,9 @@ export function AccionesPedido({
     } catch (err) {
       setConfirmando(false)
       // solo el 409 trae texto pensado para el cliente; cualquier otro fallo (red, 500) no se muestra crudo
-      avisar(err instanceof ErrorApi && err.estado === 409 ? err.message : ERROR_CANCELAR, { tono: 'error' })
+      const rechazado = err instanceof ErrorApi && err.estado === 409
+      avisar(rechazado ? err.message : ERROR_CANCELAR, { tono: 'error' })
+      if (rechazado) onRechazado()
     } finally {
       setCancelando(false)
     }

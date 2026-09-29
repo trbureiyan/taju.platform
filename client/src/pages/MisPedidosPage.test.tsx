@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { MisPedidosPage } from './MisPedidosPage'
 import { api } from '../lib/api'
 import { AuthProvider } from '../contexts/AuthContext'
-import { olvidarMisPedidos } from '../hooks/useMisPedidos'
+import { olvidarMisPedidos, actualizarEnMemoria } from '../hooks/useMisPedidos'
 import { pedido } from '../test/pedidos'
 
 vi.mock('../lib/api', () => ({
@@ -43,6 +43,21 @@ describe('MisPedidosPage', () => {
     expect(screen.getByText('Anteriores')).toBeInTheDocument()
     expect(screen.getByText('Blonda grabada')).toBeInTheDocument()
     expect(screen.getByText('Invitación bordada')).toBeInTheDocument()
+  })
+
+  it('con un pedido cancelado en memoria no lo cuenta como en camino', async () => {
+    getMock.mockResolvedValueOnce([pedido({ _id: 'a', nombre: 'Topper luna', estado: 'recibido' })])
+    const primera = renderizar()
+    await waitFor(() => expect(screen.getByText('Tienes 1 pedido en camino')).toBeInTheDocument())
+    primera.unmount()
+
+    actualizarEnMemoria(pedido({ _id: 'a', nombre: 'Topper luna', estado: 'cancelado' }))
+    getMock.mockReturnValueOnce(new Promise(() => {}))
+    renderizar()
+
+    expect(screen.getByText('Topper luna')).toBeInTheDocument()
+    expect(screen.queryByText(/en camino/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Anteriores')).toBeInTheDocument()
   })
 
   it('el vacio tutea y enlaza al catalogo', async () => {

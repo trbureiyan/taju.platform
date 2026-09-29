@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api, ErrorApi, getToken } from '../lib/api'
+import { actualizarEnMemoria } from './useMisPedidos'
 import { useAuth } from '../contexts/AuthContext'
 import type { Pedido } from '../types'
 
@@ -55,6 +56,7 @@ export function usePedido(id: string, inicial?: Pedido) {
   const reemplazar = useCallback((actualizado: Pedido) => {
     setPedido(actualizado)
     setEstado('listo')
+    actualizarEnMemoria(actualizado)
   }, [])
 
   return { pedido, estado, reintentar, reemplazar }

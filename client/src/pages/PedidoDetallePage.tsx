@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Pedido } from '../types'
 import { usePedido } from '../hooks/usePedido'
@@ -55,6 +55,8 @@ export function PedidoDetallePage() {
 function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
   const { pedido, estado, reintentar, reemplazar } = usePedido(id, inicial)
   const titulo = useRef<HTMLHeadingElement>(null)
+  const temporizadorFoco = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  useEffect(() => () => clearTimeout(temporizadorFoco.current), [])
   const envoltura = 'w-full max-w-contenedor mx-auto px-4 py-12'
 
   if (estado === 'cargando') {
@@ -93,7 +95,7 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
   // el boton de cancelar desaparece con el pedido cancelado: el foco pasa al titulo para no perderse en el body
   function alCancelar(actualizado: Pedido) {
     reemplazar(actualizado)
-    setTimeout(() => titulo.current?.focus(), 0)
+    temporizadorFoco.current = setTimeout(() => titulo.current?.focus(), 0)
   }
 
   const codigo = codigoPedido(pedido._id)
@@ -117,6 +119,7 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
       <LineaTiempoPedido estadoActual={pedido.estado} historialEstados={pedido.historialEstados} />
 
       <BloqueEntrega
+        estado={pedido.estado}
         fechaDeseada={pedido.fechaDeseada}
         fechaEntrega={pedido.fechaEntrega}
         entrega={pedido.entrega}
@@ -134,6 +137,7 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
         codigo={codigo}
         estado={pedido.estado}
         onCancelado={alCancelar}
+        onRechazado={reintentar}
       />
     </article>
   )

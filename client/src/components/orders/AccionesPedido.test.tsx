@@ -16,7 +16,7 @@ const patchMock = vi.mocked(api.patch)
 
 afterEach(() => vi.clearAllMocks())
 
-function renderizar(estado: EstadoPedido, onCancelado = vi.fn()) {
+function renderizar(estado: EstadoPedido, onCancelado = vi.fn(), onRechazado = vi.fn()) {
   render(
     <MemoryRouter>
       <SnackbarProvider>
@@ -27,6 +27,7 @@ function renderizar(estado: EstadoPedido, onCancelado = vi.fn()) {
           codigo="TJ-3F9A2C"
           estado={estado}
           onCancelado={onCancelado}
+          onRechazado={onRechazado}
         />
       </SnackbarProvider>
     </MemoryRouter>,
@@ -92,13 +93,16 @@ describe('AccionesPedido', () => {
     patchMock.mockRejectedValueOnce(
       new ErrorApi('Tu pedido ya está confirmado. Escríbenos por WhatsApp y lo revisamos contigo.', 409),
     )
-    const onCancelado = renderizar('en_revision')
+    const onRechazado = vi.fn()
+    const onCancelado = renderizar('en_revision', vi.fn(), onRechazado)
 
     await userEvent.click(disparador())
     await userEvent.click(screen.getByRole('button', { name: 'Sí, cancelar mi solicitud' }))
 
     expect(await screen.findByText(/ya está confirmado\. escríbenos por whatsapp/i)).toBeInTheDocument()
     expect(onCancelado).not.toHaveBeenCalled()
+    // el estado que vio el cliente ya no es el real: se vuelve a pedir el pedido
+    expect(onRechazado).toHaveBeenCalledTimes(1)
   })
 
   // texto de sistema o de red nunca llega al cliente

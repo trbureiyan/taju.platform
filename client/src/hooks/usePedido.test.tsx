@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createElement, type ReactNode } from 'react'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { usePedido } from './usePedido'
+import { useMisPedidos, pedidoEnMemoria, olvidarMisPedidos } from './useMisPedidos'
 import { api, ErrorApi } from '../lib/api'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
 import { pedido } from '../test/pedidos'
@@ -86,5 +87,20 @@ describe('usePedido', () => {
 
     expect(result.current.pedido?.estado).toBe('cancelado')
     expect(getMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('reemplazar tambien actualiza la lista en memoria de Mis pedidos', async () => {
+    const { wrapper } = conNav()
+    getMock.mockResolvedValueOnce([pedido({ _id: 'p1', estado: 'recibido' })])
+    const lista = renderHook(() => useMisPedidos(), { wrapper })
+    await waitFor(() => expect(lista.result.current.cargando).toBe(false))
+
+    getMock.mockResolvedValueOnce(pedido({ _id: 'p1', estado: 'recibido' }))
+    const { result } = renderHook(() => usePedido('p1', pedidoEnMemoria('p1')), { wrapper })
+    await waitFor(() => expect(result.current.estado).toBe('listo'))
+    act(() => result.current.reemplazar(pedido({ _id: 'p1', estado: 'cancelado' })))
+
+    expect(pedidoEnMemoria('p1')?.estado).toBe('cancelado')
+    olvidarMisPedidos()
   })
 })
