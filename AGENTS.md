@@ -133,7 +133,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Cloudinary**: Las llamadas son reales solo en producción. En tests interceptar el módulo de integración completo; nunca hacer llamadas reales. Módulo: `server/src/lib/cloudinary.ts`.
 - **MongoDB Atlas**: `MONGO_URI` define el entorno de destino. Un seed o reset en producción es irreversible. Estado real del Network Access, service accounts y cualquier detalle de acceso: `.docs/WALKTHROUGH.md`, nunca acá.
 - **Tokens de diseño**: El archivo de tokens CSS y `.docs/branding/04-tokens-de-diseno.md` deben coincidir. Una discrepancia es un error, no una ambigüedad.
-- **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas.
+- **Estados de pedido**: El enum `EstadoPedido` en TypeScript, el campo en Mongoose y las etiquetas en la UI deben ser el mismo string. Cualquier divergencia genera inconsistencias silenciosas. La máquina de estados es la tabla `TRANSICIONES` de `server/src/modules/pedidos/pedidos.service.ts`, no el orden del enum: `cancelado` no es el siguiente de ningún estado.
 - **Idempotencia en creación de pedidos**: `crearPedido` (`server/src/modules/pedidos/pedidos.service.ts`) reserva una clave (hash del payload completo, incluido el contenido de cada archivo, + clienteId) en la colección `idempotencia_pedidos` dentro de una transacción junto al `Pedido.create`. Un envío idéntico dentro de 60 s recibe 409. Requiere replica set: Atlas M0 sirve, un mongod standalone local no. Si se agrega un campo al payload de creación, sumarlo a `claveIdempotencia()` o dos pedidos distintos colisionan. El perdedor de una carrera simultánea ya subió sus imágenes a Cloudinary antes de perder — el catch de la clave duplicada las borra con `eliminarImagen` (best-effort, no bloquea la respuesta 409 si Cloudinary falla).
 - **Escala de precios**: La familia `superficies` opera con precio por cantidad (mínimo 12 unidades). Lógica diferente al precio por unidad del resto. Cualquier componente de precio debe soportar ambos modelos.
 - **TypeScript 7 bloqueado por typescript-eslint**: `typescript-eslint@8.x` soporta TS `>=4.8.4 <6.1.0`. Fijado en `6.0.3` hasta que typescript-eslint soporte TS 7 (tracking: [#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)). No subir `typescript` a `7.x` en ninguno de los dos `package.json` hasta que ese issue esté cerrado.
@@ -166,7 +166,7 @@ Cuatro familias de producto. **No inventar categorías fuera de esta lista.**
 
 ### Estados de pedido
 
-Enum canónico. Mismo valor en base de datos, API y UI. Los valores exactos permitidos son: `recibido`, `en_revision`, `confirmado`, `en_produccion`, `listo_para_entrega`, `entregado`.
+Enum canónico. Mismo valor en base de datos, API y UI. Los valores exactos permitidos son: `recibido`, `en_revision`, `confirmado`, `en_produccion`, `listo_para_entrega`, `entregado`, `cancelado`.
 
 ```ts
 type EstadoPedido =
@@ -175,10 +175,11 @@ type EstadoPedido =
   | 'confirmado'
   | 'en_produccion'
   | 'listo_para_entrega'
-  | 'entregado';
+  | 'entregado'
+  | 'cancelado';
 ```
 
-Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
+Los seis primeros son el flujo (`FLUJO_PEDIDO`, en ese orden); `cancelado` es una salida, no un paso. Etiquetas de presentación: Recibido, En revisión, Confirmado, En producción, Listo para entrega, Entregado, Cancelado. La etiqueta se deriva del valor en un solo mapa (`ETIQUETAS_ESTADO`), nunca se escribe suelta en un componente.
 
 ### Vocabulario de especificación
 

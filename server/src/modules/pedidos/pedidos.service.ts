@@ -5,7 +5,7 @@ import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
+import type { EstadoPedido } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
@@ -226,8 +226,17 @@ export async function getPedidoById(pedidoId: string, clienteId: string) {
 
 // ─── Panel de taller (admin) ────────────────────────────────────────────────
 
-// el orden de la constante canonica ES la maquina de estados - updateEstado solo permite moverse al siguiente indice
-const ORDEN_ESTADOS: readonly EstadoPedido[] = ESTADOS_PEDIDO
+// [DECISION] tabla de transiciones y no el orden del enum - cancelado sale de tres estados distintos y no es
+// "el siguiente" de ninguno. Producir es un compromiso: desde en_produccion ya no se cancela por aqui.
+const TRANSICIONES: Record<EstadoPedido, readonly EstadoPedido[]> = {
+  recibido: ['en_revision', 'cancelado'],
+  en_revision: ['confirmado', 'cancelado'],
+  confirmado: ['en_produccion', 'cancelado'],
+  en_produccion: ['listo_para_entrega'],
+  listo_para_entrega: ['entregado'],
+  entregado: [],
+  cancelado: [],
+}
 
 const LIMITE_MAXIMO_ADMIN = 100
 
@@ -271,10 +280,8 @@ export async function updateEstado(
   const pedido = await Pedido.findById(pedidoId)
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
 
-  // solo se avanza un paso a la vez, nada de saltarse "en_produccion" ni retroceder
-  const indexActual = ORDEN_ESTADOS.indexOf(pedido.estado as EstadoPedido)
-  const indexNuevo = ORDEN_ESTADOS.indexOf(nuevoEstado)
-  if (indexNuevo !== indexActual + 1) {
+  // solo se avanza un paso a la vez o se cancela; nada de saltarse "en_produccion" ni retroceder
+  if (!TRANSICIONES[pedido.estado as EstadoPedido].includes(nuevoEstado)) {
     throw new AppError(409, `Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
   }
 

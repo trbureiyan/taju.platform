@@ -4,7 +4,7 @@ import { crearPedido, updateEstado, getMisPedidos, getPedidoById, getAllPedidos 
 import { Pedido } from '../../models/Pedido.js'
 import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
+import { FLUJO_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba, limpiarColecciones } from '../../test/mongo.js'
 import { crearCatalogoYCliente, inputPedido } from '../../test/fixtures.js'
 
@@ -46,14 +46,14 @@ describe('updateEstado', () => {
   it('recorre los seis estados avanzando de a un paso y deja traza de cada uno', async () => {
     const id = await pedidoEn('recibido')
 
-    for (const estado of ESTADOS_PEDIDO.slice(1)) {
+    for (const estado of FLUJO_PEDIDO.slice(1)) {
       await updateEstado(id, estado, admin)
     }
 
     const final = await Pedido.findById(id).lean()
     expect(final!.estado).toBe('entregado')
     // la entrada inicial de crearPedido + una por cada avance
-    expect(final!.historialEstados.map((h) => h.estadoNuevo)).toEqual([...ESTADOS_PEDIDO])
+    expect(final!.historialEstados.map((h) => h.estadoNuevo)).toEqual([...FLUJO_PEDIDO])
     expect(final!.historialEstados.at(-1)!.actor.toString()).toBe(admin)
   })
 
@@ -79,6 +79,35 @@ describe('updateEstado', () => {
   it('rechaza con 409 quedarse en el mismo estado', async () => {
     const id = await pedidoEn('en_revision')
     await expect(updateEstado(id, 'en_revision', admin)).rejects.toBeInstanceOf(AppError)
+  })
+
+  describe('cancelacion', () => {
+    it.each(['recibido', 'en_revision', 'confirmado'] as const)(
+      'permite cancelar desde %s y deja traza',
+      async (desde) => {
+        const id = await pedidoEn(desde)
+
+        await updateEstado(id, 'cancelado', admin)
+
+        const pedido = await Pedido.findById(id).lean()
+        expect(pedido!.estado).toBe('cancelado')
+        expect(pedido!.historialEstados.at(-1)).toMatchObject({ estadoAnterior: desde, estadoNuevo: 'cancelado' })
+      },
+    )
+
+    it.each(['en_produccion', 'listo_para_entrega', 'entregado', 'cancelado'] as const)(
+      'rechaza con 409 cancelar desde %s',
+      async (desde) => {
+        const id = await pedidoEn(desde)
+        await expect(updateEstado(id, 'cancelado', admin)).rejects.toMatchObject({ status: 409 })
+        expect((await Pedido.findById(id).lean())!.estado).toBe(desde)
+      },
+    )
+
+    it.each(FLUJO_PEDIDO)('un pedido cancelado no vuelve a %s', async (hacia) => {
+      const id = await pedidoEn('cancelado')
+      await expect(updateEstado(id, hacia, admin)).rejects.toMatchObject({ status: 409 })
+    })
   })
 
   it('responde 404 si el pedido no existe', async () => {
