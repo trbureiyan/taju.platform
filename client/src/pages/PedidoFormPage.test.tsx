@@ -3,13 +3,17 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { PedidoFormPage } from './PedidoFormPage'
-import { api } from '../lib/api'
+import { api, ErrorApi } from '../lib/api'
 import { esFestivo } from '../lib/politicas'
 import { codigoPedido } from '../lib/pedido'
 import { pedido } from '../test/pedidos'
 import type { Pedido, Producto } from '../types'
 
-vi.mock('../lib/api', () => ({ api: { get: vi.fn(), postForm: vi.fn() } }))
+// ErrorApi se deja real: el formulario decide que mensaje mostrar segun la clase y el codigo del error
+vi.mock('../lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: { get: vi.fn(), postForm: vi.fn() },
+}))
 
 const producto: Producto = {
   _id: 'prod-1',
@@ -171,6 +175,39 @@ describe('PedidoFormPage', () => {
       expect(api.postForm).not.toHaveBeenCalled()
     })
 
+    it('explica la fecha minima en palabras, no en formato ISO', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-09-28T10:00:00-05:00'))
+      try {
+        await conMedidaYTextos({ fecha: false })
+        fireEvent.change(screen.getByLabelText('Fecha en que la necesitas'), { target: { value: '2026-09-27' } })
+        await enviar()
+
+        expect(screen.getByLabelText('Fecha en que la necesitas')).toHaveAccessibleDescription(
+          'Esa fecha es muy pronto para producirla. Elige una a partir del martes, 29 de septiembre, que es lo mínimo que necesitamos.',
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    // 21:00 del 28 en Bogota ya es el 29 en UTC: "mañana" se cuenta en la hora del taller, no en la del dispositivo
+    it('cuenta el dia minimo en hora de Colombia', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-09-29T02:00:00Z'))
+      try {
+        await conMedidaYTextos({ fecha: false })
+        const campoFecha = screen.getByLabelText('Fecha en que la necesitas')
+        expect(campoFecha).toHaveAttribute('min', '2026-09-29')
+
+        fireEvent.change(campoFecha, { target: { value: '2026-09-29' } })
+        await enviar()
+        expect(api.postForm).toHaveBeenCalledOnce()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     // el minimo es un dia de margen: hoy tampoco alcanza para producir
     it('rechaza la fecha de hoy', async () => {
       await conMedidaYTextos({ fecha: false })
@@ -260,6 +297,25 @@ describe('PedidoFormPage', () => {
       expect(camposEnviados().get('entregaMetodo')).toBe('domicilio')
       expect(camposEnviados().get('entregaDetalle')).toBe('Cra 5 # 10-20')
     })
+
+    it('limita el barrio o direccion a 200 caracteres, como el server', async () => {
+      await renderFormulario()
+      await userEvent.click(screen.getByLabelText('Lo quiero a domicilio en Neiva'))
+      expect(screen.getByLabelText('Barrio o dirección')).toHaveAttribute('maxLength', '200')
+    })
+
+    it('si vuelve a recoger en el taller no manda la direccion que habia escrito', async () => {
+      await renderFormulario()
+      await userEvent.click(screen.getByLabelText('Media libra: 22 cm'))
+      await userEvent.click(screen.getByLabelText('Lo quiero a domicilio en Neiva'))
+      await userEvent.type(screen.getByLabelText('Barrio o dirección'), 'Cra 5 # 10-20')
+      await userEvent.click(screen.getByLabelText('Lo recojo en el taller'))
+      await llenarObligatorios()
+      await enviar()
+
+      expect(camposEnviados().get('entregaMetodo')).toBe('recoger')
+      expect(camposEnviados().get('entregaDetalle')).toBe('')
+    })
   })
 
   describe('imagen de referencia', () => {
@@ -309,7 +365,8 @@ describe('PedidoFormPage', () => {
     await enviar()
 
     expect(await screen.findByText(codigoPedido('pedido-1abcdef'))).toBeInTheDocument()
-    expect(screen.getByText(/recibimos tu solicitud/i)).toBeInTheDocument()
+    // el formulario se desmonta: el foco pasa al titulo para que el lector de pantalla anuncie el resultado
+    expect(screen.getByRole('heading', { name: /recibimos tu solicitud/i })).toHaveFocus()
     expect(screen.getByText(/te escribimos por whatsapp/i)).toBeInTheDocument()
     expect(screen.getByText(/no empezamos a producir/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Enviar mi pedido' })).not.toBeInTheDocument()
@@ -321,14 +378,37 @@ describe('PedidoFormPage', () => {
     expect(mensaje).toContain(producto.nombre)
   })
 
-  it('muestra el error del servidor, por ejemplo el 409 de pedido duplicado', async () => {
-    vi.mocked(api.postForm).mockRejectedValueOnce(new Error('Ya recibimos este mismo pedido hace un momento.'))
-    await renderFormulario()
-    await userEvent.click(screen.getByLabelText('Media libra: 22 cm'))
-    await llenarObligatorios()
-    await enviar()
+  describe('error al enviar', () => {
+    async function enviarCon(error: unknown) {
+      vi.mocked(api.postForm).mockRejectedValueOnce(error)
+      await renderFormulario()
+      await userEvent.click(screen.getByLabelText('Media libra: 22 cm'))
+      await llenarObligatorios()
+      await enviar()
+      return screen.findByRole('alert')
+    }
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Ya recibimos este mismo pedido')
+    it('muestra el mensaje del servidor en el 409 de pedido duplicado', async () => {
+      const alerta = await enviarCon(new ErrorApi('Ya recibimos este mismo pedido hace un momento.', 409))
+      expect(alerta).toHaveTextContent('Ya recibimos este mismo pedido')
+    })
+
+    it('muestra el mensaje del servidor en un 400 escrito para el cliente', async () => {
+      const alerta = await enviarCon(
+        new ErrorApi('Adjunta una imagen de referencia. Sin verla no podemos cotizar tu pedido.', 400),
+      )
+      expect(alerta).toHaveTextContent('Sin verla no podemos cotizar')
+    })
+
+    it.each([
+      ['una caida de red', new TypeError('Failed to fetch'), 'Failed to fetch'],
+      ['un 400 generico', new ErrorApi('Datos del pedido inválidos', 400), 'inválidos'],
+      ['un 500', new ErrorApi('Error 500', 500), 'Error 500'],
+    ])('con %s muestra el mensaje de respaldo, no el texto crudo', async (_caso, error, crudo) => {
+      const alerta = await enviarCon(error)
+      expect(alerta).toHaveTextContent(/no pudimos enviar tu pedido/i)
+      expect(alerta).not.toHaveTextContent(crudo)
+    })
   })
 
   describe('Pedir de nuevo (?desde=)', () => {

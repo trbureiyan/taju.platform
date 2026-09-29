@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, ErrorApi } from '../lib/api'
 import { Input } from '../components/ui/Input'
 import { Select } from '../components/ui/Select'
 import { Button } from '../components/ui/Button'
@@ -11,7 +11,7 @@ import { calcularPrecioTotal } from '../lib/precio'
 import { codigoPedido } from '../lib/pedido'
 import { mensajeResumenPedido } from '../lib/mensajePedido'
 import { HORAS_DE_ENTREGA, esFestivo } from '../lib/politicas'
-import { horaEnPalabras, promesaContacto } from '../lib/horario'
+import { horaEnPalabras, promesaContacto, relojBogota } from '../lib/horario'
 import {
   exigeReferencia,
   normalizarCelular,
@@ -46,18 +46,42 @@ interface Errores {
   horaDeseada?: string
 }
 
-// un dia habil de margen minimo - da tiempo al taller a reaccionar antes de empezar a cortar
+// un dia calendario de margen minimo (hoy no alcanza) - da tiempo al taller a reaccionar antes de empezar a cortar
 const DIAS_MINIMOS_ENTREGA = 1
 
+// "hoy" es el del taller en Bogota, no el del dispositivo: un cliente en otra zona no corre la fecha minima
 function fechaMinimaEntrega(): string {
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + DIAS_MINIMOS_ENTREGA)
-  // toISOString() convierte a UTC — en GMT-5 antes de las 19:00 la fecha UTC es un dia atras
-  // getFullYear/Month/Date leen la zona local del dispositivo, que es donde opera el taller
-  const y = fecha.getFullYear()
-  const m = String(fecha.getMonth() + 1).padStart(2, '0')
-  const d = String(fecha.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  const [y, m, d] = relojBogota(new Date()).fecha.split('-').map(Number)
+  // aritmetica en UTC puro para sumar dias sin que la zona del dispositivo mueva la fecha
+  return new Date(Date.UTC(y, m - 1, d + DIAS_MINIMOS_ENTREGA)).toISOString().slice(0, 10)
+}
+
+// mediodia de Bogota para que ningun corrimiento de zona cambie el dia que se muestra
+function fechaEnPalabras(fecha: string): string {
+  return new Date(`${fecha}T12:00:00-05:00`).toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Bogota',
+  })
+}
+
+const MENSAJE_ERROR_ENVIO =
+  'No pudimos enviar tu pedido porque algo falló en la conexión con el taller. Tus datos siguen aquí: prueba de nuevo en unos segundos o escríbenos por WhatsApp.'
+
+// mensajes del server escritos para sistema, no para el cliente: se cambian por el de respaldo
+const MENSAJES_DE_SISTEMA = new Set(['Datos del pedido inválidos', 'Categoría no encontrada o inactiva', 'Producto no encontrado o inactivo'])
+
+// [DECISION] solo el 409 y los 400 en voz de marca llegan tal cual - una caida de red (TypeError) o un 5xx traen
+// texto crudo ("Failed to fetch", "Error 500") que no le dice al cliente que hacer. Mensaje nuevo en 400 sin voz de marca: sumarlo al Set.
+function mensajeDeErrorDeEnvio(err: unknown): string {
+  if (err instanceof ErrorApi) {
+    if (err.estado === 409) return err.message
+    if (err.estado === 400 && !MENSAJES_DE_SISTEMA.has(err.message) && !/^Error \d+$/.test(err.message)) {
+      return err.message
+    }
+  }
+  return MENSAJE_ERROR_ENVIO
 }
 
 const MAX_ARCHIVOS = 3
@@ -112,6 +136,12 @@ export function PedidoFormPage() {
     horaDeseada: '',
   })
   const [errores, setErrores] = useState<Errores>({})
+  const tituloExito = useRef<HTMLHeadingElement>(null)
+
+  // el formulario se desmonta al crear el pedido: sin mover el foco, el lector de pantalla no anuncia nada
+  useEffect(() => {
+    if (pedidoCreado) tituloExito.current?.focus()
+  }, [pedidoCreado])
 
   // sin categoria (sin radios) o eligiendo "personalizada" a mano - ambos casos piden el input libre
   const esDimensionPersonalizada =
@@ -205,7 +235,7 @@ export function PedidoFormPage() {
     if (!campos.fechaDeseada) {
       next.fechaDeseada = MENSAJE_FALTA_FECHA
     } else if (campos.fechaDeseada < fechaMinimaEntrega()) {
-      next.fechaDeseada = `Elige una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
+      next.fechaDeseada = `Esa fecha es muy pronto para producirla. Elige una a partir del ${fechaEnPalabras(fechaMinimaEntrega())}, que es lo mínimo que necesitamos.`
     } else if (esFestivo(campos.fechaDeseada)) {
       next.fechaDeseada = 'Ese día es festivo y el taller no atiende. Elige otro día.'
     }
@@ -248,7 +278,8 @@ export function PedidoFormPage() {
     fd.append('materiales', campos.materiales)
     fd.append('telefono', normalizarCelular(campos.telefono))
     fd.append('entregaMetodo', campos.entregaMetodo)
-    fd.append('entregaDetalle', campos.entregaDetalle)
+    // la direccion escrita antes de volver a "recoger" no debe llegar al pedido ni a la clave de idempotencia
+    fd.append('entregaDetalle', campos.entregaMetodo === 'domicilio' ? campos.entregaDetalle : '')
     fd.append('fechaDeseada', instanteDeseado(campos.fechaDeseada, campos.horaDeseada))
     archivos.forEach((f) => fd.append('imagenes', f))
 
@@ -257,7 +288,7 @@ export function PedidoFormPage() {
       const pedido = await api.postForm<Pedido>('/pedidos', fd)
       setPedidoCreado(pedido)
     } catch (err) {
-      setErrorEnvio(err instanceof Error ? err.message : 'No pudimos enviar tu pedido. Prueba de nuevo en unos segundos.')
+      setErrorEnvio(mensajeDeErrorDeEnvio(err))
     } finally {
       setEnviando(false)
     }
@@ -289,7 +320,9 @@ export function PedidoFormPage() {
     return (
       <div className="max-w-md mx-auto text-center py-12 flex flex-col gap-6">
         <div className="rounded-tarjeta bg-exito-fondo border border-exito-borde p-6">
-          <p className="text-sm font-medium text-exito-texto mb-1">Recibimos tu solicitud</p>
+          <h1 ref={tituloExito} tabIndex={-1} className="text-sm font-medium text-exito-texto mb-1">
+            Recibimos tu solicitud
+          </h1>
           <p className="text-xs text-exito-texto">
             Código: <span className="font-mono">{codigoPedido(pedidoCreado._id)}</span>
           </p>
@@ -497,6 +530,7 @@ export function PedidoFormPage() {
               label="Barrio o dirección"
               type="text"
               autoComplete="street-address"
+              maxLength={200}
               hint="Puedes dejarlo para después: la dirección exacta la confirmamos contigo antes de fijar la fecha."
               value={campos.entregaDetalle}
               onChange={(e) => set('entregaDetalle', e.target.value)}
