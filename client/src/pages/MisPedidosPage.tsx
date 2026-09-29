@@ -54,8 +54,8 @@ export function MisPedidosPage() {
 
           {entregados.length > 0 && (
             <div className="flex flex-col gap-4">
-              <h2 className="text-sm font-medium text-texto-secundario uppercase tracking-wide">Entregados</h2>
-              <ul className="flex flex-col gap-4" aria-label="Pedidos entregados">
+              <h2 className="text-sm font-medium text-texto-secundario uppercase tracking-wide">Anteriores</h2>
+              <ul className="flex flex-col gap-4" aria-label="Pedidos anteriores">
                 {entregados.map((p) => (
                   <li key={p._id}>
                     <TarjetaPedido pedido={p} />

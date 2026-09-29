@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Pedido } from '../types'
 import { usePedido } from '../hooks/usePedido'
@@ -21,6 +22,7 @@ function paresDePedido(pedido: Pedido): ParEspecificacion[] {
         : `${pedido.dimensiones.valor} ${pedido.dimensiones.unidad}`,
     },
     { etiqueta: 'Cantidad', valor: pedido.cantidad },
+    { etiqueta: 'Celular', valor: pedido.contacto.telefono },
     { etiqueta: 'Colores', valor: pedido.colores },
     { etiqueta: 'Materiales', valor: pedido.materiales },
     { etiqueta: 'Descripción', valor: pedido.descripcion },
@@ -51,7 +53,8 @@ export function PedidoDetallePage() {
 }
 
 function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
-  const { pedido, estado, reintentar } = usePedido(id, inicial)
+  const { pedido, estado, reintentar, reemplazar } = usePedido(id, inicial)
+  const titulo = useRef<HTMLHeadingElement>(null)
   const envoltura = 'w-full max-w-contenedor mx-auto px-4 py-12'
 
   if (estado === 'cargando') {
@@ -87,6 +90,12 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
     )
   }
 
+  // el boton de cancelar desaparece con el pedido cancelado: el foco pasa al titulo para no perderse en el body
+  function alCancelar(actualizado: Pedido) {
+    reemplazar(actualizado)
+    setTimeout(() => titulo.current?.focus(), 0)
+  }
+
   const codigo = codigoPedido(pedido._id)
   const contenido = contenidoDe(pedido.categoria.familia)
 
@@ -97,7 +106,7 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
           {ETIQUETAS_FAMILIA[pedido.categoria.familia]}
         </p>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-h1 text-texto-principal">{pedido.producto.nombre}</h1>
+          <h1 ref={titulo} tabIndex={-1} className="text-h1 text-texto-principal focus:outline-none">{pedido.producto.nombre}</h1>
           <span className="font-mono text-sm text-texto-secundario">{codigo}</span>
           <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-superficie-base text-texto-principal">
             {ETIQUETAS_ESTADO[pedido.estado]}
@@ -107,7 +116,11 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
 
       <LineaTiempoPedido estadoActual={pedido.estado} historialEstados={pedido.historialEstados} />
 
-      <BloqueEntrega fechaEntrega={pedido.fechaEntrega} />
+      <BloqueEntrega
+        fechaDeseada={pedido.fechaDeseada}
+        fechaEntrega={pedido.fechaEntrega}
+        entrega={pedido.entrega}
+      />
 
       <div>
         <h2 className="text-sm font-medium text-texto-secundario uppercase tracking-wide mb-2">Lo que pediste</h2>
@@ -119,6 +132,8 @@ function DetallePedido({ id, inicial }: { id: string; inicial?: Pedido }) {
         pedidoId={pedido._id}
         nombreProducto={pedido.producto.nombre}
         codigo={codigo}
+        estado={pedido.estado}
+        onCancelado={alCancelar}
       />
     </article>
   )

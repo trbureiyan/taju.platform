@@ -1,22 +1,41 @@
+import type { Pedido } from '../../types'
+import { fechaConHora } from '../../lib/pedido'
+
 /**
- * Bloque de entrega del detalle de pedido. No distingue fecha pedida de confirmada: el formulario guarda
- * la del cliente en `fechaEntrega` y el taller la sobrescribe en el mismo campo (ver spec §4), así que el
- * texto nunca afirma una confirmación que el dato no garantiza.
- * @prop fechaEntrega - Fecha de entrega del pedido, o null si aún no se fijó.
+ * Bloque de entrega del detalle de pedido. Distingue lo que el cliente pidió de lo que se acordó:
+ * la fecha acordada solo existe cuando el taller la registra, así que el texto nunca afirma un acuerdo
+ * que el dato no garantiza.
+ * @prop fechaDeseada - Lo que pidió el cliente, o null.
+ * @prop fechaEntrega - La fecha acordada con el taller, o null mientras no se acuerde.
+ * @prop entrega - Cómo recibe el pedido: taller o domicilio con su dirección.
  */
-export function BloqueEntrega({ fechaEntrega }: { fechaEntrega: string | null }) {
+export function BloqueEntrega({
+  fechaDeseada,
+  fechaEntrega,
+  entrega,
+}: {
+  fechaDeseada: string | null
+  fechaEntrega: string | null
+  entrega: Pedido['entrega']
+}) {
+  const modo =
+    entrega.metodo === 'domicilio'
+      ? `A domicilio${entrega.detalle ? `: ${entrega.detalle}` : ''}`
+      : 'La recoges en el taller'
+
   return (
-    <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">
+    <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4 flex flex-col gap-1">
       {fechaEntrega ? (
-        <p className="text-sm font-medium text-texto-principal">
-          Entrega prevista:{' '}
-          {new Date(fechaEntrega).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </p>
+        <p className="text-sm font-medium text-texto-principal">Fecha acordada: {fechaConHora(fechaEntrega)}</p>
       ) : (
-        <p className="text-sm text-texto-secundario">
-          Te confirmamos la fecha por WhatsApp apenas pase a producción.
-        </p>
+        <>
+          {fechaDeseada && (
+            <p className="text-sm text-texto-principal">Fecha que pediste: {fechaConHora(fechaDeseada)}</p>
+          )}
+          <p className="text-sm text-texto-secundario">La acordamos contigo por WhatsApp antes de confirmar.</p>
+        </>
       )}
+      <p className="text-sm text-texto-secundario">{modo}</p>
     </div>
   )
 }

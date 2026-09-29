@@ -75,4 +75,16 @@ describe('usePedido', () => {
     expect(result.current.pedido).toBeNull()
     expect(result.current.estado).toBe('cargando')
   })
+
+  it('reemplazar pinta el pedido que devolvio el server sin volver a pedirlo', async () => {
+    const { wrapper } = conNav()
+    getMock.mockResolvedValueOnce(pedido({ _id: 'p1', estado: 'recibido' }))
+    const { result } = renderHook(() => usePedido('p1'), { wrapper })
+    await waitFor(() => expect(result.current.estado).toBe('listo'))
+
+    act(() => result.current.reemplazar(pedido({ _id: 'p1', estado: 'cancelado' })))
+
+    expect(result.current.pedido?.estado).toBe('cancelado')
+    expect(getMock).toHaveBeenCalledTimes(1)
+  })
 })

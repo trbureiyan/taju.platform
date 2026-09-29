@@ -30,17 +30,19 @@ function renderizar() {
 }
 
 describe('MisPedidosPage', () => {
-  it('muestra el resumen y separa en curso de entregados', async () => {
+  it('muestra el resumen y separa en curso de anteriores, con los cancelados entre ellos', async () => {
     getMock.mockResolvedValueOnce([
       pedido({ _id: 'a', nombre: 'Topper luna', estado: 'en_produccion' }),
       pedido({ _id: 'b', nombre: 'Blonda grabada', estado: 'entregado' }),
+      pedido({ _id: 'c', nombre: 'Invitación bordada', estado: 'cancelado' }),
     ])
     renderizar()
 
     await waitFor(() => expect(screen.getByText('Topper luna')).toBeInTheDocument())
     expect(screen.getByText('Tienes 1 pedido en camino')).toBeInTheDocument()
-    expect(screen.getByText('Entregados')).toBeInTheDocument()
+    expect(screen.getByText('Anteriores')).toBeInTheDocument()
     expect(screen.getByText('Blonda grabada')).toBeInTheDocument()
+    expect(screen.getByText('Invitación bordada')).toBeInTheDocument()
   })
 
   it('el vacio tutea y enlaza al catalogo', async () => {
