@@ -16,7 +16,7 @@ export function TarjetaPedido({ pedido }: { pedido: Pedido }) {
   const contenido = contenidoDe(pedido.categoria.familia)
 
   const proximo = pedido.fechaEntrega && !entregado
-    ? `Te lo entregamos el ${fechaConHora(pedido.fechaEntrega)}`
+    ? `${pedido.entrega.metodo === 'recoger' ? 'Puedes recogerlo' : 'Te lo entregamos'} el ${fechaConHora(pedido.fechaEntrega)}`
     : SIGUIENTE_PASO[pedido.estado]
 
   return (

@@ -233,11 +233,15 @@ export function PedidoFormPage() {
     if (esDimensionPersonalizada && !campos.dimensionCustom.trim()) {
       next.dimensionCustom = 'Nos falta la medida en centímetros. Sin ella no podemos calcular la proporción de tu pieza.'
     } else if (esDimensionPersonalizada && parseFloat(campos.dimensionCustom) <= 0) {
-      next.dimensionCustom = 'El valor debe ser mayor a 0'
+      next.dimensionCustom = 'Necesitamos una medida mayor a 0 para calcular tu pieza. Escríbela en centímetros.'
     }
     if (!campos.descripcion.trim()) next.descripcion = 'Cuéntanos qué necesitas. Con eso podemos cotizarlo.'
     const qty = parseInt(campos.cantidad, 10)
-    if (!campos.cantidad || isNaN(qty) || qty < 1) next.cantidad = 'La cantidad mínima es 1'
+    if (!Number.isInteger(Number(campos.cantidad)) && campos.cantidad.trim() !== '') {
+      next.cantidad = 'Las piezas se piden completas. Escribe la cantidad en números enteros, por ejemplo 2.'
+    } else if (!campos.cantidad || isNaN(qty) || qty < 1) {
+      next.cantidad = 'Necesitamos al menos 1 pieza para cotizar tu pedido. Escribe cuántas quieres.'
+    }
     if (!campos.colores.trim()) next.colores = 'Indica los colores que quieres. Los necesitamos para cotizar y producir.'
     if (!campos.materiales.trim()) {
       next.materiales = 'Indica el material. Si no lo sabes, cuéntanos para qué lo vas a usar y te asesoramos.'

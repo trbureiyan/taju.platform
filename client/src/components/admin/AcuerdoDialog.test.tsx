@@ -79,6 +79,11 @@ describe('AcuerdoDialog', () => {
     expect(patchMock).not.toHaveBeenCalled()
   })
 
+  it('limita la direccion a 200 caracteres, lo que acepta el servidor', async () => {
+    renderizar(pedidoAdmin({ entrega: { metodo: 'domicilio', detalle: 'Cra 5' } }))
+    expect(screen.getByLabelText('Dirección de entrega')).toHaveAttribute('maxlength', '200')
+  })
+
   it('no vuelve a registrar el anticipo si no cambio, para no mover su fecha', async () => {
     patchMock.mockResolvedValueOnce(pedidoAdmin({}))
     renderizar(

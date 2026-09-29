@@ -129,7 +129,7 @@ function FormularioAcuerdo({
         <option value="domicilio">Domicilio</option>
       </Select>
       {metodo === 'domicilio' && (
-        <Input label="Dirección de entrega" value={detalle} onChange={(e) => setDetalle(e.target.value)} />
+        <Input label="Dirección de entrega" maxLength={200} value={detalle} onChange={(e) => setDetalle(e.target.value)} />
       )}
 
       <div className="grid grid-cols-2 gap-3">

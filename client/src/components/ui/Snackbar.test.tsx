@@ -68,6 +68,50 @@ describe('Snackbar', () => {
     expect(screen.getByText('Dos', { selector: 'p' })).toBeInTheDocument()
   })
 
+  it('un aviso de error se anuncia de inmediato y dura 10 segundos', () => {
+    render(
+      <SnackbarProvider>
+        <Disparador mensaje="No pudimos guardar" opciones={{ tono: 'error' }} />
+      </SnackbarProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Avisar No pudimos guardar' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('No pudimos guardar')
+
+    act(() => {
+      vi.advanceTimersByTime(9999)
+    })
+    expect(screen.getByText('No pudimos guardar', { selector: 'p' })).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.queryByText('No pudimos guardar', { selector: 'p' })).not.toBeInTheDocument()
+  })
+
+  it('un aviso de error con accion dura 12 segundos; el neutro sigue en status', () => {
+    render(
+      <SnackbarProvider>
+        <Disparador
+          mensaje="Fallo"
+          opciones={{ tono: 'error', accion: { etiqueta: 'Reintentar', alHacerClick: () => {} } }}
+        />
+        <Disparador mensaje="Listo" />
+      </SnackbarProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Avisar Fallo' }))
+    act(() => {
+      vi.advanceTimersByTime(11999)
+    })
+    expect(screen.getByText('Fallo', { selector: 'p' })).toBeInTheDocument()
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.queryByText('Fallo', { selector: 'p' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Avisar Listo' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Listo')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('usarlo fuera del proveedor falla con un mensaje claro', () => {
     // React y jsdom reportan el error esperado por consola y por el evento `error`: se silencian solo aqui
     const silencio = vi.spyOn(console, 'error').mockImplementation(() => {})
