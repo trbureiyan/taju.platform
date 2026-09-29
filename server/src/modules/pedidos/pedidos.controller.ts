@@ -45,7 +45,8 @@ export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
     return
   }
 
-  const archivos = (req.files as Express.Multer.File[]) ?? [] // uploadImagen ya corrio antes en la ruta
+  // uploadImagen (.array) ya corrio antes en la ruta; Array.isArray descarta la forma de objeto que multer usa con .fields()
+  const archivos = Array.isArray(req.files) ? req.files : []
 
   // req.usuario! - crearPedido esta detras de requireAuth en la ruta, siempre hay usuario aqui
   const pedido = await pedidosService.crearPedido({
