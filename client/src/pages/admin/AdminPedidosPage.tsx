@@ -29,6 +29,8 @@ type Confirmacion = { tipo: 'avanzar' | 'cancelar'; pedido: PedidoAdmin }
 const ERROR_CARGA = 'No pudimos cargar los pedidos. Recarga la página para intentar de nuevo.'
 const ERROR_ACCION = 'No pudimos actualizar el pedido. Prueba de nuevo.'
 
+const AVISO_EN_CURSO = 'Estamos guardando otro cambio. Espera un momento y vuelve a intentarlo.'
+
 export function AdminPedidosPage() {
   const [pedidos, setPedidos] = useState<PedidoAdmin[]>([])
   const [cargando, setCargando] = useState(true)
@@ -55,7 +57,10 @@ export function AdminPedidosPage() {
   // las tres acciones de una fila comparten el mismo ciclo: en vuelo, reemplazar la fila con la respuesta del
   // server (no un refetch completo), avisar en un snackbar y explicar el motivo si el server rechaza
   async function ejecutar(id: string, accion: () => Promise<PedidoAdmin>, exito: string) {
-    if (actualizando) return
+    if (actualizando) {
+      avisar(AVISO_EN_CURSO, { tono: 'error' })
+      return
+    }
     setActualizando(id)
     try {
       reemplazarFila(await accion())

@@ -128,6 +128,24 @@ describe('AdminPedidosPage', () => {
     expect(screen.queryByText('Error 500')).not.toBeInTheDocument()
   })
 
+  it('con una accion en curso, una segunda en otra fila avisa y no dispara otra peticion', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce([
+      pedidoAdmin({ _id: 'aaa111', estado: 'recibido' }),
+      pedidoAdmin({ _id: 'bbb222', estado: 'recibido' }),
+    ])
+    vi.mocked(api.post).mockReturnValueOnce(new Promise(() => {}))
+    renderizar()
+
+    const botones = await screen.findAllByRole('button', { name: 'Ya le escribí' })
+    await userEvent.click(botones[0])
+    await userEvent.click(botones[1])
+
+    expect(
+      await screen.findByText('Estamos guardando otro cambio. Espera un momento y vuelve a intentarlo.'),
+    ).toBeInTheDocument()
+    expect(api.post).toHaveBeenCalledTimes(1)
+  })
+
   it('si la lista no carga, explica que hacer sin mostrar el error crudo', async () => {
     vi.mocked(api.get).mockRejectedValueOnce(new TypeError('Failed to fetch'))
     renderizar()
