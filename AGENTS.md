@@ -19,7 +19,7 @@ taju.platform/
 │   ├── tsconfig.json
 │   └── src/
 │       ├── main.tsx                 # render root
-│       ├── App.tsx                  # router root (por definir en Phase 1)
+│       ├── App.tsx                  # router root
 │       ├── styles/
 │       │   ├── tokens.css           # fuente unica de tokens — ver 04-tokens-de-diseno.md
 │       │   └── index.css            # @import tokens + tailwindcss + @config (obligatorio) + reset base
