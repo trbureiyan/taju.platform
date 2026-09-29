@@ -1,4 +1,4 @@
-import type { Pedido, EstadoPedido, Familia, HistorialEstadoPedido } from '../types'
+import type { Pedido, EstadoPedido, Familia, HistorialEstadoPedido, MetodoEntrega } from '../types'
 
 // fabrica de pedidos de prueba: solo lo que cada test cambia, el resto con valores neutros
 export function pedido(parcial: {
@@ -7,8 +7,13 @@ export function pedido(parcial: {
   familia?: Familia
   estado?: EstadoPedido
   fechaEntrega?: string | null
+  fechaDeseada?: string | null
   fechaSolicitud?: string
   esDimensionPersonalizada?: boolean
+  entrega?: { metodo: MetodoEntrega; detalle: string }
+  contacto?: { nombre: string; telefono: string }
+  pago?: Pedido['pago']
+  contactadoEn?: string | null
   historialEstados?: HistorialEstadoPedido[]
 }): Pedido {
   const estado = parcial.estado ?? 'recibido'
@@ -24,8 +29,13 @@ export function pedido(parcial: {
     materiales: 'acrílico',
     imagenesReferencia: [],
     estado,
+    contacto: parcial.contacto ?? { nombre: 'Laura', telefono: '3192452842' },
+    entrega: parcial.entrega ?? { metodo: 'recoger', detalle: '' },
     fechaSolicitud: parcial.fechaSolicitud ?? '2026-09-20T12:00:00.000Z',
+    fechaDeseada: parcial.fechaDeseada === undefined ? '2026-12-12T22:00:00.000Z' : parcial.fechaDeseada,
     fechaEntrega: parcial.fechaEntrega ?? null,
+    pago: parcial.pago ?? null,
+    contactadoEn: parcial.contactadoEn ?? null,
     confirmacionDimensionPersonalizada: false,
     historialEstados: parcial.historialEstados ?? [
       { estadoAnterior: null, estadoNuevo: estado, fecha: '2026-09-20T12:00:00.000Z' },

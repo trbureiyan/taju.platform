@@ -47,6 +47,7 @@ const VARIANTE_POR_ESTADO: Record<EstadoPedido, BadgeProps['variante']> = {
   en_produccion: 'aviso',
   listo_para_entrega: 'exito',
   entregado: 'neutro',
+  cancelado: 'neutro',
 }
 
 /**

@@ -13,7 +13,8 @@ export const RUTA_INICIO_POR_ROL: Record<Rol, string> = {
 export const FAMILIAS = ['toppers', 'superficies', 'senaletica', 'papeleria'] as const
 export type Familia = (typeof FAMILIAS)[number]
 
-export const ESTADOS_PEDIDO = [
+// el flujo feliz, en orden; ESTADOS_PEDIDO le suma las salidas que no son un paso del flujo
+export const FLUJO_PEDIDO = [
   'recibido',
   'en_revision',
   'confirmado',
@@ -21,7 +22,15 @@ export const ESTADOS_PEDIDO = [
   'listo_para_entrega',
   'entregado',
 ] as const
+
+export const ESTADOS_PEDIDO = [...FLUJO_PEDIDO, 'cancelado'] as const
 export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number]
+
+export const METODOS_ENTREGA = ['recoger', 'domicilio'] as const
+export type MetodoEntrega = (typeof METODOS_ENTREGA)[number]
+
+export const MEDIOS_PAGO = ['efectivo', 'nequi', 'daviplata', 'bancolombia', 'otro'] as const
+export type MedioPago = (typeof MEDIOS_PAGO)[number]
 
 // ─── Entidades ────────────────────────────────────────────────────────────────
 
@@ -117,7 +126,13 @@ export interface Pedido {
   imagenesReferencia: ImagenReferencia[]
   estado: EstadoPedido
   fechaSolicitud: string
+  contacto: { nombre: string; telefono: string }
+  entrega: { metodo: MetodoEntrega; detalle: string }
+  // lo que pidio el cliente; fechaEntrega es la acordada con el taller
+  fechaDeseada: string | null
   fechaEntrega: string | null
+  pago: { monto: number; medio: MedioPago; registradoEn: string } | null
+  contactadoEn: string | null
   confirmacionDimensionPersonalizada: boolean
   historialEstados: HistorialEstadoPedido[]
 }
@@ -139,6 +154,15 @@ export const ETIQUETAS_ESTADO: Record<EstadoPedido, string> = {
   en_produccion: 'En producción',
   listo_para_entrega: 'Listo para entrega',
   entregado: 'Entregado',
+  cancelado: 'Cancelado',
+}
+
+export const ETIQUETAS_MEDIO_PAGO: Record<MedioPago, string> = {
+  efectivo: 'Efectivo',
+  nequi: 'Nequi',
+  daviplata: 'Daviplata',
+  bancolombia: 'Bancolombia',
+  otro: 'Otro medio',
 }
 
 export const ETIQUETAS_FAMILIA: Record<Familia, string> = {
@@ -156,4 +180,5 @@ export const CLASES_ESTADO: Record<EstadoPedido, string> = {
   en_produccion: 'bg-pedido-produccion-fondo text-pedido-produccion-texto',
   listo_para_entrega: 'bg-pedido-listo-fondo text-pedido-listo-texto',
   entregado: 'bg-pedido-entregado-fondo text-pedido-entregado-texto',
+  cancelado: 'bg-superficie-hundida text-texto-secundario',
 }
