@@ -6,6 +6,7 @@ import { PedidoFormPage } from './PedidoFormPage'
 import { api, ErrorApi } from '../lib/api'
 import { esFestivo } from '../lib/politicas'
 import { codigoPedido } from '../lib/pedido'
+import { MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA } from '../lib/requisitos'
 import { pedido } from '../test/pedidos'
 import type { Pedido, Producto } from '../types'
 
@@ -191,8 +192,12 @@ describe('PedidoFormPage', () => {
       }
     })
 
-    // 21:00 del 28 en Bogota ya es el 29 en UTC: "mañana" se cuenta en la hora del taller, no en la del dispositivo
+    // 21:00 del 28 en Bogota ya es el 29 en UTC: "mañana" se cuenta en la hora del taller, no en la del dispositivo.
+    // TZ del proceso forzada a UTC para que el caso distinga aunque la maquina de pruebas este en Bogota
     it('cuenta el dia minimo en hora de Colombia', async () => {
+      // borrar TZ no devuelve la zona anterior en Node: se restaura la zona resuelta
+      const tzOriginal = Intl.DateTimeFormat().resolvedOptions().timeZone
+      vi.stubEnv('TZ', 'UTC') // escribe process.env.TZ, que Node aplica en caliente
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2026-09-29T02:00:00Z'))
       try {
@@ -205,6 +210,7 @@ describe('PedidoFormPage', () => {
         expect(api.postForm).toHaveBeenCalledOnce()
       } finally {
         vi.useRealTimers()
+        vi.stubEnv('TZ', tzOriginal)
       }
     })
 
@@ -394,16 +400,29 @@ describe('PedidoFormPage', () => {
     })
 
     it('muestra el mensaje del servidor en un 400 escrito para el cliente', async () => {
-      const alerta = await enviarCon(
-        new ErrorApi('Adjunta una imagen de referencia. Sin verla no podemos cotizar tu pedido.', 400),
-      )
+      const alerta = await enviarCon(new ErrorApi(MENSAJE_FALTA_REFERENCIA, 400))
       expect(alerta).toHaveTextContent('Sin verla no podemos cotizar')
+    })
+
+    // el server junta varios requisitos faltantes con un espacio
+    it('muestra los requisitos que faltan aunque vengan juntos', async () => {
+      const alerta = await enviarCon(new ErrorApi(`${MENSAJE_FALTA_FECHA} ${MENSAJE_FALTA_REFERENCIA}`, 400))
+      expect(alerta).toHaveTextContent(MENSAJE_FALTA_FECHA)
+      expect(alerta).toHaveTextContent(MENSAJE_FALTA_REFERENCIA)
+    })
+
+    it('un 400 con un mensaje conocido mas texto de sistema pegado no pasa', async () => {
+      const alerta = await enviarCon(new ErrorApi(`${MENSAJE_FALTA_FECHA} detalle interno`, 400))
+      expect(alerta).toHaveTextContent(/no pudimos enviar tu pedido/i)
     })
 
     it.each([
       ['una caida de red', new TypeError('Failed to fetch'), 'Failed to fetch'],
       ['un 400 generico', new ErrorApi('Datos del pedido inválidos', 400), 'inválidos'],
       ['un 500', new ErrorApi('Error 500', 500), 'Error 500'],
+      ['un 400 de multer', new ErrorApi('Error al procesar imagen: Too many files', 400), 'Too many files'],
+      ['un 400 del manejador de errores', new ErrorApi('Solicitud inválida', 400), 'Solicitud inválida'],
+      ['un 400 sin cuerpo', new ErrorApi('Error 400', 400), 'Error 400'],
     ])('con %s muestra el mensaje de respaldo, no el texto crudo', async (_caso, error, crudo) => {
       const alerta = await enviarCon(error)
       expect(alerta).toHaveTextContent(/no pudimos enviar tu pedido/i)

@@ -69,17 +69,29 @@ function fechaEnPalabras(fecha: string): string {
 const MENSAJE_ERROR_ENVIO =
   'No pudimos enviar tu pedido porque algo falló en la conexión con el taller. Tus datos siguen aquí: prueba de nuevo en unos segundos o escríbenos por WhatsApp.'
 
-// mensajes del server escritos para sistema, no para el cliente: se cambian por el de respaldo
-const MENSAJES_DE_SISTEMA = new Set(['Datos del pedido inválidos', 'Categoría no encontrada o inactiva', 'Producto no encontrado o inactivo'])
+// 400 del server que ya estan escritos para el cliente: requisitos (pedidos.requisitos.ts) y subida (middleware/upload.ts)
+const MENSAJES_REQUISITOS = [MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA, MENSAJE_CELULAR]
+const MENSAJES_SUBIDA = new Set([
+  'Cada imagen debe pesar menos de 5 MB',
+  'Uno de los archivos no es una imagen JPG válida',
+  'Solo se aceptan imágenes JPG (image/jpeg)',
+])
 
-// [DECISION] solo el 409 y los 400 en voz de marca llegan tal cual - una caida de red (TypeError) o un 5xx traen
-// texto crudo ("Failed to fetch", "Error 500") que no le dice al cliente que hacer. Mensaje nuevo en 400 sin voz de marca: sumarlo al Set.
+// el server junta los requisitos faltantes con un espacio: pasa solo si el texto entero son requisitos conocidos
+function sonSoloRequisitos(texto: string): boolean {
+  let resto = texto
+  for (const m of MENSAJES_REQUISITOS) resto = resto.split(m).join('')
+  return resto !== texto && resto.trim() === ''
+}
+
+// [DECISION] lista blanca que falla cerrada: el texto del server llega tal cual solo en el 409 o en un 400 conocido;
+// red caida (TypeError), 5xx y cualquier otro 400 ("Solicitud inválida", errores de multer) reciben el de respaldo.
+// Si el server agrega un 400 escrito para el cliente, sumarlo aqui a mano o el cliente vera el de respaldo.
 function mensajeDeErrorDeEnvio(err: unknown): string {
-  if (err instanceof ErrorApi) {
-    if (err.estado === 409) return err.message
-    if (err.estado === 400 && !MENSAJES_DE_SISTEMA.has(err.message) && !/^Error \d+$/.test(err.message)) {
-      return err.message
-    }
+  if (!(err instanceof ErrorApi)) return MENSAJE_ERROR_ENVIO
+  if (err.estado === 409) return err.message
+  if (err.estado === 400 && (MENSAJES_SUBIDA.has(err.message) || sonSoloRequisitos(err.message))) {
+    return err.message
   }
   return MENSAJE_ERROR_ENVIO
 }
