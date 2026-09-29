@@ -14,7 +14,7 @@ describe('LineaTiempoPedido', () => {
     render(<LineaTiempoPedido estadoActual="confirmado" historialEstados={historial} />)
 
     expect(screen.getByText(/recibido, 10 de septiembre/i)).toBeInTheDocument()
-    expect(screen.getByText('Tu pedido está confirmado. Pronto empieza a cortarse.')).toBeInTheDocument()
+    expect(screen.getByText('Tu pedido está confirmado. Empezamos a producir cuando recibamos el anticipo.')).toBeInTheDocument()
     expect(screen.getByText('En producción')).toBeInTheDocument()
   })
 })

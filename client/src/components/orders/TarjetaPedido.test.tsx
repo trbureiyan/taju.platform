@@ -34,6 +34,6 @@ describe('TarjetaPedido', () => {
 
     const sinFecha = pedido({ estado: 'recibido', fechaEntrega: null })
     renderizar(sinFecha)
-    expect(screen.getByText(/lo estamos revisando/i)).toBeInTheDocument()
+    expect(screen.getByText(/recibimos tu solicitud/i)).toBeInTheDocument()
   })
 })

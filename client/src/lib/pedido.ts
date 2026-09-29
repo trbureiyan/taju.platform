@@ -1,4 +1,4 @@
-import { ESTADOS_PEDIDO, type EstadoPedido } from '../types'
+import { FLUJO_PEDIDO, type EstadoPedido } from '../types'
 
 /**
  * Código de pedido para nombrar el mismo pedido por WhatsApp entre cliente y taller.
@@ -13,20 +13,43 @@ export function codigoPedido(id: string): string {
 
 // unica fuente del mensaje de "lo proximo que el cliente necesita saber" - lista junto a ETIQUETAS_ESTADO
 export const SIGUIENTE_PASO: Record<EstadoPedido, string> = {
-  recibido: 'Lo estamos revisando. Te escribimos por WhatsApp si nos falta algo.',
-  en_revision: 'Estamos revisando los detalles de tu pedido.',
-  confirmado: 'Tu pedido está confirmado. Pronto empieza a cortarse.',
+  recibido: 'Recibimos tu solicitud. Te escribimos por WhatsApp para confirmar precio, fecha y anticipo.',
+  en_revision: 'Ya hablamos contigo. Estamos cerrando los detalles antes de confirmar.',
+  confirmado: 'Tu pedido está confirmado. Empezamos a producir cuando recibamos el anticipo.',
   en_produccion: 'Ya estamos cortando tu pedido.',
-  listo_para_entrega: 'Ya está listo. Te escribimos para coordinar la entrega.',
+  listo_para_entrega: 'Ya está listo. Coordinamos contigo la entrega.',
   entregado: 'Entregado. Gracias por pedir con nosotros.',
+  cancelado: 'Este pedido se canceló. Si fue un error, escríbenos por WhatsApp.',
 }
 
-/** Un pedido está en curso mientras no llegue a `entregado`. */
+/** Un pedido está en curso mientras no llegue a `entregado` ni se cancele. */
 export function enCurso(estado: EstadoPedido): boolean {
-  return estado !== 'entregado'
+  return estado !== 'entregado' && estado !== 'cancelado'
 }
 
-/** Posición del estado en la máquina de estados canónica (0 a 5), para la línea de avance. */
+/** Posición del estado en el flujo (0 a 5) para la línea de avance; -1 para `cancelado`, que no es un paso. */
 export function avance(estado: EstadoPedido): number {
-  return ESTADOS_PEDIDO.indexOf(estado)
+  return (FLUJO_PEDIDO as readonly EstadoPedido[]).indexOf(estado)
+}
+
+/**
+ * Fecha y hora en la hora de Colombia, donde opera el taller, sin depender de la zona del dispositivo.
+ * @param iso - Instante en ISO 8601.
+ * @returns Ej. `sábado, 12 de diciembre, 5:00 p. m.`
+ */
+export function fechaConHora(iso: string): string {
+  const fecha = new Date(iso)
+  const dia = fecha.toLocaleDateString('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'America/Bogota',
+  })
+  const hora = fecha.toLocaleTimeString('es-CO', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'America/Bogota',
+  })
+  return `${dia}, ${hora}`
 }
