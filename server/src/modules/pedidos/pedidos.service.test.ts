@@ -664,3 +664,44 @@ describe('cancelarMiPedido', () => {
     expect(historial.filter((h) => h.estadoNuevo === 'cancelado')).toHaveLength(1)
   })
 })
+
+// ─── Concurrencia y documentos legados ──────────────────────────────────────
+
+describe('concurrencia sobre el mismo pedido', () => {
+  const admin = new Types.ObjectId().toString()
+
+  it('si el cliente cancela mientras el taller avanza, el que llega tarde pierde y el historial queda coherente', async () => {
+    const { input, cliente } = await pedidoBase()
+    const id = (await crearPedido(input)).id as string
+    const clienteId = cliente.id as string
+
+    // el taller lee el pedido; antes de que guarde, la cancelacion del cliente llega completa
+    const findByIdReal = Pedido.findById.bind(Pedido)
+    vi.spyOn(Pedido, 'findById').mockImplementationOnce((async () => {
+      const leido = await findByIdReal(id)
+      await cancelarMiPedido(id, clienteId)
+      return leido
+    }) as unknown as typeof Pedido.findById)
+
+    const error = await updateEstado(id, 'en_revision', admin).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(mongoose.Error.VersionError)
+    const final = (await Pedido.findById(id).lean())!
+    expect(final.estado).toBe('cancelado')
+    expect(final.historialEstados.map((h) => h.estadoNuevo)).toEqual(['recibido', 'cancelado'])
+  })
+})
+
+describe('faltantesParaAvanzar con un pedido legado', () => {
+  it('un pedido sin entrega responde 409 con lo que falta, no un error interno', async () => {
+    const { input } = await pedidoBase()
+    const id = (await crearPedido(input)).id as string
+    await Pedido.collection.updateOne({ _id: new Types.ObjectId(id) }, { $unset: { entrega: '' }, $set: { estado: 'en_revision' } })
+
+    const error = await updateEstado(id, 'confirmado', new Types.ObjectId().toString()).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(AppError)
+    expect((error as AppError).status).toBe(409)
+    expect((error as AppError).message).toMatch(/la fecha de entrega acordada/)
+  })
+})

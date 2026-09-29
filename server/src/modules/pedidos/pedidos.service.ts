@@ -388,7 +388,10 @@ function faltantesParaAvanzar(
   if (destino === 'confirmado') {
     if (!pedido.contactadoEn) faltan.push('marcar que ya hablaste con el cliente')
     if (!pedido.fechaEntrega) faltan.push('la fecha de entrega acordada')
-    if (pedido.entrega.metodo === 'domicilio' && !pedido.entrega.detalle.trim()) faltan.push('la dirección de entrega')
+    // ?. por pedidos legados guardados antes de que existiera entrega: sin esto la compuerta da 500 y no 409
+    if (pedido.entrega?.metodo === 'domicilio' && !pedido.entrega.detalle?.trim()) {
+      faltan.push('la dirección de entrega')
+    }
   }
   if (destino === 'en_produccion' && !pedido.pago) faltan.push('el anticipo')
   return faltan

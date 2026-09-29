@@ -187,7 +187,11 @@ const pedidoSchema = new Schema<IPedido>({
   contactadoEn: { type: Date, default: null },
   confirmacionDimensionPersonalizada: { type: Boolean, default: false },
   historialEstados: [historialEstadoSchema],
-})
+},
+// [DECISION] optimisticConcurrency: los servicios leen, validan el estado en memoria y guardan. Sin chequear
+// __v, una cancelacion del cliente y un avance del taller simultaneos ganaban los dos. El perdedor recibe
+// VersionError, que errorHandler traduce a 409
+{ optimisticConcurrency: true })
 
 // ─── Indices ──────────────────────────────────────────────────────────────────
 // las tres vistas que mas se consultan: "mis pedidos", el tablero del taller por estado,
