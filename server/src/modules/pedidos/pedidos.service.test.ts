@@ -606,6 +606,62 @@ describe('registrarAcuerdo', () => {
     await Pedido.updateOne({ _id: id }, { estado })
     await expect(registrarAcuerdo(id, { fechaEntrega: null })).rejects.toMatchObject({ status: 409 })
   })
+
+  describe('en un pedido ya confirmado', () => {
+    const FECHA = '2026-12-12T17:00:00.000Z'
+
+    async function confirmado() {
+      const id = await recien()
+      await Pedido.updateOne(
+        { _id: id },
+        { estado: 'confirmado', contactadoEn: new Date(), fechaEntrega: new Date(FECHA) },
+      )
+      return id
+    }
+
+    it('no deja borrar la fecha acordada y no guarda nada', async () => {
+      const id = await confirmado()
+
+      await expect(registrarAcuerdo(id, { fechaEntrega: null })).rejects.toMatchObject({
+        status: 409,
+        message: expect.stringMatching(/la fecha de entrega acordada/),
+      })
+
+      expect((await Pedido.findById(id).lean())!.fechaEntrega!.toISOString()).toBe(FECHA)
+    })
+
+    it('no deja pasar a domicilio sin direccion', async () => {
+      const id = await confirmado()
+
+      await expect(
+        registrarAcuerdo(id, { entrega: { metodo: 'domicilio', detalle: '' } }),
+      ).rejects.toMatchObject({ status: 409, message: expect.stringMatching(/la dirección de entrega/) })
+
+      expect((await Pedido.findById(id).lean())!.entrega.metodo).toBe('recoger')
+    })
+
+    it('un cambio que mantiene lo exigido se guarda', async () => {
+      const id = await confirmado()
+
+      await registrarAcuerdo(id, {
+        fechaEntrega: new Date('2026-12-19T17:00:00.000Z'),
+        entrega: { metodo: 'domicilio', detalle: 'Cra 5 # 10-20' },
+      })
+
+      const pedido = (await Pedido.findById(id).lean())!
+      expect(pedido.fechaEntrega!.toISOString()).toBe('2026-12-19T17:00:00.000Z')
+      expect(pedido.entrega).toEqual({ metodo: 'domicilio', detalle: 'Cra 5 # 10-20' })
+    })
+  })
+
+  it('antes de confirmar, en en_revision, la fecha acordada se puede borrar', async () => {
+    const id = await recien()
+    await Pedido.updateOne({ _id: id }, { estado: 'en_revision', fechaEntrega: new Date('2026-12-12T17:00:00.000Z') })
+
+    await registrarAcuerdo(id, { fechaEntrega: null })
+
+    expect((await Pedido.findById(id).lean())!.fechaEntrega).toBeNull()
+  })
 })
 
 describe('cancelarMiPedido', () => {

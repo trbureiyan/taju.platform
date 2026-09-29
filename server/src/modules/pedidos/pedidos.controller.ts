@@ -26,8 +26,14 @@ const crearPedidoSchema = z.object({
     .string()
     .trim()
     .regex(/^3\d{9}$/, 'Escribe tu celular de 10 dígitos, empieza en 3. Es el número por el que te escribimos.'),
-  entregaMetodo: z.enum(METODOS_ENTREGA),
-  entregaDetalle: z.string().trim().max(200).default(''),
+  entregaMetodo: z.enum(METODOS_ENTREGA, {
+    error: 'No sabemos cómo quieres recibir tu pedido. Elige si lo vas a recoger en el taller o te lo llevamos a domicilio.',
+  }),
+  entregaDetalle: z
+    .string()
+    .trim()
+    .max(200, 'La dirección admite hasta 200 caracteres. Deja la calle, el número y el barrio; el resto lo hablamos por WhatsApp.')
+    .default(''),
   // nullable a proposito: la exigencia de fecha la decide pedidos.requisitos.ts segun la familia
   fechaDeseada: z.string().datetime({ offset: true }).nullable().default(null),
 })

@@ -6,7 +6,7 @@ import { Producto } from '../../models/Producto.js'
 import { Usuario } from '../../models/Usuario.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import type { EstadoPedido, MedioPago, MetodoEntrega } from '../../types/index.js'
+import { FLUJO_PEDIDO, type EstadoPedido, type MedioPago, type MetodoEntrega } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 import { faltantesDeSolicitud } from './pedidos.requisitos.js'
 
@@ -312,6 +312,17 @@ export async function registrarAcuerdo(pedidoId: string, cambios: CambiosAcuerdo
   if (cambios.entrega) pedido.entrega = cambios.entrega
   // el anticipo lleva su propia fecha de registro: la plataforma deja constancia, no mueve dinero
   if (cambios.pago) pedido.pago = { ...cambios.pago, registradoEn: new Date() }
+
+  // desde confirmado lo exigido para confirmar tiene que seguir en pie: sin esto un acuerdo posterior
+  // podia dejar un pedido en produccion sin fecha o sin direccion. Se lanza antes del save, no queda nada escrito
+  const comprometido =
+    pedido.estado !== 'cancelado' && FLUJO_PEDIDO.indexOf(pedido.estado) >= FLUJO_PEDIDO.indexOf('confirmado')
+  if (comprometido) {
+    const faltan = faltantesParaAvanzar(pedido, 'confirmado')
+    if (faltan.length > 0) {
+      throw new AppError(409, `Este pedido ya está "${pedido.estado}" y no puede quedar sin: ${faltan.join(', ')}.`)
+    }
+  }
 
   await pedido.save()
   // populate('cliente', 'email').lean() para igualar el contrato de retorno de updateEstado
