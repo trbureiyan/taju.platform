@@ -1,4 +1,4 @@
-import type { Pedido, EstadoPedido, Familia, HistorialEstadoPedido, MetodoEntrega } from '../types'
+import type { Pedido, PedidoAdmin, EstadoPedido, Familia, HistorialEstadoPedido, MetodoEntrega } from '../types'
 
 // fabrica de pedidos de prueba: solo lo que cada test cambia, el resto con valores neutros
 export function pedido(parcial: {
@@ -41,4 +41,9 @@ export function pedido(parcial: {
       { estadoAnterior: null, estadoNuevo: estado, fecha: '2026-09-20T12:00:00.000Z' },
     ],
   }
+}
+
+// en el panel el pedido siempre trae al cliente populado con su correo
+export function pedidoAdmin(parcial: Parameters<typeof pedido>[0] = {}): PedidoAdmin {
+  return { ...pedido(parcial), cliente: { _id: 'c1', email: 'laura@taju.co' } }
 }
