@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto'
 import mongoose, { Types } from 'mongoose'
-import { Pedido } from '../../models/Pedido.js'
+import { Pedido, type IPedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
 import { Usuario } from '../../models/Usuario.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import type { EstadoPedido, MetodoEntrega } from '../../types/index.js'
+import type { EstadoPedido, MedioPago, MetodoEntrega } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 import { faltantesDeSolicitud } from './pedidos.requisitos.js'
 
@@ -287,14 +287,111 @@ export async function getAllPedidos(limite = 50, pagina = 1) {
     .lean()
 }
 
-// null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
-export async function setFechaEntrega(pedidoId: string, fecha: Date | null) {
+export interface CambiosAcuerdo {
+  // null es valida: "todavia no sabemos cuando" es un estado legitimo, no un error
+  fechaEntrega?: Date | null
+  entrega?: { metodo: MetodoEntrega; detalle: string }
+  pago?: { monto: number; medio: MedioPago }
+}
+
+const ESTADOS_CERRADOS: readonly EstadoPedido[] = ['entregado', 'cancelado']
+
+/**
+ * Registra lo que TaJu y el cliente acordaron por fuera: fecha, entrega y anticipo.
+ * @param cambios - Solo se tocan los campos presentes; `fechaEntrega: null` la borra.
+ * @throws AppError(404) si el pedido no existe; AppError(409) si ya esta entregado o cancelado.
+ */
+export async function registrarAcuerdo(pedidoId: string, cambios: CambiosAcuerdo) {
   const pedido = await Pedido.findById(pedidoId)
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
-  pedido.fechaEntrega = fecha
+  if (ESTADOS_CERRADOS.includes(pedido.estado)) {
+    throw new AppError(409, 'Este pedido ya está cerrado y no admite cambios')
+  }
+
+  if (cambios.fechaEntrega !== undefined) pedido.fechaEntrega = cambios.fechaEntrega
+  if (cambios.entrega) pedido.entrega = cambios.entrega
+  // el anticipo lleva su propia fecha de registro: la plataforma deja constancia, no mueve dinero
+  if (cambios.pago) pedido.pago = { ...cambios.pago, registradoEn: new Date() }
+
   await pedido.save()
   // populate('cliente', 'email').lean() para igualar el contrato de retorno de updateEstado
   return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
+}
+
+/**
+ * Marca que el taller ya le escribio al cliente. Desde `recibido` avanza a `en_revision` en el mismo gesto.
+ * Idempotente: una segunda llamada no mueve la marca (el plazo de contacto se mide desde la primera).
+ * @throws AppError(404) si no existe; AppError(409) si ya esta entregado o cancelado.
+ */
+export async function marcarContactado(pedidoId: string, actorId: string) {
+  const pedido = await Pedido.findById(pedidoId)
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
+  if (ESTADOS_CERRADOS.includes(pedido.estado)) throw new AppError(409, 'Este pedido ya está cerrado')
+
+  if (!pedido.contactadoEn) {
+    pedido.contactadoEn = new Date()
+    if (pedido.estado === 'recibido') {
+      pedido.historialEstados.push({
+        estadoAnterior: 'recibido',
+        estadoNuevo: 'en_revision',
+        fecha: pedido.contactadoEn,
+        actor: new Types.ObjectId(actorId),
+      })
+      pedido.estado = 'en_revision'
+    }
+  }
+
+  await pedido.save()
+  return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
+}
+
+const ESTADOS_CANCELABLES_POR_CLIENTE: readonly EstadoPedido[] = ['recibido', 'en_revision']
+
+/**
+ * El cliente cancela su propia solicitud mientras el taller todavia no la confirma.
+ * @throws AppError(404) si no existe o es de otro cliente (no se distingue a proposito);
+ *         AppError(409) si ya esta confirmada o mas adelante: eso se habla por WhatsApp.
+ */
+export async function cancelarMiPedido(pedidoId: string, clienteId: string) {
+  const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId })
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
+
+  // doble clic o reintento de red: ya esta cancelado, no hay nada mas que hacer ni un segundo historial
+  if (pedido.estado === 'cancelado') return Pedido.findById(pedidoId, PROYECCION_SIN_ACTOR).lean()
+
+  if (!ESTADOS_CANCELABLES_POR_CLIENTE.includes(pedido.estado)) {
+    throw new AppError(409, 'Tu pedido ya está confirmado. Escríbenos por WhatsApp y lo revisamos contigo.')
+  }
+
+  const estadoAnterior = pedido.estado
+  pedido.estado = 'cancelado'
+  pedido.historialEstados.push({
+    estadoAnterior,
+    estadoNuevo: 'cancelado',
+    fecha: new Date(),
+    actor: new Types.ObjectId(clienteId),
+  })
+  await pedido.save()
+  return Pedido.findById(pedidoId, PROYECCION_SIN_ACTOR).lean()
+}
+
+/**
+ * Lo que todavia no esta registrado para dar el paso a `destino`. Vacio significa que se puede avanzar.
+ * [DECISION] confirmado = compromiso (hablamos, hay fecha y lugar); en_produccion exige anticipo. Sin esto
+ * el taller trabaja sin saber cuando ni a quien entrega, ni si le pagan.
+ */
+function faltantesParaAvanzar(
+  pedido: Pick<IPedido, 'contactadoEn' | 'fechaEntrega' | 'entrega' | 'pago'>,
+  destino: EstadoPedido,
+): string[] {
+  const faltan: string[] = []
+  if (destino === 'confirmado') {
+    if (!pedido.contactadoEn) faltan.push('marcar que ya hablaste con el cliente')
+    if (!pedido.fechaEntrega) faltan.push('la fecha de entrega acordada')
+    if (pedido.entrega.metodo === 'domicilio' && !pedido.entrega.detalle.trim()) faltan.push('la dirección de entrega')
+  }
+  if (destino === 'en_produccion' && !pedido.pago) faltan.push('el anticipo')
+  return faltan
 }
 
 // confirmarDimensionPersonalizada: el admin lo manda explicito en el mismo request que avanza a en_produccion -
@@ -311,6 +408,11 @@ export async function updateEstado(
   // solo se avanza un paso a la vez o se cancela; nada de saltarse "en_produccion" ni retroceder
   if (!TRANSICIONES[pedido.estado as EstadoPedido].includes(nuevoEstado)) {
     throw new AppError(409, `Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
+  }
+
+  const faltan = faltantesParaAvanzar(pedido, nuevoEstado)
+  if (faltan.length > 0) {
+    throw new AppError(409, `Antes de pasar a "${nuevoEstado}" falta registrar: ${faltan.join(', ')}.`)
   }
 
   // dimension personalizada exige confirmacion manual del admin antes de entrar a produccion

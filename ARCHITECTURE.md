@@ -132,8 +132,10 @@ La API organiza sus rutas bajo el prefijo `/api`:
   - `GET /mis-pedidos`: Historial de pedidos del cliente autenticado (`requireAuth`).
   - `GET /:id`: Consulta individual de pedido asegurando aislamiento por `clienteId` o acceso de administrador.
   - `GET /`: Listado completo de pedidos para el taller (`requireRol('administrador')`).
-  - `PATCH /:id/estado`: Transición controlada en la máquina de estados (`requireRol('administrador')`).
-  - `PATCH /:id/fecha-entrega`: Asignación de fecha estimada de entrega (`requireRol('administrador')`).
+  - `PATCH /:id/estado`: Transición controlada en la máquina de estados (tabla `TRANSICIONES`; `confirmado` y `en_produccion` exigen lo registrado) (`requireRol('administrador')`).
+  - `POST /:id/contacto`: Marca el primer contacto con el cliente; desde `recibido` pasa a `en_revision` (`requireRol('administrador')`).
+  - `PATCH /:id/acuerdo`: Registra lo acordado por fuera: fecha de entrega, entrega y anticipo (`requireRol('administrador')`).
+  - `PATCH /:id/cancelar`: El cliente cancela su solicitud hasta `en_revision` (`requireAuth`, solo el dueño; ajeno da 404).
 - **Healthcheck**:
   - `GET /health`: Endpoint liviano sin autenticación para monitoreo y verificación de despliegue.
 

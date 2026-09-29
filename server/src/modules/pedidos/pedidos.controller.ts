@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import * as pedidosService from './pedidos.service.js'
-import { ESTADOS_PEDIDO, METODOS_ENTREGA } from '../../types/index.js'
+import { ESTADOS_PEDIDO, MEDIOS_PAGO, METODOS_ENTREGA } from '../../types/index.js'
 import { asyncHandler } from '../../lib/errors.js'
 
 // ─── Cliente ──────────────────────────────────────────────────────────────────
@@ -61,22 +61,43 @@ export const getPedidoById = asyncHandler(async (req: Request, res: Response) =>
   res.json(pedido)
 })
 
-// ─── Admin ────────────────────────────────────────────────────────────────────
-
-const setFechaEntregaSchema = z.object({
-  // nullable a proposito: el admin puede borrar la fecha si todavia no sabe cuando entrega
-  fechaEntrega: z.string().datetime({ offset: true }).nullable(),
+export const cancelarMiPedido = asyncHandler(async (req: Request, res: Response) => {
+  const pedido = await pedidosService.cancelarMiPedido(req.params.id, req.usuario!.sub)
+  res.json(pedido)
 })
 
-export const setFechaEntrega = asyncHandler(async (req: Request, res: Response) => {
-  const parsed = setFechaEntregaSchema.safeParse(req.body)
+// ─── Admin ────────────────────────────────────────────────────────────────────
+
+const acuerdoSchema = z
+  .object({
+    // nullable: el taller puede borrar la fecha acordada si el cliente la mueve
+    fechaEntrega: z.string().datetime({ offset: true }).nullable().optional(),
+    entrega: z
+      .object({ metodo: z.enum(METODOS_ENTREGA), detalle: z.string().trim().max(200).default('') })
+      .optional(),
+    pago: z.object({ monto: z.number().int().positive(), medio: z.enum(MEDIOS_PAGO) }).optional(),
+  })
+  .refine((v) => v.fechaEntrega !== undefined || v.entrega !== undefined || v.pago !== undefined, {
+    message: 'No hay nada que guardar',
+  })
+
+export const registrarAcuerdo = asyncHandler(async (req: Request, res: Response) => {
+  const parsed = acuerdoSchema.safeParse(req.body)
   if (!parsed.success) {
-    res.status(400).json({ error: 'Fecha inválida', detalles: z.flattenError(parsed.error) })
+    res.status(400).json({ error: 'Acuerdo inválido', detalles: z.flattenError(parsed.error) })
     return
   }
+  const { fechaEntrega, entrega, pago } = parsed.data
+  const pedido = await pedidosService.registrarAcuerdo(req.params.id, {
+    ...(fechaEntrega !== undefined && { fechaEntrega: fechaEntrega ? new Date(fechaEntrega) : null }),
+    ...(entrega && { entrega }),
+    ...(pago && { pago }),
+  })
+  res.json(pedido)
+})
 
-  const fecha = parsed.data.fechaEntrega ? new Date(parsed.data.fechaEntrega) : null
-  const pedido = await pedidosService.setFechaEntrega(req.params.id, fecha)
+export const marcarContactado = asyncHandler(async (req: Request, res: Response) => {
+  const pedido = await pedidosService.marcarContactado(req.params.id, req.usuario!.sub)
   res.json(pedido)
 })
 

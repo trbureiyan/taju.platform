@@ -14,7 +14,9 @@ router.post('/', requireAuth, uploadImagen, pedidosController.crearPedido)
 router.get('/mis-pedidos', requireAuth, pedidosController.getMisPedidos)
 
 router.patch('/:id/estado', requireAuth, requireRol('administrador'), pedidosController.actualizarEstado)
-router.patch('/:id/fecha-entrega', requireAuth, requireRol('administrador'), pedidosController.setFechaEntrega)
+router.post('/:id/contacto', requireAuth, requireRol('administrador'), pedidosController.marcarContactado)
+router.patch('/:id/acuerdo', requireAuth, requireRol('administrador'), pedidosController.registrarAcuerdo)
+router.patch('/:id/cancelar', requireAuth, pedidosController.cancelarMiPedido)
 router.get('/:id', requireAuth, pedidosController.getPedidoById)
 
 export default router

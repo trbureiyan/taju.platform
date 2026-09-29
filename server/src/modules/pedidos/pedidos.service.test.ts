@@ -1,7 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
 import mongoose, { Types } from 'mongoose'
-import { crearPedido, updateEstado, getMisPedidos, getPedidoById, getAllPedidos } from './pedidos.service.js'
+import {
+  crearPedido,
+  updateEstado,
+  marcarContactado,
+  registrarAcuerdo,
+  cancelarMiPedido,
+  getMisPedidos,
+  getPedidoById,
+  getAllPedidos,
+} from './pedidos.service.js'
 import { Pedido } from '../../models/Pedido.js'
+import { Usuario } from '../../models/Usuario.js'
 import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { FLUJO_PEDIDO, type EstadoPedido } from '../../types/index.js'
@@ -43,10 +53,28 @@ describe('updateEstado', () => {
     return pedido.id as string
   }
 
+  // confirmado exige contacto, fecha acordada y entrega; en_produccion exige anticipo. Los tests que ya parten
+  // de esos estados escriben el acuerdo directo en la base para no repetir el camino completo
+  async function conAcuerdo(id: string) {
+    await Pedido.updateOne(
+      { _id: id },
+      {
+        contactadoEn: new Date(),
+        fechaEntrega: new Date('2026-12-12T17:00:00.000Z'),
+        pago: { monto: 50000, medio: 'nequi', registradoEn: new Date() },
+      },
+    )
+  }
+
   it('recorre los seis estados avanzando de a un paso y deja traza de cada uno', async () => {
     const id = await pedidoEn('recibido')
 
-    for (const estado of FLUJO_PEDIDO.slice(1)) {
+    await marcarContactado(id, admin) // recibido -> en_revision en un solo gesto
+    await registrarAcuerdo(id, {
+      fechaEntrega: new Date('2026-12-12T17:00:00.000Z'),
+      pago: { monto: 50000, medio: 'nequi' },
+    })
+    for (const estado of FLUJO_PEDIDO.slice(2)) {
       await updateEstado(id, estado, admin)
     }
 
@@ -118,6 +146,7 @@ describe('updateEstado', () => {
   describe('con dimension personalizada', () => {
     it('bloquea el paso a en_produccion sin confirmacion explicita', async () => {
       const id = await pedidoEn('confirmado', true)
+      await conAcuerdo(id)
 
       await expect(updateEstado(id, 'en_produccion', admin)).rejects.toMatchObject({ status: 409 })
 
@@ -128,6 +157,7 @@ describe('updateEstado', () => {
 
     it('avanza y persiste la confirmacion cuando el admin la manda', async () => {
       const id = await pedidoEn('confirmado', true)
+      await conAcuerdo(id)
 
       await updateEstado(id, 'en_produccion', admin, true)
 
@@ -144,6 +174,7 @@ describe('updateEstado', () => {
 
   it('una dimension estandar pasa a en_produccion sin confirmacion', async () => {
     const id = await pedidoEn('confirmado', false)
+    await conAcuerdo(id)
     await updateEstado(id, 'en_produccion', admin)
     expect((await Pedido.findById(id).lean())!.estado).toBe('en_produccion')
   })
@@ -424,5 +455,212 @@ describe('getAllPedidos — paginación', () => {
     await crearPedidosDistintos(3)
     const todos = await getAllPedidos()
     expect(todos.length).toBeLessThanOrEqual(50)
+  })
+})
+
+// ─── Compuertas, contacto, acuerdo y cancelacion del cliente ─────────────────
+
+describe('compuertas de updateEstado', () => {
+  const admin = new Types.ObjectId().toString()
+
+  async function solicitudEn(estado: EstadoPedido, extra: Record<string, unknown> = {}) {
+    const { input } = await pedidoBase()
+    const pedido = await crearPedido({ ...input, ...extra })
+    await Pedido.updateOne({ _id: pedido._id }, { estado })
+    return pedido.id as string
+  }
+
+  async function errorDe(promesa: Promise<unknown>) {
+    return promesa.then(
+      () => null,
+      (e: unknown) => e as AppError,
+    )
+  }
+
+  it('no confirma sin contacto ni fecha acordada y nombra lo que falta', async () => {
+    const id = await solicitudEn('en_revision')
+
+    const error = await errorDe(updateEstado(id, 'confirmado', admin))
+
+    expect(error).toBeInstanceOf(AppError)
+    expect(error!.status).toBe(409)
+    expect(error!.message).toMatch(/marcar que ya hablaste con el cliente/)
+    expect(error!.message).toMatch(/la fecha de entrega acordada/)
+  })
+
+  it('un domicilio sin direccion no se confirma', async () => {
+    const id = await solicitudEn('en_revision', { entregaMetodo: 'domicilio', entregaDetalle: '' })
+    await registrarAcuerdo(id, { fechaEntrega: new Date('2026-12-12T17:00:00.000Z') })
+    await Pedido.updateOne({ _id: id }, { contactadoEn: new Date() })
+
+    const error = await errorDe(updateEstado(id, 'confirmado', admin))
+
+    expect(error!.status).toBe(409)
+    expect(error!.message).toMatch(/la dirección de entrega/)
+  })
+
+  it('confirma cuando hay contacto, fecha acordada y entrega', async () => {
+    const id = await solicitudEn('en_revision')
+    await marcarContactado(id, admin)
+    await registrarAcuerdo(id, { fechaEntrega: new Date('2026-12-12T17:00:00.000Z') })
+
+    await updateEstado(id, 'confirmado', admin)
+
+    expect((await Pedido.findById(id).lean())!.estado).toBe('confirmado')
+  })
+
+  it('no pasa a produccion sin anticipo registrado', async () => {
+    const id = await solicitudEn('confirmado')
+
+    const error = await errorDe(updateEstado(id, 'en_produccion', admin))
+
+    expect(error!.status).toBe(409)
+    expect(error!.message).toMatch(/el anticipo/)
+    expect((await Pedido.findById(id).lean())!.estado).toBe('confirmado')
+  })
+
+  it('cancelar no exige nada registrado', async () => {
+    const id = await solicitudEn('en_revision')
+    await expect(updateEstado(id, 'cancelado', admin)).resolves.toBeTruthy()
+  })
+})
+
+describe('marcarContactado', () => {
+  const admin = new Types.ObjectId().toString()
+
+  async function recien() {
+    const { input } = await pedidoBase()
+    return (await crearPedido(input)).id as string
+  }
+
+  it('desde recibido marca el contacto y pasa a en_revision en un solo gesto', async () => {
+    const id = await recien()
+
+    await marcarContactado(id, admin)
+
+    const pedido = await Pedido.findById(id).lean()
+    expect(pedido!.contactadoEn).toBeInstanceOf(Date)
+    expect(pedido!.estado).toBe('en_revision')
+    expect(pedido!.historialEstados.at(-1)).toMatchObject({ estadoAnterior: 'recibido', estadoNuevo: 'en_revision' })
+    expect(pedido!.historialEstados.at(-1)!.actor.toString()).toBe(admin)
+  })
+
+  it('es idempotente: escribirle dos veces no mueve la marca ni el historial', async () => {
+    const id = await recien()
+
+    await marcarContactado(id, admin)
+    const primera = (await Pedido.findById(id).lean())!
+    await marcarContactado(id, admin)
+    const segunda = (await Pedido.findById(id).lean())!
+
+    expect(segunda.contactadoEn!.getTime()).toBe(primera.contactadoEn!.getTime())
+    expect(segunda.historialEstados).toHaveLength(primera.historialEstados.length)
+  })
+
+  it.each(['entregado', 'cancelado'] as const)('rechaza con 409 un pedido %s', async (estado) => {
+    const id = await recien()
+    await Pedido.updateOne({ _id: id }, { estado })
+    await expect(marcarContactado(id, admin)).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('responde 404 si el pedido no existe', async () => {
+    await expect(marcarContactado(new Types.ObjectId().toString(), admin)).rejects.toMatchObject({ status: 404 })
+  })
+})
+
+describe('registrarAcuerdo', () => {
+  async function recien() {
+    const { input } = await pedidoBase()
+    return (await crearPedido(input)).id as string
+  }
+
+  it('guarda fecha acordada, entrega y anticipo; el anticipo lleva su fecha de registro', async () => {
+    const id = await recien()
+
+    await registrarAcuerdo(id, {
+      fechaEntrega: new Date('2026-12-14T15:00:00.000Z'),
+      entrega: { metodo: 'domicilio', detalle: 'Cra 5 # 10-20' },
+      pago: { monto: 50000, medio: 'bancolombia' },
+    })
+
+    const pedido = await Pedido.findById(id).lean()
+    expect(pedido!.fechaEntrega!.toISOString()).toBe('2026-12-14T15:00:00.000Z')
+    expect(pedido!.entrega).toEqual({ metodo: 'domicilio', detalle: 'Cra 5 # 10-20' })
+    expect(pedido!.pago).toMatchObject({ monto: 50000, medio: 'bancolombia' })
+    expect(pedido!.pago!.registradoEn).toBeInstanceOf(Date)
+  })
+
+  it('null en fechaEntrega la borra y omitirla no la toca', async () => {
+    const id = await recien()
+    await registrarAcuerdo(id, { fechaEntrega: new Date('2026-12-14T15:00:00.000Z') })
+
+    await registrarAcuerdo(id, { pago: { monto: 1000, medio: 'efectivo' } })
+    expect((await Pedido.findById(id).lean())!.fechaEntrega).not.toBeNull()
+
+    await registrarAcuerdo(id, { fechaEntrega: null })
+    expect((await Pedido.findById(id).lean())!.fechaEntrega).toBeNull()
+  })
+
+  it.each(['entregado', 'cancelado'] as const)('rechaza con 409 un pedido %s', async (estado) => {
+    const id = await recien()
+    await Pedido.updateOne({ _id: id }, { estado })
+    await expect(registrarAcuerdo(id, { fechaEntrega: null })).rejects.toMatchObject({ status: 409 })
+  })
+})
+
+describe('cancelarMiPedido', () => {
+  async function solicitud() {
+    const { input, cliente } = await pedidoBase()
+    const pedido = await crearPedido(input)
+    return { id: pedido.id as string, clienteId: cliente.id as string }
+  }
+
+  it('cancela lo propio en recibido y deja al cliente como actor, sin exponerlo de vuelta', async () => {
+    const { id, clienteId } = await solicitud()
+
+    const devuelto = await cancelarMiPedido(id, clienteId)
+
+    expect(devuelto!.estado).toBe('cancelado')
+    expect(devuelto!.historialEstados.at(-1)).not.toHaveProperty('actor')
+    const guardado = await Pedido.findById(id).lean()
+    expect(guardado!.historialEstados.at(-1)!.actor.toString()).toBe(clienteId)
+  })
+
+  it('cancela desde en_revision', async () => {
+    const { id, clienteId } = await solicitud()
+    await Pedido.updateOne({ _id: id }, { estado: 'en_revision' })
+    await expect(cancelarMiPedido(id, clienteId)).resolves.toBeTruthy()
+  })
+
+  it.each(['confirmado', 'en_produccion', 'entregado'] as const)(
+    'desde %s rechaza con 409 y manda a WhatsApp',
+    async (estado) => {
+      const { id, clienteId } = await solicitud()
+      await Pedido.updateOne({ _id: id }, { estado })
+
+      const error = await cancelarMiPedido(id, clienteId).catch((e: unknown) => e as AppError)
+
+      expect(error).toBeInstanceOf(AppError)
+      expect((error as AppError).status).toBe(409)
+      expect((error as AppError).message).toMatch(/WhatsApp/)
+      expect((await Pedido.findById(id).lean())!.estado).toBe(estado)
+    },
+  )
+
+  it('responde 404 si el pedido es de otro cliente', async () => {
+    const { id } = await solicitud()
+    const otro = await Usuario.create({ nombre: 'Otra', email: 'otra@taju.co', password: 'hash-no-relevante' })
+    await expect(cancelarMiPedido(id, otro.id)).rejects.toMatchObject({ status: 404 })
+    expect((await Pedido.findById(id).lean())!.estado).toBe('recibido')
+  })
+
+  it('es idempotente: cancelar dos veces no falla ni duplica el historial', async () => {
+    const { id, clienteId } = await solicitud()
+
+    await cancelarMiPedido(id, clienteId)
+    await expect(cancelarMiPedido(id, clienteId)).resolves.toBeTruthy()
+
+    const historial = (await Pedido.findById(id).lean())!.historialEstados
+    expect(historial.filter((h) => h.estadoNuevo === 'cancelado')).toHaveLength(1)
   })
 })
