@@ -24,7 +24,7 @@ taju.platform/
 │       │   ├── tokens.css           # fuente unica de tokens — ver 04-tokens-de-diseno.md
 │       │   └── index.css            # @import tokens + tailwindcss + @config (obligatorio) + reset base
 │       ├── components/
-│       │   ├── ui/                  # primitivos compartidos: Button, Input, Badge...
+│       │   ├── ui/                  # primitivos compartidos: Button, Input, Select, Badge, Dialog (modal), Snackbar (aviso)...
 │       │   ├── catalog/             # catalogo: tarjeta, estantes, barra de filtros, navegacion de familias
 │       │   ├── producto/            # detalle de producto: galeria, precio por escala, antes de pedir, especificaciones
 │       │   ├── orders/              # seguimiento de pedidos: tarjeta, linea de avance, linea de tiempo, entrega, acciones
