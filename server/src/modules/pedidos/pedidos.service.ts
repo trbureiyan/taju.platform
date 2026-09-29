@@ -8,6 +8,7 @@ import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import type { EstadoPedido, MetodoEntrega } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
+import { faltantesDeSolicitud } from './pedidos.requisitos.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,14 @@ export async function crearPedido(input: CrearPedidoInput) {
   if (!producto || !producto.activo) {
     throw new AppError(400, 'Producto no encontrado o inactivo')
   }
+
+  // antes de subir nada a Cloudinary: una solicitud incompleta no debe gastar subidas
+  const faltan = faltantesDeSolicitud({
+    familia: categoria.familia,
+    fechaDeseada: input.fechaDeseada,
+    cantidadReferencias: input.archivos.length,
+  })
+  if (faltan.length > 0) throw new AppError(400, faltan.join(' '))
 
   // el nombre viaja como snapshot en el pedido; sin cuenta no hay a quien escribirle ni de quien es el pedido
   const cliente = await Usuario.findById(input.clienteId).select('nombre').lean()

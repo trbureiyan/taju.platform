@@ -22,7 +22,7 @@ afterEach(async () => {
 })
 
 async function pedidoBase() {
-  const { categoria, producto, cliente } = await crearCatalogoYCliente()
+  const { categoria, producto, cliente } = await crearCatalogoYCliente('papeleria')
   const input = inputPedido({
     clienteId: cliente.id,
     productoId: producto.id,
@@ -152,6 +152,22 @@ describe('updateEstado', () => {
 // ─── Creacion: idempotencia y transaccion (issue #17) ────────────────────────
 
 describe('crearPedido', () => {
+  it('rechaza con 400 un topper sin imagen de referencia y no sube nada', async () => {
+    const { categoria, producto, cliente } = await crearCatalogoYCliente('toppers')
+    const input = inputPedido({ clienteId: cliente.id, productoId: producto.id, categoriaId: categoria.id })
+
+    await expect(crearPedido(input)).rejects.toMatchObject({ status: 400 })
+
+    expect(subirImagen).not.toHaveBeenCalled()
+    expect(await Pedido.countDocuments()).toBe(0)
+  })
+
+  it('rechaza con 400 una solicitud sin fecha deseada', async () => {
+    const { input } = await pedidoBase()
+    await expect(crearPedido({ ...input, fechaDeseada: null })).rejects.toMatchObject({ status: 400 })
+    expect(await Pedido.countDocuments()).toBe(0)
+  })
+
   it('crea el pedido en recibido con su primera entrada de historial', async () => {
     const { input, cliente } = await pedidoBase()
 

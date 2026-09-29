@@ -2,11 +2,11 @@ import { Types } from 'mongoose'
 import { Categoria } from '../models/Categoria.js'
 import { Producto } from '../models/Producto.js'
 import { Usuario } from '../models/Usuario.js'
-import type { MetodoEntrega } from '../types/index.js'
+import type { Familia, MetodoEntrega } from '../types/index.js'
 
 /** Crea categoria + producto activos y un cliente, lo minimo que crearPedido necesita para no rechazar. */
-export async function crearCatalogoYCliente() {
-  const categoria = await Categoria.create({ nombre: 'Toppers de acrílico', familia: 'toppers' })
+export async function crearCatalogoYCliente(familia: Familia = 'toppers') {
+  const categoria = await Categoria.create({ nombre: 'Toppers de acrílico', familia })
   const producto = await Producto.create({
     nombre: 'Topper nombre en espejo dorado',
     categoria: categoria._id,

@@ -33,7 +33,7 @@ afterAll(async () => {
 // criterio de aceptacion del issue #17: 0 duplicados, 0 5xx ni requests sin respuesta, historial completo
 describe(`POST /api/pedidos con ${CONCURRENCIA} requests concurrentes del mismo payload`, () => {
   it('crea un solo pedido y responde un estado a cada request', async () => {
-    const { categoria, producto, cliente } = await crearCatalogoYCliente()
+    const { categoria, producto, cliente } = await crearCatalogoYCliente('papeleria')
     const token = signToken({ sub: cliente.id, email: cliente.email, rol: 'cliente' })
 
     // mismo shape que el crearPedidoSchema del controller: todo string, como llega del form-data
