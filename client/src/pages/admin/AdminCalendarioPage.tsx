@@ -15,12 +15,12 @@ function inicioSemana(fecha: Date): Date {
   return d
 }
 
-// lunes a viernes fijo - el taller no produce ni entrega fin de semana, por eso el rango siempre es de 5 dias
+// lunes a domingo: el taller atiende y entrega todos los dias, salvo festivos
 function etiquetaSemana(lunes: Date): string {
-  const viernes = new Date(lunes)
-  viernes.setDate(lunes.getDate() + 4)
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
-  return `${lunes.toLocaleDateString('es-CO', opts)} – ${viernes.toLocaleDateString('es-CO', opts)}`
+  return `${lunes.toLocaleDateString('es-CO', opts)} – ${domingo.toLocaleDateString('es-CO', opts)}`
 }
 
 type Grupos = {
@@ -38,12 +38,13 @@ export function AdminCalendarioPage() {
     api
       .get<PedidoAdmin[]>('/pedidos')
       .then(setPedidos)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar pedidos'))
+      // texto propio y no el del server o la red: un TypeError de fetch no le dice nada al taller
+      .catch(() => setError('No pudimos cargar los pedidos. Recarga la página para intentar de nuevo.'))
       .finally(() => setCargando(false))
   }, [])
 
-  // entregados ya no compiten por espacio en el calendario, el taller mira para adelante
-  const activos = pedidos.filter((p) => p.estado !== 'entregado')
+  // entregados y cancelados ya no compiten por espacio en el calendario, el taller mira para adelante
+  const activos = pedidos.filter((p) => p.estado !== 'entregado' && p.estado !== 'cancelado')
 
   // agrupa por semana de lunes (ISO string como key ordena cronologico gratis) y separa los sin fecha aparte
   const { grupos, sinFecha } = activos.reduce<{

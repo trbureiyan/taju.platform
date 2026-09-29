@@ -238,6 +238,7 @@ erDiagram
 - **`lib/precio.ts`**: Lógica de cálculo de precios del lado cliente, soportando productos de precio unitario directo y productos con escalas por volumen (familia `superficies`, mínimo 12 unidades).
 - **`components/ui/Dialog.tsx` y `Snackbar.tsx`**: diálogo modal con foco atrapado (reemplaza `window.confirm`) y aviso de una línea con región viva (`useSnackbar().avisar`), montado en `App.tsx`.
 - **`lib/politicas.ts` y `lib/horario.ts`**: números del taller en un solo lugar y cálculo de la promesa de contacto anclada al horario, en hora de Colombia.
+- **`lib/pedidoAdmin.ts` y `components/admin/AcuerdoDialog.tsx`**: reglas del panel de Taller (espejo de `faltantesParaAvanzar` con los mismos textos, cola sin contactar, solicitudes vencidas) y el diálogo que asienta fecha con hora, entrega y anticipo. `AdminPedidosPage` muestra cada compuerta como botón deshabilitado con "Falta: ..." y confirma avances y cancelaciones en `Dialog`.
 - **Mapeos de Presentación Centralizados (`types/index.ts`)**: `ETIQUETAS_ESTADO`, `ETIQUETAS_FAMILIA` y `CLASES_ESTADO`, garantizando que ninguna etiqueta o color de estado se declare de forma literal en componentes.
 
 ---
