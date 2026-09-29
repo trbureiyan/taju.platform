@@ -10,5 +10,14 @@ export function enlaceWhatsApp(mensaje: string): string {
   return `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`
 }
 
+/**
+ * Arma un enlace de wa.me hacia el celular de un cliente, para que el taller le escriba.
+ * @param celular - Celular colombiano de 10 digitos, sin indicativo (asi se guarda en `Pedido.contacto`).
+ * @param mensaje - Texto a prellenar, se codifica para la URL.
+ */
+export function enlaceWhatsAppA(celular: string, mensaje: string): string {
+  return `https://wa.me/57${celular}?text=${encodeURIComponent(mensaje)}`
+}
+
 // mismo numero sin indicativo, agrupado como se dicta en Colombia - sale del de wa.me para no duplicarlo
 export const NUMERO_WHATSAPP_LEGIBLE = NUMERO_WHATSAPP.slice(2).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3')
