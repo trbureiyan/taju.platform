@@ -146,6 +146,7 @@ Document known landmines here. Be specific: name the files, describe the behavio
 - **Catálogo en el cliente**: `useCatalogo()` trae todo `/productos` una vez y guarda el último resultado en memoria (volver del detalle pinta al instante). Esa cache va atada al token: con sesión de administrador la respuesta incluye productos inactivos, así que un cambio de sesión la descarta y vuelve a pedir; cualquier cache nueva de datos del servidor debe seguir la misma regla, y no se pasan datos del servidor por `location.state` (el historial sobrevive al logout; el detalle pinta al instante con `productoEnCatalogo`); familia, búsqueda, orden y ocasión se filtran en el cliente y viven en la URL (`useFiltrosCatalogo`). Diseñado para 30 a 100 productos: si el catálogo pasa de ~100, mover búsqueda y paginación al servidor. `lib/api.ts` lanza `ErrorApi` con el código HTTP; una caída de red llega como `TypeError`, no como `ErrorApi`.
 - **Mis pedidos en el cliente**: `useMisPedidos()` y `usePedido()` calcan el mismo patrón de `useCatalogo`/`useProducto` (cache en memoria atada al token, `pedidoEnMemoria(id)` pinta el detalle al instante desde la lista de la sesión). El server nunca manda `actor` en `historialEstados` al cliente (`getMisPedidos`/`getPedidoById` proyectan sin ese campo); si se agrega un campo nuevo al historial que el taller no quiera exponer, sumarlo a la misma proyección. `codigoPedido()` (`lib/pedido.ts`) es el único lugar que deriva el código `TJ-XXXXXX`; el panel de Taller y el cliente lo llaman a partir del mismo `_id`, nunca lo formatean por su cuenta.
 - **eslint-plugin-react-hooks@7 — `set-state-in-effect`**: Nueva regla que bloquea `setState` síncrono dentro del cuerpo del `useEffect`. Ya no quedan usos suprimidos: `useCatalogo.ts` deriva el estado inicial de la cache y resetea durante el render cuando cambia el token, y `ProductoDetailPage.tsx` se remonta con `key={id}` al cambiar de producto. Preferir esos dos patrones; si un caso nuevo de verdad necesita `setState` síncrono en el efecto, suprimir con `// eslint-disable-next-line react-hooks/set-state-in-effect` y documentar el motivo.
+- **Pedidos anteriores a la solicitud**: `contacto` y `entrega` son obligatorios en el modelo `Pedido`. Un pedido creado antes de ese cambio no los tiene y `save()` falla con `ValidationError` al moverlo de estado. Se limpian con la acción manual del cierre del plan de la solicitud de pedido, no con código.
 
 ---
 
@@ -183,7 +184,7 @@ Los seis primeros son el flujo (`FLUJO_PEDIDO`, en ese orden); `cancelado` es un
 
 ### Vocabulario de especificación
 
-`diametro` y `altura` en centímetros, enteros. `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaEntrega`, `nota`.
+`diametro` y `altura` en centímetros, enteros. `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaDeseada` (lo que pide el cliente), `fechaEntrega` (la acordada, solo la fija el taller), `nota`.
 
 Los campos del formulario replican el vocabulario que el negocio ya usa con sus clientes. No inventar terminología nueva donde existe una compartida.
 

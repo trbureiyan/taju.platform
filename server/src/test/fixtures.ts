@@ -2,6 +2,7 @@ import { Types } from 'mongoose'
 import { Categoria } from '../models/Categoria.js'
 import { Producto } from '../models/Producto.js'
 import { Usuario } from '../models/Usuario.js'
+import type { MetodoEntrega } from '../types/index.js'
 
 /** Crea categoria + producto activos y un cliente, lo minimo que crearPedido necesita para no rechazar. */
 export async function crearCatalogoYCliente() {
@@ -29,7 +30,10 @@ export function inputPedido(ids: { clienteId: string; productoId: string; catego
     cantidad: 1,
     colores: 'dorado',
     materiales: 'acrílico espejo 3 mm',
-    fechaEntrega: new Date('2026-12-12T17:00:00.000Z') as Date | null,
+    fechaDeseada: new Date('2026-12-12T17:00:00.000Z') as Date | null,
+    telefono: '3192452842',
+    entregaMetodo: 'recoger' as MetodoEntrega,
+    entregaDetalle: '',
     archivos: [] as Express.Multer.File[],
   }
 }

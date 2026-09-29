@@ -163,6 +163,38 @@ describe('crearPedido', () => {
     expect(pedido.historialEstados[0].actor.toString()).toBe(cliente.id)
   })
 
+  it('guarda el contacto como snapshot, la fecha deseada y deja vacio lo que decide el taller', async () => {
+    const { input } = await pedidoBase()
+
+    const creado = await crearPedido({ ...input, entregaMetodo: 'domicilio', entregaDetalle: '  Cra 5 # 10-20  ' })
+
+    const pedido = await Pedido.findById(creado._id).lean()
+    expect(pedido!.contacto).toEqual({ nombre: 'Laura', telefono: '3192452842' })
+    expect(pedido!.entrega).toEqual({ metodo: 'domicilio', detalle: 'Cra 5 # 10-20' })
+    expect(pedido!.fechaDeseada!.toISOString()).toBe('2026-12-12T17:00:00.000Z')
+    expect(pedido!.fechaEntrega).toBeNull()
+    expect(pedido!.pago).toBeNull()
+    expect(pedido!.contactadoEn).toBeNull()
+  })
+
+  it('cambiar el celular o la entrega hace otra solicitud para la clave de idempotencia', async () => {
+    const { input } = await pedidoBase()
+
+    await crearPedido(input)
+    await crearPedido({ ...input, telefono: '3001234567' })
+    await crearPedido({ ...input, entregaMetodo: 'domicilio', entregaDetalle: 'Cra 5 # 10-20' })
+
+    expect(await Pedido.countDocuments()).toBe(3)
+  })
+
+  it('rechaza con 401 si la cuenta del cliente ya no existe', async () => {
+    const { input } = await pedidoBase()
+    await expect(crearPedido({ ...input, clienteId: new Types.ObjectId().toString() })).rejects.toMatchObject({
+      status: 401,
+    })
+    expect(await Pedido.countDocuments()).toBe(0)
+  })
+
   it('sube las referencias por el modulo de Cloudinary (mockeado)', async () => {
     const { input } = await pedidoBase()
     const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
@@ -268,7 +300,7 @@ describe('crearPedido', () => {
 
     await crearPedido(input)
     await crearPedido({ ...input, cantidad: 2 })
-    await crearPedido({ ...input, fechaEntrega: new Date('2026-12-19T17:00:00.000Z') })
+    await crearPedido({ ...input, fechaDeseada: new Date('2026-12-19T17:00:00.000Z') })
 
     expect(await Pedido.countDocuments()).toBe(3)
   })

@@ -46,7 +46,9 @@ describe(`POST /api/pedidos con ${CONCURRENCIA} requests concurrentes del mismo 
       cantidad: '1',
       colores: 'dorado',
       materiales: 'acrílico espejo 3 mm',
-      fechaEntrega: '2026-12-12T17:00:00.000Z',
+      fechaDeseada: '2026-12-12T17:00:00.000Z',
+      telefono: '3192452842',
+      entregaMetodo: 'recoger',
     }
 
     const estados: number[] = []

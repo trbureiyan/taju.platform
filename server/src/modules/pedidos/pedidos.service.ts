@@ -3,9 +3,10 @@ import mongoose, { Types } from 'mongoose'
 import { Pedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
+import { Usuario } from '../../models/Usuario.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import type { EstadoPedido } from '../../types/index.js'
+import type { EstadoPedido, MetodoEntrega } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
@@ -16,7 +17,7 @@ const VENTANA_IDEMPOTENCIA_MS = 60_000
 const MENSAJE_PEDIDO_DUPLICADO =
   'Ya recibimos este mismo pedido hace un momento. Revisa Mis pedidos antes de enviarlo otra vez.'
 
-// [DECISION] clave = hash de clienteId + productoId + fechaEntrega + el resto de la especificacion, no solo los
+// [DECISION] clave = hash de clienteId + productoId + fechaDeseada + el resto de la especificacion, no solo los
 // tres primeros - un doble click o un reintento mandan el payload identico, asi que igual se detectan, y un
 // cliente profesional que pide dos variantes del mismo producto para la misma fecha no queda bloqueado.
 // Los archivos entran como hash de su contenido, no como nombre/tamano: dos pedidos con el mismo texto pero
@@ -27,13 +28,16 @@ function claveIdempotencia(input: CrearPedidoInput): string {
     input.clienteId,
     input.productoId,
     input.categoriaId,
-    input.fechaEntrega?.toISOString() ?? 'sin-fecha',
+    input.fechaDeseada?.toISOString() ?? 'sin-fecha',
     input.descripcion.trim(),
     input.dimensionValor,
     input.esDimensionPersonalizada,
     input.cantidad,
     input.colores.trim(),
     input.materiales.trim(),
+    input.telefono,
+    input.entregaMetodo,
+    input.entregaDetalle.trim(),
     input.archivos.map((archivo) => createHash('sha256').update(archivo.buffer).digest('hex')),
   ]
   return createHash('sha256').update(JSON.stringify(partes)).digest('hex')
@@ -53,7 +57,10 @@ interface CrearPedidoInput {
   cantidad: number
   colores: string
   materiales: string
-  fechaEntrega: Date | null
+  fechaDeseada: Date | null
+  telefono: string
+  entregaMetodo: MetodoEntrega
+  entregaDetalle: string
   archivos: Express.Multer.File[]
 }
 
@@ -76,6 +83,12 @@ export async function crearPedido(input: CrearPedidoInput) {
   const producto = await Producto.findById(input.productoId)
   if (!producto || !producto.activo) {
     throw new AppError(400, 'Producto no encontrado o inactivo')
+  }
+
+  // el nombre viaja como snapshot en el pedido; sin cuenta no hay a quien escribirle ni de quien es el pedido
+  const cliente = await Usuario.findById(input.clienteId).select('nombre').lean()
+  if (!cliente) {
+    throw new AppError(401, 'No encontramos tu cuenta. Vuelve a ingresar e inténtalo de nuevo.')
   }
 
   const clave = claveIdempotencia(input)
@@ -131,7 +144,7 @@ export async function crearPedido(input: CrearPedidoInput) {
         [{ _id: clave, pedido: pedidoId, expiraEn: new Date(ahora.getTime() + VENTANA_IDEMPOTENCIA_MS) }],
         { session },
       )
-      await Pedido.create([armarPedido(pedidoId, input, producto, categoria, imagenesReferencia)], { session })
+      await Pedido.create([armarPedido(pedidoId, input, producto, categoria, cliente, imagenesReferencia)], { session })
     })
   } catch (err) {
     // [DECISION] withTransaction puede lanzar por UnknownTransactionCommitResult aunque el commit haya
@@ -168,6 +181,7 @@ function armarPedido(
   input: CrearPedidoInput,
   producto: { _id: Types.ObjectId; nombre: string },
   categoria: { _id: Types.ObjectId; nombre: string; familia: string },
+  cliente: { nombre: string },
   imagenesReferencia: { nombreOriginal: string; mimeType: 'image/jpeg'; tamano: number; url: string }[],
 ) {
   return {
@@ -195,7 +209,12 @@ function armarPedido(
     materiales: input.materiales,
     imagenesReferencia,
     estado: 'recibido',
-    fechaEntrega: input.fechaEntrega,
+    contacto: { nombre: cliente.nombre, telefono: input.telefono },
+    entrega: { metodo: input.entregaMetodo, detalle: input.entregaDetalle.trim() },
+    fechaDeseada: input.fechaDeseada,
+    fechaEntrega: null,
+    pago: null,
+    contactadoEn: null,
     // arranca su propio historial desde el momento cero, el cliente es el "actor" de este primer paso
     historialEstados: [
       {

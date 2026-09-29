@@ -20,6 +20,13 @@ export const FLUJO_PEDIDO = [
 export const ESTADOS_PEDIDO = [...FLUJO_PEDIDO, 'cancelado'] as const
 export type EstadoPedido = (typeof ESTADOS_PEDIDO)[number]
 
+export const METODOS_ENTREGA = ['recoger', 'domicilio'] as const
+export type MetodoEntrega = (typeof METODOS_ENTREGA)[number]
+
+// medios con los que hoy se acuerda el anticipo; la plataforma no mueve dinero, solo deja constancia
+export const MEDIOS_PAGO = ['efectivo', 'nequi', 'daviplata', 'bancolombia', 'otro'] as const
+export type MedioPago = (typeof MEDIOS_PAGO)[number]
+
 // lo que va firmado dentro del token - sub es el id de Usuario, se llama asi por convencion JWT
 export interface JwtPayload {
   sub: string

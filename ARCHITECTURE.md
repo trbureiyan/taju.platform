@@ -208,8 +208,13 @@ erDiagram
         string materiales
         Array imagenesReferencia "subdocumentos IImagenReferencia"
         string estado "enum EstadoPedido"
+        Object contacto "snapshot: nombre, telefono"
+        Object entrega "metodo, detalle"
         Date fechaSolicitud
-        Date fechaEntrega
+        Date fechaDeseada "lo que pidio el cliente"
+        Date fechaEntrega "acordada, la fija el taller"
+        Object pago "anticipo: monto, medio, registradoEn"
+        Date contactadoEn "primer contacto del taller"
         boolean confirmacionDimensionPersonalizada
         Array historialEstados "subdocumentos IHistorialEstado"
     }

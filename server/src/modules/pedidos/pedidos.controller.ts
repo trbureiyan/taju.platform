@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import * as pedidosService from './pedidos.service.js'
-import { ESTADOS_PEDIDO } from '../../types/index.js'
+import { ESTADOS_PEDIDO, METODOS_ENTREGA } from '../../types/index.js'
 import { asyncHandler } from '../../lib/errors.js'
 
 // ─── Cliente ──────────────────────────────────────────────────────────────────
@@ -13,14 +13,23 @@ const booleanoTexto = z.enum(['true', 'false']).transform((v) => v === 'true')
 const crearPedidoSchema = z.object({
   productoId: z.string().min(1, 'Producto requerido'),
   categoriaId: z.string().min(1, 'Categoría requerida'),
-  descripcion: z.string().min(1, 'Describí tu pedido'),
+  descripcion: z
+    .string()
+    .min(1, 'Cuéntanos qué necesitas. Con eso podemos cotizarlo.')
+    .max(500, 'La descripción admite hasta 500 caracteres. Deja lo esencial y el resto lo hablamos por WhatsApp.'),
   dimensionValor: z.coerce.number().positive('El valor de dimensión debe ser mayor a 0'),
   esDimensionPersonalizada: booleanoTexto,
   cantidad: z.coerce.number().int().min(1, 'La cantidad mínima es 1'),
-  colores: z.string().min(1, 'Indicá los colores'),
-  materiales: z.string().min(1, 'Indicá los materiales'),
-  // nullable a proposito: el cliente puede no tener una fecha en mente todavia
-  fechaEntrega: z.string().datetime({ offset: true }).nullable().default(null),
+  colores: z.string().min(1, 'Indica los colores que quieres'),
+  materiales: z.string().min(1, 'Indica el material o para qué lo usarás'),
+  telefono: z
+    .string()
+    .trim()
+    .regex(/^3\d{9}$/, 'Escribe tu celular de 10 dígitos, empieza en 3. Es el número por el que te escribimos.'),
+  entregaMetodo: z.enum(METODOS_ENTREGA),
+  entregaDetalle: z.string().trim().max(200).default(''),
+  // nullable a proposito: la exigencia de fecha la decide pedidos.requisitos.ts segun la familia
+  fechaDeseada: z.string().datetime({ offset: true }).nullable().default(null),
 })
 
 export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
@@ -36,7 +45,7 @@ export const crearPedido = asyncHandler(async (req: Request, res: Response) => {
   const pedido = await pedidosService.crearPedido({
     clienteId: req.usuario!.sub,
     ...parsed.data,
-    fechaEntrega: parsed.data.fechaEntrega ? new Date(parsed.data.fechaEntrega) : null,
+    fechaDeseada: parsed.data.fechaDeseada ? new Date(parsed.data.fechaDeseada) : null,
     archivos,
   })
   res.status(201).json(pedido)

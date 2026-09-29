@@ -65,7 +65,7 @@ Etiquetas: Recibido, En revisión, Confirmado, En producción, Listo para entreg
 
 ### Vocabulario de especificación
 
-`diametro` y `altura` en centímetros, enteros. Campos canónicos: `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaEntrega`, `nota`.
+`diametro` y `altura` en centímetros, enteros. Campos canónicos: `medida`, `referencia`, `material`, `acabado`, `personalizacion`, `fechaDeseada` (lo que pide el cliente), `fechaEntrega` (la acordada, solo la fija el taller), `nota`.
 
 ### Dos audiencias
 

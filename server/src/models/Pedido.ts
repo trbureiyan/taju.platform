@@ -1,5 +1,14 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import { ESTADOS_PEDIDO, FAMILIAS, type EstadoPedido, type Familia } from '../types/index.js'
+import {
+  ESTADOS_PEDIDO,
+  FAMILIAS,
+  MEDIOS_PAGO,
+  METODOS_ENTREGA,
+  type EstadoPedido,
+  type Familia,
+  type MedioPago,
+  type MetodoEntrega,
+} from '../types/index.js'
 
 // ─── Subdocumentos ────────────────────────────────────────────────────────────
 
@@ -42,6 +51,25 @@ interface IHistorialEstado {
   actor: Types.ObjectId
 }
 
+// snapshot del cliente al pedir - si luego cambia de celular, el taller conserva el numero con el que se hablo
+interface IContacto {
+  nombre: string
+  telefono: string
+}
+
+// detalle es la direccion o el barrio; con "recoger" queda vacio
+interface IEntrega {
+  metodo: MetodoEntrega
+  detalle: string
+}
+
+// anticipo registrado a mano por el taller - constancia, no una transaccion
+interface IPago {
+  monto: number
+  medio: MedioPago
+  registradoEn: Date
+}
+
 // ─── Documento principal ──────────────────────────────────────────────────────
 
 export interface IPedido extends Document {
@@ -56,7 +84,14 @@ export interface IPedido extends Document {
   imagenesReferencia: IImagenReferencia[]
   estado: EstadoPedido
   fechaSolicitud: Date
+  contacto: IContacto
+  entrega: IEntrega
+  // lo que pidio el cliente; fechaEntrega es la acordada y solo la fija el taller
+  fechaDeseada: Date | null
   fechaEntrega: Date | null
+  pago: IPago | null
+  // primera vez que el taller le escribio al cliente; mide la promesa de contacto
+  contactadoEn: Date | null
   // el admin la marca explicito antes de avanzar a en_produccion cuando esDimensionPersonalizada es true
   confirmacionDimensionPersonalizada: boolean
   historialEstados: IHistorialEstado[]
@@ -111,6 +146,25 @@ const historialEstadoSchema = new Schema<IHistorialEstado>(
   { _id: false },
 )
 
+const contactoSchema = new Schema<IContacto>(
+  { nombre: { type: String, required: true }, telefono: { type: String, required: true } },
+  { _id: false },
+)
+
+const entregaSchema = new Schema<IEntrega>(
+  { metodo: { type: String, enum: METODOS_ENTREGA, required: true }, detalle: { type: String, default: '' } },
+  { _id: false },
+)
+
+const pagoSchema = new Schema<IPago>(
+  {
+    monto: { type: Number, required: true, min: 1 },
+    medio: { type: String, enum: MEDIOS_PAGO, required: true },
+    registradoEn: { type: Date, default: Date.now },
+  },
+  { _id: false },
+)
+
 // timestamps no viene de aqui: fechaSolicitud es explicito porque queremos ese nombre en la API,
 // no createdAt/updatedAt genericos de mongoose
 const pedidoSchema = new Schema<IPedido>({
@@ -125,7 +179,12 @@ const pedidoSchema = new Schema<IPedido>({
   imagenesReferencia: { type: [imagenReferenciaSchema], default: [] },
   estado: { type: String, enum: ESTADOS_PEDIDO, default: 'recibido' },
   fechaSolicitud: { type: Date, default: Date.now },
+  contacto: { type: contactoSchema, required: true },
+  entrega: { type: entregaSchema, required: true },
+  fechaDeseada: { type: Date, default: null },
   fechaEntrega: { type: Date, default: null },
+  pago: { type: pagoSchema, default: null },
+  contactadoEn: { type: Date, default: null },
   confirmacionDimensionPersonalizada: { type: Boolean, default: false },
   historialEstados: [historialEstadoSchema],
 })
