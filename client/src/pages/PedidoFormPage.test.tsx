@@ -124,7 +124,39 @@ describe('PedidoFormPage', () => {
       await userEvent.type(screen.getByLabelText('Valor en cm'), '0')
       await enviar()
 
-      expect(screen.getByLabelText('Valor en cm')).toHaveAccessibleDescription('El valor debe ser mayor a 0')
+      expect(screen.getByLabelText('Valor en cm')).toHaveAccessibleDescription(
+        'Necesitamos una medida mayor a 0 para calcular tu pieza. Escríbela en centímetros.',
+      )
+      expect(api.postForm).not.toHaveBeenCalled()
+    })
+
+    it('rechaza una cantidad con decimales antes de enviar', async () => {
+      await renderFormulario()
+      await userEvent.click(screen.getByLabelText('Media libra: 22 cm'))
+      await llenarObligatorios()
+      const cantidad = screen.getByLabelText('Cantidad')
+      await userEvent.clear(cantidad)
+      await userEvent.type(cantidad, '1.5')
+      await enviar()
+
+      expect(cantidad).toHaveAccessibleDescription(
+        'Las piezas se piden completas. Escribe la cantidad en números enteros, por ejemplo 2.',
+      )
+      expect(api.postForm).not.toHaveBeenCalled()
+    })
+
+    it('rechaza una cantidad de 0 con un mensaje que dice que hacer', async () => {
+      await renderFormulario()
+      await userEvent.click(screen.getByLabelText('Media libra: 22 cm'))
+      await llenarObligatorios()
+      const cantidad = screen.getByLabelText('Cantidad')
+      await userEvent.clear(cantidad)
+      await userEvent.type(cantidad, '0')
+      await enviar()
+
+      expect(cantidad).toHaveAccessibleDescription(
+        'Necesitamos al menos 1 pieza para cotizar tu pedido. Escribe cuántas quieres.',
+      )
       expect(api.postForm).not.toHaveBeenCalled()
     })
 
