@@ -415,7 +415,10 @@ describe('crearPedido', () => {
     }
 
     it('rechaza 5 unidades de superficies: el minimo sale de la escala del producto', async () => {
-      await expect(crearPedido(await superficies(5))).rejects.toThrow(/desde 12 unidades/)
+      const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+      const input = { ...(await superficies(5)), archivos: [archivo as Express.Multer.File] }
+      await expect(crearPedido(input)).rejects.toThrow(/desde 12 unidades/)
+      expect(subirImagen).not.toHaveBeenCalled()
       expect(await Pedido.countDocuments()).toBe(0)
     })
 
@@ -432,17 +435,20 @@ describe('crearPedido', () => {
 
     it('rechaza una fecha deseada en el pasado, sin subir imagenes', async () => {
       const { input } = await pedidoBase()
-      await expect(crearPedido({ ...input, fechaDeseada: new Date('2020-01-01T15:00:00.000Z') })).rejects.toThrow(
-        /ya pasó/,
-      )
+      const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+      await expect(
+        crearPedido({ ...input, fechaDeseada: new Date('2020-01-01T15:00:00.000Z'), archivos: [archivo as Express.Multer.File] }),
+      ).rejects.toThrow(/ya pasó/)
       expect(subirImagen).not.toHaveBeenCalled()
     })
 
     it('acepta un domingo: el servidor no rechaza dias sin servicio', async () => {
       const { input } = await pedidoBase()
-      // domingo 6 de enero de 2030
-      const pedido = await crearPedido({ ...input, fechaDeseada: new Date('2030-01-06T15:00:00.000Z') })
-      expect(pedido.fechaDeseada!.toISOString()).toBe('2030-01-06T15:00:00.000Z')
+      // primer domingo a partir de dentro de 30 dias: siempre futuro, sin fecha fija que caduque
+      const domingo = fechaFutura()
+      while (domingo.getUTCDay() !== 0) domingo.setUTCDate(domingo.getUTCDate() + 1)
+      const pedido = await crearPedido({ ...input, fechaDeseada: domingo })
+      expect(pedido.fechaDeseada!.toISOString()).toBe(domingo.toISOString())
     })
   })
 })
