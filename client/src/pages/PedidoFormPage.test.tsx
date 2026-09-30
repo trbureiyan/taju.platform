@@ -8,6 +8,7 @@ import { esDiaConServicio } from '../lib/horario'
 import { codigoPedido } from '../lib/pedido'
 import { MENSAJE_CELULAR, MENSAJE_FALTA_REFERENCIA } from '../lib/requisitos'
 import { MENSAJE_ERROR_ENVIO } from '../lib/errorEnvio'
+import { comprimirImagen } from '../lib/comprimirImagen'
 import { pedido } from '../test/pedidos'
 import type { Pedido, Producto } from '../types'
 
@@ -15,6 +16,11 @@ import type { Pedido, Producto } from '../types'
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: { get: vi.fn(), postForm: vi.fn() },
+}))
+// la compresion real se prueba en su modulo; aqui pasa la imagen tal cual salvo el caso que la deja a medias
+vi.mock('../lib/comprimirImagen', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/comprimirImagen')>()),
+  comprimirImagen: vi.fn(async (f: File) => f),
 }))
 
 const producto: Producto = {
@@ -145,6 +151,7 @@ function camposEnviados() {
 beforeEach(() => {
   vi.mocked(api.get).mockReset().mockResolvedValue(producto)
   vi.mocked(api.postForm).mockReset().mockResolvedValue(pedido({ _id: 'pedido-1abcdef', nombre: producto.nombre }))
+  vi.mocked(comprimirImagen).mockReset().mockImplementation(async (f) => f)
   URL.createObjectURL = vi.fn(() => 'blob:vista-previa')
   URL.revokeObjectURL = vi.fn()
 })
@@ -275,6 +282,30 @@ describe('PedidoFormPage | recorrido', () => {
 
     expect(screen.getByRole('heading', { name: 'Cómo lo imaginas' })).toBeInTheDocument()
     expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAccessibleDescription(MENSAJE_FALTA_REFERENCIA)
+  })
+
+  it('mientras se prepara la imagen, Siguiente espera y dice por que; al terminar avanza con ella', async () => {
+    let terminar: (f: File) => void = () => {}
+    vi.mocked(comprimirImagen).mockImplementationOnce(() => new Promise<File>((r) => (terminar = r)))
+    await renderFormulario()
+    await completarMomento1()
+    await siguiente()
+    await screen.findByRole('heading', { name: 'Cómo lo imaginas' })
+    await userEvent.type(screen.getByLabelText('Descripción del pedido'), 'Feliz 15 Valentina')
+    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), jpg())
+
+    const boton = screen.getByRole('button', { name: 'Siguiente' })
+    await waitFor(() => expect(boton).toBeDisabled())
+    expect(screen.getByText('Estamos preparando tu imagen…')).toBeInTheDocument()
+    fireEvent.submit(boton.closest('form')!) // Enter en un campo
+    expect(screen.getByRole('heading', { name: 'Cómo lo imaginas' })).toBeInTheDocument()
+    expect(screen.queryByText(MENSAJE_FALTA_REFERENCIA)).not.toBeInTheDocument()
+
+    terminar(jpg())
+    await screen.findByText('ref.jpg')
+    await waitFor(() => expect(boton).toBeEnabled())
+    await siguiente()
+    expect(await screen.findByRole('heading', { name: 'Cuándo y dónde' })).toBeInTheDocument()
   })
 
   it('en papeleria la referencia es opcional y avanza sin imagen', async () => {

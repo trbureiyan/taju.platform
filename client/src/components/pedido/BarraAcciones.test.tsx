@@ -24,6 +24,13 @@ describe('BarraAcciones', () => {
     expect(screen.queryByRole('button', { name: 'Siguiente' })).not.toBeInTheDocument()
   })
 
+  it('mientras se prepara una imagen la accion primaria espera y una linea dice por que', () => {
+    render(<BarraAcciones paso={2} onAtras={vi.fn()} enviando={false} procesando />)
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Atrás' })).toBeEnabled()
+    expect(screen.getByText('Estamos preparando tu imagen…')).toBeInTheDocument()
+  })
+
   it('mientras envia se deshabilita y una linea dice por que', () => {
     render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
     expect(screen.getByRole('button', { name: /Enviando tu pedido/ })).toBeDisabled()

@@ -16,6 +16,7 @@ import {
  * @prop obligatoria - Si la familia del producto exige referencia (topper).
  * @prop error - Mensaje de validacion del momento; se enlaza al campo.
  * @prop max - Cantidad maxima de imagenes (3, como el servidor).
+ * @prop onProcesando - Avisa cuando empieza y termina de preparar imagenes, para que el formulario espere.
  */
 interface ZonaReferenciasProps {
   archivos: File[]
@@ -23,6 +24,7 @@ interface ZonaReferenciasProps {
   obligatoria: boolean
   error?: string
   max?: number
+  onProcesando?: (procesando: boolean) => void
 }
 
 function peso(bytes: number): string {
@@ -41,7 +43,7 @@ function VistaPrevia({ archivo }: { archivo: File }) {
   return <img ref={ref} alt="" className="h-12 w-12 shrink-0 rounded-campo object-cover" />
 }
 
-export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 3 }: ZonaReferenciasProps) {
+export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 3, onProcesando }: ZonaReferenciasProps) {
   const id = useId()
   const [arrastrando, setArrastrando] = useState(false)
   const [procesando, setProcesando] = useState(false)
@@ -62,6 +64,8 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
     const listos: File[] = []
     if (aceptados.length > 0) {
       setProcesando(true)
+      // aviso directo y no por efecto: si el momento se desmonta a mitad, el false igual llega al formulario
+      onProcesando?.(true)
       // en orden y una por una: si una falla, las que ya salieron bien se conservan
       for (const archivo of aceptados) {
         try {
@@ -70,8 +74,10 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
           avisos.push(err instanceof ErrorImagen ? err.message : MENSAJE_IMAGEN_ILEGIBLE)
         }
       }
+      // mientras se procesa no se puede agregar ni quitar, y el formulario no avanza: archivos sigue vigente
       if (listos.length > 0) onCambio([...archivos, ...listos])
       setProcesando(false)
+      onProcesando?.(false)
     }
     setMensaje(avisos.length > 0 ? avisos.join(' ') : null)
   }

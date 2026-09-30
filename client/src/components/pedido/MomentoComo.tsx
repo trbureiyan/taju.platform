@@ -16,10 +16,12 @@ export function MomentoComo({
   intento,
   archivos,
   cambiarArchivos,
+  onProcesando,
   desdeOtroPedido = false,
 }: PropsMomento & {
   archivos: File[]
   cambiarArchivos: (archivos: File[]) => void
+  onProcesando?: (procesando: boolean) => void
   // "Pedir de nuevo": las imagenes del pedido original no se copian, hay que avisarlo
   desdeOtroPedido?: boolean
 }) {
@@ -40,6 +42,7 @@ export function MomentoComo({
         onCambio={cambiarArchivos}
         obligatoria={exigeReferencia(producto.categoria.familia)}
         error={errores.archivos}
+        onProcesando={onProcesando}
       />
 
       <Textarea

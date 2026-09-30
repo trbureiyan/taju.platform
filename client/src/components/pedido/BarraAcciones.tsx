@@ -6,15 +6,17 @@ import { Button } from '../ui/Button'
  * @prop paso - Momento actual (1 a total).
  * @prop onAtras - Vuelve al momento anterior.
  * @prop enviando - Deshabilita la accion primaria y muestra por que.
+ * @prop procesando - Una imagen de referencia se esta preparando: la accion primaria espera y dice por que.
  */
 interface BarraAccionesProps {
   paso: number
   total?: number
   onAtras: () => void
   enviando: boolean
+  procesando?: boolean
 }
 
-export function BarraAcciones({ paso, total = 4, onAtras, enviando }: BarraAccionesProps) {
+export function BarraAcciones({ paso, total = 4, onAtras, enviando, procesando = false }: BarraAccionesProps) {
   const esRepaso = paso === total
   return (
     <div className="fixed inset-x-0 bottom-0 z-encabezado border-t border-borde-sutil bg-superficie-base p-4 lg:static lg:border-0 lg:bg-transparent lg:p-0">
@@ -22,6 +24,10 @@ export function BarraAcciones({ paso, total = 4, onAtras, enviando }: BarraAccio
         <p role="status" className="mb-2 text-center text-xs text-texto-secundario">
           Estamos enviando tu solicitud. No cierres esta página.
         </p>
+      )}
+      {/* sin role: la zona de referencias ya anuncia "Preparando tu imagen…" */}
+      {procesando && !enviando && (
+        <p className="mb-2 text-center text-xs text-texto-secundario">Estamos preparando tu imagen…</p>
       )}
       <div className="mx-auto flex max-w-contenedor items-center justify-between gap-3">
         {paso > 1 ? (
@@ -31,7 +37,7 @@ export function BarraAcciones({ paso, total = 4, onAtras, enviando }: BarraAccio
         ) : (
           <span />
         )}
-        <Button type="submit" variante="primario" disabled={enviando} className="min-w-0 flex-1 sm:flex-none">
+        <Button type="submit" variante="primario" disabled={enviando || procesando} className="min-w-0 flex-1 sm:flex-none">
           {esRepaso ? (enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido') : 'Siguiente'}
         </Button>
       </div>

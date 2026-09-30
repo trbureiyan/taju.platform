@@ -14,9 +14,21 @@ import { comprimirImagen, ErrorImagen } from '../../lib/comprimirImagen'
 const img = (nombre: string, tipo = 'image/jpeg', bytes = 10) => new File([new Uint8Array(bytes)], nombre, { type: tipo })
 
 // el componente es controlado: este contenedor guarda los archivos como lo haria el formulario
-function Contenedor({ inicial = [] as File[], obligatoria = false, error }: { inicial?: File[]; obligatoria?: boolean; error?: string }) {
+function Contenedor({
+  inicial = [] as File[],
+  obligatoria = false,
+  error,
+  onProcesando,
+}: {
+  inicial?: File[]
+  obligatoria?: boolean
+  error?: string
+  onProcesando?: (procesando: boolean) => void
+}) {
   const [archivos, setArchivos] = useState(inicial)
-  return <ZonaReferencias archivos={archivos} onCambio={setArchivos} obligatoria={obligatoria} error={error} />
+  return (
+    <ZonaReferencias archivos={archivos} onCambio={setArchivos} obligatoria={obligatoria} error={error} onProcesando={onProcesando} />
+  )
 }
 
 beforeEach(() => {
@@ -27,6 +39,20 @@ beforeEach(() => {
 })
 
 describe('ZonaReferencias', () => {
+  // el formulario bloquea Siguiente mientras tanto: la imagen todavia no esta en la lista
+  it('avisa hacia arriba cuando empieza y termina de preparar imagenes', async () => {
+    let terminar: (f: File) => void = () => {}
+    vi.mocked(comprimirImagen).mockImplementationOnce(() => new Promise<File>((r) => (terminar = r)))
+    const onProcesando = vi.fn()
+    render(<Contenedor onProcesando={onProcesando} />)
+    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), img('a.jpg'))
+
+    await waitFor(() => expect(onProcesando).toHaveBeenLastCalledWith(true))
+    terminar(img('a.jpg'))
+    await waitFor(() => expect(onProcesando).toHaveBeenLastCalledWith(false))
+    expect(await screen.findByText('a.jpg')).toBeInTheDocument()
+  })
+
   it('el area es un input de archivos real que acepta JPG, PNG y WebP', () => {
     render(<Contenedor />)
     const input = screen.getByLabelText(/Elige imágenes de referencia/i)

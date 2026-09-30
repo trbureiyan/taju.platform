@@ -43,6 +43,8 @@ export function useSolicitud(producto: Producto | null) {
   const enviandoRef = useRef(false)
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   const [fallos, setFallos] = useState(0)
+  // una imagen de referencia a medio preparar (ZonaReferencias) todavia no esta en archivos: no se avanza ni envia
+  const [procesando, setProcesando] = useState(false)
 
   const pedido = Number(searchParams.get('paso'))
   const pedidoValido = Number.isInteger(pedido) && pedido >= 1 ? pedido : 1
@@ -74,7 +76,7 @@ export function useSolicitud(producto: Producto | null) {
   }
 
   function siguiente(): boolean {
-    if (!producto || paso > 3) return false
+    if (!producto || paso > 3 || procesando) return false
     const encontrados = validarMomento(paso as 1 | 2 | 3, campos, archivos, producto, new Date())
     setErrores(encontrados)
     if (Object.keys(encontrados).length > 0) {
@@ -92,7 +94,7 @@ export function useSolicitud(producto: Producto | null) {
 
   /** Valida los tres momentos y, si todo esta bien, envia. Devuelve el pedido creado, o null si no se envio. */
   async function enviar(): Promise<Pedido | null> {
-    if (!producto || enviandoRef.current) return null
+    if (!producto || enviandoRef.current || procesando) return null
     const ahora = new Date()
     for (const numero of [1, 2, 3] as const) {
       const encontrados = validarMomento(numero, campos, archivos, producto, ahora)
@@ -166,6 +168,8 @@ export function useSolicitud(producto: Producto | null) {
     enviando,
     errorEnvio,
     fallos,
+    procesando,
+    marcarProcesando: setProcesando,
     esDimensionPersonalizada,
   }
 }

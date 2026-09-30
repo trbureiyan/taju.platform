@@ -261,6 +261,7 @@ export function PedidoFormPage() {
               {...propsMomento}
               archivos={solicitud.archivos}
               cambiarArchivos={solicitud.cambiarArchivos}
+              onProcesando={solicitud.marcarProcesando}
               desdeOtroPedido={Boolean(pedidoOrigenId)}
             />
           )}
@@ -268,7 +269,12 @@ export function PedidoFormPage() {
           {paso === 4 && (
             <MomentoRepaso {...propsMomento} archivos={solicitud.archivos} errorEnvio={solicitud.errorEnvio} />
           )}
-          <BarraAcciones paso={paso} onAtras={solicitud.atras} enviando={solicitud.enviando} />
+          <BarraAcciones
+            paso={paso}
+            onAtras={solicitud.atras}
+            enviando={solicitud.enviando}
+            procesando={solicitud.procesando}
+          />
         </form>
 
         {/* en el repaso la hoja ya es el contenido: dos hojas a la vez repetirian el resumen */}

@@ -86,6 +86,32 @@ describe('useSolicitud: pasos y URL', () => {
     expect(r.result.current.url).toContain('paso=2')
   })
 
+  // una imagen a medio preparar todavia no esta en archivos: avanzar ahora daria "Adjunta una imagen" o la perderia
+  it('mientras se prepara una imagen no avanza ni envia, y no marca errores', async () => {
+    const r = montar()
+    llenarMomento1(r)
+    act(() => r.result.current.s.marcarProcesando(true))
+    expect(r.result.current.s.procesando).toBe(true)
+    let avanzo = true
+    act(() => {
+      avanzo = r.result.current.s.siguiente()
+    })
+    expect(avanzo).toBe(false)
+    expect(r.result.current.s.paso).toBe(1)
+    expect(r.result.current.s.errores).toEqual({})
+    expect(r.result.current.s.fallos).toBe(0)
+    await act(async () => {
+      expect(await r.result.current.s.enviar()).toBeNull()
+    })
+    expect(api.postForm).not.toHaveBeenCalled()
+
+    act(() => r.result.current.s.marcarProcesando(false))
+    act(() => {
+      r.result.current.s.siguiente()
+    })
+    expect(r.result.current.s.paso).toBe(2)
+  })
+
   it('atras vuelve al momento anterior', () => {
     const r = montar()
     llenarMomento1(r)
