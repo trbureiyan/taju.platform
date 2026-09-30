@@ -1,5 +1,16 @@
 import { Schema, model, Document, Types } from 'mongoose'
-import { ESTADOS_PEDIDO, FAMILIAS, type EstadoPedido, type Familia } from '../types/index.js'
+import {
+  ESTADOS_PEDIDO,
+  FAMILIAS,
+  MEDIOS_PAGO,
+  METODOS_ENTREGA,
+  TIPOS_IMAGEN,
+  type EstadoPedido,
+  type Familia,
+  type MedioPago,
+  type MetodoEntrega,
+  type TipoImagen,
+} from '../types/index.js'
 
 // ─── Subdocumentos ────────────────────────────────────────────────────────────
 
@@ -26,10 +37,10 @@ interface IDimensiones {
   esDimensionPersonalizada: boolean
 }
 
-// una por cada foto que el cliente adjunto al pedir - mimeType fijo porque upload.ts solo deja pasar JPG
+// una por cada foto que el cliente adjunto al pedir; mimeType es el real, ya verificado por upload.ts
 interface IImagenReferencia {
   nombreOriginal: string
-  mimeType: 'image/jpeg'
+  mimeType: TipoImagen
   tamano: number
   url: string
 }
@@ -40,6 +51,25 @@ interface IHistorialEstado {
   estadoNuevo: EstadoPedido
   fecha: Date
   actor: Types.ObjectId
+}
+
+// snapshot del cliente al pedir - si luego cambia de celular, el taller conserva el numero con el que se hablo
+interface IContacto {
+  nombre: string
+  telefono: string
+}
+
+// detalle es la direccion o el barrio; con "recoger" queda vacio
+interface IEntrega {
+  metodo: MetodoEntrega
+  detalle: string
+}
+
+// anticipo registrado a mano por el taller - constancia, no una transaccion
+interface IPago {
+  monto: number
+  medio: MedioPago
+  registradoEn: Date
 }
 
 // ─── Documento principal ──────────────────────────────────────────────────────
@@ -56,7 +86,14 @@ export interface IPedido extends Document {
   imagenesReferencia: IImagenReferencia[]
   estado: EstadoPedido
   fechaSolicitud: Date
+  contacto: IContacto
+  entrega: IEntrega
+  // lo que pidio el cliente; fechaEntrega es la acordada y solo la fija el taller
+  fechaDeseada: Date | null
   fechaEntrega: Date | null
+  pago: IPago | null
+  // primera vez que el taller le escribio al cliente; mide la promesa de contacto
+  contactadoEn: Date | null
   // el admin la marca explicito antes de avanzar a en_produccion cuando esDimensionPersonalizada es true
   confirmacionDimensionPersonalizada: boolean
   historialEstados: IHistorialEstado[]
@@ -94,7 +131,7 @@ const dimensionesSchema = new Schema<IDimensiones>(
 const imagenReferenciaSchema = new Schema<IImagenReferencia>(
   {
     nombreOriginal: { type: String, required: true },
-    mimeType: { type: String, default: 'image/jpeg' },
+    mimeType: { type: String, enum: TIPOS_IMAGEN, default: 'image/jpeg' },
     tamano: { type: Number, required: true },
     url: { type: String, required: true },
   },
@@ -107,6 +144,25 @@ const historialEstadoSchema = new Schema<IHistorialEstado>(
     estadoNuevo: { type: String, required: true, enum: ESTADOS_PEDIDO },
     fecha: { type: Date, default: Date.now },
     actor: { type: Schema.Types.ObjectId, ref: 'Usuario', required: true },
+  },
+  { _id: false },
+)
+
+const contactoSchema = new Schema<IContacto>(
+  { nombre: { type: String, required: true }, telefono: { type: String, required: true } },
+  { _id: false },
+)
+
+const entregaSchema = new Schema<IEntrega>(
+  { metodo: { type: String, enum: METODOS_ENTREGA, required: true }, detalle: { type: String, default: '' } },
+  { _id: false },
+)
+
+const pagoSchema = new Schema<IPago>(
+  {
+    monto: { type: Number, required: true, min: 1 },
+    medio: { type: String, enum: MEDIOS_PAGO, required: true },
+    registradoEn: { type: Date, default: Date.now },
   },
   { _id: false },
 )
@@ -125,10 +181,19 @@ const pedidoSchema = new Schema<IPedido>({
   imagenesReferencia: { type: [imagenReferenciaSchema], default: [] },
   estado: { type: String, enum: ESTADOS_PEDIDO, default: 'recibido' },
   fechaSolicitud: { type: Date, default: Date.now },
+  contacto: { type: contactoSchema, required: true },
+  entrega: { type: entregaSchema, required: true },
+  fechaDeseada: { type: Date, default: null },
   fechaEntrega: { type: Date, default: null },
+  pago: { type: pagoSchema, default: null },
+  contactadoEn: { type: Date, default: null },
   confirmacionDimensionPersonalizada: { type: Boolean, default: false },
   historialEstados: [historialEstadoSchema],
-})
+},
+// [DECISION] optimisticConcurrency: los servicios leen, validan el estado en memoria y guardan. Sin chequear
+// __v, una cancelacion del cliente y un avance del taller simultaneos ganaban los dos. El perdedor recibe
+// VersionError, que errorHandler traduce a 409
+{ optimisticConcurrency: true })
 
 // ─── Indices ──────────────────────────────────────────────────────────────────
 // las tres vistas que mas se consultan: "mis pedidos", el tablero del taller por estado,

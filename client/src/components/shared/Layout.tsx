@@ -25,6 +25,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const aSangre = pathname === '/' || pathname.startsWith('/catalogo')
   // el detalle trae su WhatsApp con el nombre del producto y una barra fija abajo: el flotante sobraria y la pisaria
   const esDetalle = /^\/catalogo\/[^/]+$/.test(pathname)
+  // el formulario tiene una barra fija abajo y su propio enlace de dudas en cada momento: el flotante la pisaria
+  const esFormulario = /^\/pedido\/[^/]+$/.test(pathname)
 
   return (
     <div className="min-h-screen bg-superficie-base flex flex-col">
@@ -36,7 +38,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {children}
       </main>
       {!esPanelTaller && <Footer />}
-      {!esPanelTaller && !esDetalle && <BotonWhatsApp variante="flotante" mensaje={MENSAJE_CONSULTA_GENERAL} />}
+      {!esPanelTaller && !esDetalle && !esFormulario && <BotonWhatsApp variante="flotante" mensaje={MENSAJE_CONSULTA_GENERAL} />}
     </div>
   )
 }

@@ -45,6 +45,14 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return
   }
 
+  // otro cambio sobre el mismo documento se guardo entre la lectura y el save (optimisticConcurrency)
+  if (err instanceof mongoose.Error.VersionError) {
+    res.status(409).json({
+      error: 'Este pedido cambió hace un momento y no alcanzamos a guardar tu cambio. Recarga la página y vuelve a intentarlo.',
+    })
+    return
+  }
+
   // errores HTTP de Express/body-parser (PayloadTooLargeError, SyntaxError de JSON malformado, etc.)
   // traen un campo .status numerico que es el codigo HTTP correcto a propagar
   if (

@@ -1,12 +1,14 @@
 import { createHash } from 'node:crypto'
 import mongoose, { Types } from 'mongoose'
-import { Pedido } from '../../models/Pedido.js'
+import { Pedido, type IPedido } from '../../models/Pedido.js'
 import { Categoria } from '../../models/Categoria.js'
 import { Producto } from '../../models/Producto.js'
+import { Usuario } from '../../models/Usuario.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import { ESTADOS_PEDIDO, type EstadoPedido } from '../../types/index.js'
+import { FLUJO_PEDIDO, type EstadoPedido, type MedioPago, type MetodoEntrega, type TipoImagen } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
+import { cantidadMinimaDe, faltantesDeSolicitud } from './pedidos.requisitos.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
 
@@ -16,7 +18,7 @@ const VENTANA_IDEMPOTENCIA_MS = 60_000
 const MENSAJE_PEDIDO_DUPLICADO =
   'Ya recibimos este mismo pedido hace un momento. Revisa Mis pedidos antes de enviarlo otra vez.'
 
-// [DECISION] clave = hash de clienteId + productoId + fechaEntrega + el resto de la especificacion, no solo los
+// [DECISION] clave = hash de clienteId + productoId + fechaDeseada + el resto de la especificacion, no solo los
 // tres primeros - un doble click o un reintento mandan el payload identico, asi que igual se detectan, y un
 // cliente profesional que pide dos variantes del mismo producto para la misma fecha no queda bloqueado.
 // Los archivos entran como hash de su contenido, no como nombre/tamano: dos pedidos con el mismo texto pero
@@ -27,13 +29,16 @@ function claveIdempotencia(input: CrearPedidoInput): string {
     input.clienteId,
     input.productoId,
     input.categoriaId,
-    input.fechaEntrega?.toISOString() ?? 'sin-fecha',
+    input.fechaDeseada?.toISOString() ?? 'sin-fecha',
     input.descripcion.trim(),
     input.dimensionValor,
     input.esDimensionPersonalizada,
     input.cantidad,
     input.colores.trim(),
     input.materiales.trim(),
+    input.telefono,
+    input.entregaMetodo,
+    input.entregaDetalle.trim(),
     input.archivos.map((archivo) => createHash('sha256').update(archivo.buffer).digest('hex')),
   ]
   return createHash('sha256').update(JSON.stringify(partes)).digest('hex')
@@ -53,7 +58,10 @@ interface CrearPedidoInput {
   cantidad: number
   colores: string
   materiales: string
-  fechaEntrega: Date | null
+  fechaDeseada: Date | null
+  telefono: string
+  entregaMetodo: MetodoEntrega
+  entregaDetalle: string
   archivos: Express.Multer.File[]
 }
 
@@ -78,6 +86,22 @@ export async function crearPedido(input: CrearPedidoInput) {
     throw new AppError(400, 'Producto no encontrado o inactivo')
   }
 
+  // antes de subir nada a Cloudinary: una solicitud incompleta no debe gastar subidas
+  const faltan = faltantesDeSolicitud({
+    familia: categoria.familia,
+    fechaDeseada: input.fechaDeseada,
+    cantidadReferencias: input.archivos.length,
+    cantidad: input.cantidad,
+    cantidadMinima: cantidadMinimaDe(producto.precio?.escalas ?? []),
+  })
+  if (faltan.length > 0) throw new AppError(400, faltan.join(' '))
+
+  // el nombre viaja como snapshot en el pedido; sin cuenta no hay a quien escribirle ni de quien es el pedido
+  const cliente = await Usuario.findById(input.clienteId).select('nombre').lean()
+  if (!cliente) {
+    throw new AppError(401, 'No encontramos tu cuenta. Vuelve a ingresar e inténtalo de nuevo.')
+  }
+
   const clave = claveIdempotencia(input)
 
   // chequeo barato fuera de la transaccion: corta el reintento secuencial antes de gastar subidas a Cloudinary.
@@ -91,7 +115,7 @@ export async function crearPedido(input: CrearPedidoInput) {
   // que dura esa subida, no indefinidamente.
   interface ImagenSubida {
     nombreOriginal: string
-    mimeType: 'image/jpeg'
+    mimeType: TipoImagen
     tamano: number
     url: string
     publicId: string
@@ -103,7 +127,8 @@ export async function crearPedido(input: CrearPedidoInput) {
   const resultadosSubida = await Promise.allSettled<ImagenSubida>(
     input.archivos.map(async (file) => {
       const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
-      return { nombreOriginal: file.originalname, mimeType: 'image/jpeg', tamano: file.size, url, publicId }
+      // upload.ts ya verifico tipo y firma
+      return { nombreOriginal: file.originalname, mimeType: file.mimetype as TipoImagen, tamano: file.size, url, publicId }
     }),
   )
   const subidasExitosas = resultadosSubida
@@ -131,7 +156,7 @@ export async function crearPedido(input: CrearPedidoInput) {
         [{ _id: clave, pedido: pedidoId, expiraEn: new Date(ahora.getTime() + VENTANA_IDEMPOTENCIA_MS) }],
         { session },
       )
-      await Pedido.create([armarPedido(pedidoId, input, producto, categoria, imagenesReferencia)], { session })
+      await Pedido.create([armarPedido(pedidoId, input, producto, categoria, cliente, imagenesReferencia)], { session })
     })
   } catch (err) {
     // [DECISION] withTransaction puede lanzar por UnknownTransactionCommitResult aunque el commit haya
@@ -168,7 +193,8 @@ function armarPedido(
   input: CrearPedidoInput,
   producto: { _id: Types.ObjectId; nombre: string },
   categoria: { _id: Types.ObjectId; nombre: string; familia: string },
-  imagenesReferencia: { nombreOriginal: string; mimeType: 'image/jpeg'; tamano: number; url: string }[],
+  cliente: { nombre: string },
+  imagenesReferencia: { nombreOriginal: string; mimeType: TipoImagen; tamano: number; url: string }[],
 ) {
   return {
     _id: pedidoId,
@@ -195,7 +221,12 @@ function armarPedido(
     materiales: input.materiales,
     imagenesReferencia,
     estado: 'recibido',
-    fechaEntrega: input.fechaEntrega,
+    contacto: { nombre: cliente.nombre, telefono: input.telefono },
+    entrega: { metodo: input.entregaMetodo, detalle: input.entregaDetalle.trim() },
+    fechaDeseada: input.fechaDeseada,
+    fechaEntrega: null,
+    pago: null,
+    contactadoEn: null,
     // arranca su propio historial desde el momento cero, el cliente es el "actor" de este primer paso
     historialEstados: [
       {
@@ -226,8 +257,17 @@ export async function getPedidoById(pedidoId: string, clienteId: string) {
 
 // ─── Panel de taller (admin) ────────────────────────────────────────────────
 
-// el orden de la constante canonica ES la maquina de estados - updateEstado solo permite moverse al siguiente indice
-const ORDEN_ESTADOS: readonly EstadoPedido[] = ESTADOS_PEDIDO
+// [DECISION] tabla de transiciones y no el orden del enum - cancelado sale de tres estados distintos y no es
+// "el siguiente" de ninguno. Producir es un compromiso: desde en_produccion ya no se cancela por aqui.
+const TRANSICIONES: Record<EstadoPedido, readonly EstadoPedido[]> = {
+  recibido: ['en_revision', 'cancelado'],
+  en_revision: ['confirmado', 'cancelado'],
+  confirmado: ['en_produccion', 'cancelado'],
+  en_produccion: ['listo_para_entrega'],
+  listo_para_entrega: ['entregado'],
+  entregado: [],
+  cancelado: [],
+}
 
 const LIMITE_MAXIMO_ADMIN = 100
 
@@ -250,14 +290,125 @@ export async function getAllPedidos(limite = 50, pagina = 1) {
     .lean()
 }
 
-// null es valida - "todavia no sabemos cuando" es un estado legitimo, no un error
-export async function setFechaEntrega(pedidoId: string, fecha: Date | null) {
+export interface CambiosAcuerdo {
+  // null es valida: "todavia no sabemos cuando" es un estado legitimo, no un error
+  fechaEntrega?: Date | null
+  entrega?: { metodo: MetodoEntrega; detalle: string }
+  pago?: { monto: number; medio: MedioPago }
+}
+
+const ESTADOS_CERRADOS: readonly EstadoPedido[] = ['entregado', 'cancelado']
+
+/**
+ * Registra lo que TaJu y el cliente acordaron por fuera: fecha, entrega y anticipo.
+ * @param cambios - Solo se tocan los campos presentes; `fechaEntrega: null` la borra.
+ * @throws AppError(404) si el pedido no existe; AppError(409) si ya esta entregado o cancelado.
+ */
+export async function registrarAcuerdo(pedidoId: string, cambios: CambiosAcuerdo) {
   const pedido = await Pedido.findById(pedidoId)
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
-  pedido.fechaEntrega = fecha
+  if (ESTADOS_CERRADOS.includes(pedido.estado)) {
+    throw new AppError(409, 'Este pedido ya está cerrado y no admite cambios')
+  }
+
+  if (cambios.fechaEntrega !== undefined) pedido.fechaEntrega = cambios.fechaEntrega
+  if (cambios.entrega) pedido.entrega = cambios.entrega
+  // el anticipo lleva su propia fecha de registro: la plataforma deja constancia, no mueve dinero
+  if (cambios.pago) pedido.pago = { ...cambios.pago, registradoEn: new Date() }
+
+  // desde confirmado lo exigido para confirmar tiene que seguir en pie: sin esto un acuerdo posterior
+  // podia dejar un pedido en produccion sin fecha o sin direccion. Se lanza antes del save, no queda nada escrito
+  const comprometido =
+    pedido.estado !== 'cancelado' && FLUJO_PEDIDO.indexOf(pedido.estado) >= FLUJO_PEDIDO.indexOf('confirmado')
+  if (comprometido) {
+    const faltan = faltantesParaAvanzar(pedido, 'confirmado')
+    if (faltan.length > 0) {
+      throw new AppError(409, `Este pedido ya está "${pedido.estado}" y no puede quedar sin: ${faltan.join(', ')}.`)
+    }
+  }
+
   await pedido.save()
   // populate('cliente', 'email').lean() para igualar el contrato de retorno de updateEstado
   return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
+}
+
+/**
+ * Marca que el taller ya le escribio al cliente. Desde `recibido` avanza a `en_revision` en el mismo gesto.
+ * Idempotente: una segunda llamada no mueve la marca (el plazo de contacto se mide desde la primera).
+ * @throws AppError(404) si no existe; AppError(409) si ya esta entregado o cancelado.
+ */
+export async function marcarContactado(pedidoId: string, actorId: string) {
+  const pedido = await Pedido.findById(pedidoId)
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
+  if (ESTADOS_CERRADOS.includes(pedido.estado)) throw new AppError(409, 'Este pedido ya está cerrado')
+
+  if (!pedido.contactadoEn) {
+    pedido.contactadoEn = new Date()
+    if (pedido.estado === 'recibido') {
+      pedido.historialEstados.push({
+        estadoAnterior: 'recibido',
+        estadoNuevo: 'en_revision',
+        fecha: pedido.contactadoEn,
+        actor: new Types.ObjectId(actorId),
+      })
+      pedido.estado = 'en_revision'
+    }
+  }
+
+  await pedido.save()
+  return Pedido.findById(pedidoId).populate('cliente', 'email').lean()
+}
+
+const ESTADOS_CANCELABLES_POR_CLIENTE: readonly EstadoPedido[] = ['recibido', 'en_revision']
+
+/**
+ * El cliente cancela su propia solicitud mientras el taller todavia no la confirma.
+ * @throws AppError(404) si no existe o es de otro cliente (no se distingue a proposito);
+ *         AppError(409) si ya esta confirmada o mas adelante: eso se habla por WhatsApp.
+ */
+export async function cancelarMiPedido(pedidoId: string, clienteId: string) {
+  const pedido = await Pedido.findOne({ _id: pedidoId, cliente: clienteId })
+  if (!pedido) throw new AppError(404, 'Pedido no encontrado')
+
+  // doble clic o reintento de red: ya esta cancelado, no hay nada mas que hacer ni un segundo historial
+  if (pedido.estado === 'cancelado') return Pedido.findById(pedidoId, PROYECCION_SIN_ACTOR).lean()
+
+  if (!ESTADOS_CANCELABLES_POR_CLIENTE.includes(pedido.estado)) {
+    throw new AppError(409, 'Tu pedido ya está confirmado. Escríbenos por WhatsApp y lo revisamos contigo.')
+  }
+
+  const estadoAnterior = pedido.estado
+  pedido.estado = 'cancelado'
+  pedido.historialEstados.push({
+    estadoAnterior,
+    estadoNuevo: 'cancelado',
+    fecha: new Date(),
+    actor: new Types.ObjectId(clienteId),
+  })
+  await pedido.save()
+  return Pedido.findById(pedidoId, PROYECCION_SIN_ACTOR).lean()
+}
+
+/**
+ * Lo que todavia no esta registrado para dar el paso a `destino`. Vacio significa que se puede avanzar.
+ * [DECISION] confirmado = compromiso (hablamos, hay fecha y lugar); en_produccion exige anticipo. Sin esto
+ * el taller trabaja sin saber cuando ni a quien entrega, ni si le pagan.
+ */
+function faltantesParaAvanzar(
+  pedido: Pick<IPedido, 'contactadoEn' | 'fechaEntrega' | 'entrega' | 'pago'>,
+  destino: EstadoPedido,
+): string[] {
+  const faltan: string[] = []
+  if (destino === 'confirmado') {
+    if (!pedido.contactadoEn) faltan.push('marcar que ya hablaste con el cliente')
+    if (!pedido.fechaEntrega) faltan.push('la fecha de entrega acordada')
+    // ?. por pedidos legados guardados antes de que existiera entrega: sin esto la compuerta da 500 y no 409
+    if (pedido.entrega?.metodo === 'domicilio' && !pedido.entrega.detalle?.trim()) {
+      faltan.push('la dirección de entrega')
+    }
+  }
+  if (destino === 'en_produccion' && !pedido.pago) faltan.push('el anticipo')
+  return faltan
 }
 
 // confirmarDimensionPersonalizada: el admin lo manda explicito en el mismo request que avanza a en_produccion -
@@ -271,11 +422,14 @@ export async function updateEstado(
   const pedido = await Pedido.findById(pedidoId)
   if (!pedido) throw new AppError(404, 'Pedido no encontrado')
 
-  // solo se avanza un paso a la vez, nada de saltarse "en_produccion" ni retroceder
-  const indexActual = ORDEN_ESTADOS.indexOf(pedido.estado as EstadoPedido)
-  const indexNuevo = ORDEN_ESTADOS.indexOf(nuevoEstado)
-  if (indexNuevo !== indexActual + 1) {
+  // solo se avanza un paso a la vez o se cancela; nada de saltarse "en_produccion" ni retroceder
+  if (!TRANSICIONES[pedido.estado as EstadoPedido].includes(nuevoEstado)) {
     throw new AppError(409, `Transición inválida: ${pedido.estado} → ${nuevoEstado}`)
+  }
+
+  const faltan = faltantesParaAvanzar(pedido, nuevoEstado)
+  if (faltan.length > 0) {
+    throw new AppError(409, `Antes de pasar a "${nuevoEstado}" falta registrar: ${faltan.join(', ')}.`)
   }
 
   // dimension personalizada exige confirmacion manual del admin antes de entrar a produccion

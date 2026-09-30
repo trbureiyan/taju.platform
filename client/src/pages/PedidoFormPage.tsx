@@ -1,89 +1,58 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
-import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
+import { AnilloProgreso } from '../components/ui/AnilloProgreso'
 import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
-import type { Producto, Pedido } from '../types'
+import { HojaResumen } from '../components/pedido/HojaResumen'
+import { BarraAcciones } from '../components/pedido/BarraAcciones'
+import { MomentoQue } from '../components/pedido/MomentoQue'
+import { MomentoComo } from '../components/pedido/MomentoComo'
+import { MomentoCuando } from '../components/pedido/MomentoCuando'
+import { MomentoRepaso } from '../components/pedido/MomentoRepaso'
+import { useSolicitud } from '../hooks/useSolicitud'
+import { MOMENTOS } from '../lib/validarSolicitud'
+import { exigeReferencia } from '../lib/requisitos'
+import { resumenDesdeCampos, resumenDesdePedido } from '../lib/resumenPedido'
+import { mensajeResumenPedido } from '../lib/mensajePedido'
+import { promesaContacto } from '../lib/horario'
+import { codigoPedido } from '../lib/pedido'
 import { ETIQUETAS_FAMILIA } from '../types'
-import { calcularPrecioTotal } from '../lib/precio'
+import type { Pedido, Producto } from '../types'
 
-interface Campos {
-  dimensionSeleccionada: string
-  dimensionCustom: string
-  descripcion: string
-  cantidad: string
-  colores: string
-  materiales: string
-  fechaEntrega: string
-}
+// ventana tras llegar al repaso en la que un envio se toma como el segundo toque de un doble toque en Siguiente
+const GRACIA_REPASO_MS = 500
 
-interface Errores {
-  dimensionCustom?: string
-  descripcion?: string
-  cantidad?: string
-  colores?: string
-  materiales?: string
-  fechaEntrega?: string
-}
-
-// un dia habil de margen minimo - da tiempo al taller a reaccionar antes de empezar a cortar
-const DIAS_MINIMOS_ENTREGA = 1
-
-function fechaMinimaEntrega(): string {
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + DIAS_MINIMOS_ENTREGA)
-  // toISOString() convierte a UTC — en GMT-5 antes de las 19:00 la fecha UTC es un dia atras
-  // getFullYear/Month/Date leen la zona local del dispositivo, que es donde opera el taller
-  const y = fecha.getFullYear()
-  const m = String(fecha.getMonth() + 1).padStart(2, '0')
-  const d = String(fecha.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-const MAX_ARCHIVOS = 3
-
-// ─── Componente ───────────────────────────────────────────────────────────────
-
+/**
+ * Formulario de solicitud en cuatro momentos (que, como, cuando, repaso). Esta pagina es la carcasa: carga el
+ * producto, precarga "Pedir de nuevo", muestra el progreso y el momento activo, y la pantalla de exito. El estado,
+ * la validacion por momento y el envio viven en useSolicitud.
+ */
 export function PedidoFormPage() {
   const { productoId } = useParams<{ productoId: string }>()
   const [searchParams] = useSearchParams()
   const pedidoOrigenId = searchParams.get('desde')
   const navigate = useNavigate()
 
-  // producto sobre el que se pide + su carga inicial
   const [producto, setProducto] = useState<Producto | null>(null)
   const [productoInactivo, setProductoInactivo] = useState(false)
   const [cargando, setCargando] = useState(true)
   // "Pedir de nuevo": aviso si el pedido de origen no se pudo leer (404 o red) - el formulario igual abre, vacio
   const [avisoOrigenIlegible, setAvisoOrigenIlegible] = useState(false)
-
-  // imagenes de referencia, por fuera de "campos" porque File no es serializable como el resto del form
-  const [archivos, setArchivos] = useState<File[]>([])
-  const [archivoError, setArchivoError] = useState<string | null>(null)
-
-  // resultado del envio - pedidoCreado no-null es lo que dispara la pantalla de "listo"
+  // pedidoCreado no-null es lo que dispara la pantalla de "listo"
   const [pedidoCreado, setPedidoCreado] = useState<Pedido | null>(null)
-  const [enviando, setEnviando] = useState(false)
-  const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
 
-  // campos del formulario, todo en string aunque el server espere numeros - se convierte recien al enviar
-  const [campos, setCampos] = useState<Campos>({
-    dimensionSeleccionada: '',
-    dimensionCustom: '',
-    descripcion: '',
-    cantidad: '1',
-    colores: '',
-    materiales: '',
-    fechaEntrega: '',
-  })
-  const [errores, setErrores] = useState<Errores>({})
-
-  // sin categoria (sin radios) o eligiendo "personalizada" a mano - ambos casos piden el input libre
-  const esDimensionPersonalizada =
-    !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
-
-  // ─── Carga del producto ───────────────────────────────────────────────────
+  const solicitud = useSolicitud(producto)
+  const { campos, errores, paso, fallos, precargar } = solicitud
+  const tituloExito = useRef<HTMLHeadingElement>(null)
+  const tituloMomento = useRef<HTMLHeadingElement>(null)
+  const formulario = useRef<HTMLFormElement>(null)
+  // ultimo momento cuyo titulo ya se enfoco; null hasta la primera vista del formulario
+  const momentoEnfocado = useRef<number | null>(null)
+  // ultimo intento fallido cuyo foco ya se atendio
+  const falloAtendido = useRef(0)
+  // cuando se entro al repaso; 0 fuera de el
+  const entradaAlRepaso = useRef(0)
 
   useEffect(() => {
     if (!productoId) return
@@ -102,118 +71,79 @@ export function PedidoFormPage() {
       .then((original) => {
         // ?desde= manipulado a mano puede apuntar a un pedido de otro producto - sus datos no aplican aqui
         if (original.producto._id !== producto._id) return
-        const baseCoincidente = producto.categoria.dimensionesBase.find(
-          (d) => d.valor === original.dimensiones.valor,
-        )
+        const baseCoincidente = producto.categoria.dimensionesBase.find((d) => d.valor === original.dimensiones.valor)
         const personalizada = original.dimensiones.esDimensionPersonalizada || !baseCoincidente
-        setCampos((prev) => ({
-          ...prev,
+        precargar({
           dimensionSeleccionada: personalizada ? 'personalizada' : baseCoincidente!.etiqueta,
           dimensionCustom: personalizada ? String(original.dimensiones.valor) : '',
           descripcion: original.descripcion,
           cantidad: String(original.cantidad),
           colores: original.colores,
           materiales: original.materiales,
-        }))
+          // el celular y la entrega casi siempre se repiten; la fecha no (ya paso) ni las imagenes
+          ...(original.contacto?.telefono ? { telefono: original.contacto.telefono } : {}),
+          ...(original.entrega
+            ? { entregaMetodo: original.entrega.metodo, entregaDetalle: original.entrega.detalle ?? '' }
+            : {}),
+        })
       })
       .catch(() => setAvisoOrigenIlegible(true)) // 404 o red: el formulario abre vacio, sin bloquear
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+    // precargar cambia en cada render del hook; la precarga corre una vez por pedido de origen y producto
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pedidoOrigenId, producto?._id])
 
-  // ─── Handlers de campos ───────────────────────────────────────────────────
-
-  // limpia el error del campo apenas el usuario vuelve a escribir en el, no espera al proximo submit
-  function set(field: keyof Campos, value: string) {
-    setCampos((prev) => ({ ...prev, [field]: value }))
-    if (field in errores) setErrores((prev) => ({ ...prev, [field]: undefined }))
-  }
-
-  // valida aqui como espejo del middleware del server - asi el cliente ve el error al tiro, sin esperar el POST
-  function handleArchivos(e: React.ChangeEvent<HTMLInputElement>) {
-    setArchivoError(null)
-    const files = Array.from(e.target.files ?? []).slice(0, MAX_ARCHIVOS)
-    if (files.some((f) => f.type !== 'image/jpeg')) {
-      setArchivoError('Solo se aceptan imágenes JPG')
-      e.target.value = ''
+  // al cambiar de momento el foco pasa a su titulo: quien usa lector de pantalla oye donde esta.
+  // [DECISION] la primera vista del momento 1 no mueve el foco: la pagina recien cargada ya se anuncio y robarlo
+  // saltaria las migas y la tarjeta del producto. Se compara contra el ultimo momento enfocado (no un booleano)
+  // para que el doble efecto de StrictMode tampoco lo robe, y volver al 1 con Atras si lo enfoca.
+  useEffect(() => {
+    if (!producto || pedidoCreado) return
+    if (momentoEnfocado.current === null) {
+      momentoEnfocado.current = paso
       return
     }
-    if (files.some((f) => f.size > 5 * 1024 * 1024)) {
-      setArchivoError('Cada imagen debe pesar menos de 5 MB')
-      e.target.value = ''
-      return
-    }
-    setArchivos(files)
-  }
+    if (momentoEnfocado.current === paso) return
+    momentoEnfocado.current = paso
+    tituloMomento.current?.focus()
+  }, [paso, producto, pedidoCreado])
 
-  // ─── Validacion ───────────────────────────────────────────────────────────
-  // espejo del crearPedidoSchema del server - mismas reglas duplicadas para dar feedback antes del POST
+  // tras un intento fallido el foco va al primer campo marcado, una vez por intento. Depende tambien de paso: cuando
+  // enviar() devuelve al cliente a un momento anterior, react-router cambia la URL en una transicion, asi que fallos
+  // se aplica aun en el repaso (sin campos marcados) y el momento con el error llega en un render posterior.
+  // Declarado despues del efecto del titulo para ganarle en ese render.
+  useEffect(() => {
+    if (fallos <= falloAtendido.current) return
+    const invalido = formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+    if (!invalido) return
+    falloAtendido.current = fallos
+    invalido.focus()
+  }, [fallos, paso])
 
-  function validar(): boolean {
-    const next: Errores = {}
-    if (esDimensionPersonalizada && !campos.dimensionCustom.trim()) {
-      next.dimensionCustom = 'Ingresá el valor en cm'
-    } else if (esDimensionPersonalizada && parseFloat(campos.dimensionCustom) <= 0) {
-      next.dimensionCustom = 'El valor debe ser mayor a 0'
-    }
-    if (!campos.descripcion.trim()) next.descripcion = 'Describí tu pedido'
-    const qty = parseInt(campos.cantidad, 10)
-    if (!campos.cantidad || isNaN(qty) || qty < 1) next.cantidad = 'La cantidad mínima es 1'
-    if (!campos.colores.trim()) next.colores = 'Indicá los colores'
-    if (!campos.materiales.trim()) next.materiales = 'Indicá los materiales'
-    // fechaEntrega es opcional, pero si la eligen tiene que respetar el minimo de produccion
-    if (campos.fechaEntrega && campos.fechaEntrega < fechaMinimaEntrega()) {
-      next.fechaEntrega = `Elige una fecha a partir de ${fechaMinimaEntrega()}, que es lo mínimo que necesitamos para producir`
-    }
-    setErrores(next)
-    return Object.keys(next).length === 0
-  }
+  // fuera del repaso la ventana de gracia no aplica; la marca de entrada se pone en el manejador (ver abajo)
+  useEffect(() => {
+    if (paso !== 4) entradaAlRepaso.current = 0
+  }, [paso])
 
-  // ─── Envio ────────────────────────────────────────────────────────────────
+  // el formulario se desmonta al crear el pedido: sin mover el foco, el lector de pantalla no anuncia nada
+  useEffect(() => {
+    if (pedidoCreado) tituloExito.current?.focus()
+  }, [pedidoCreado])
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function alEnviarFormulario(e: React.FormEvent) {
     e.preventDefault()
-    if (!producto || !validar()) return
-
-    setEnviando(true)
-    setErrorEnvio(null)
-
-    // si eligio una dimension base, mandamos su valor numerico; si no, el que escribio a mano
-    const dimensiones = producto.categoria.dimensionesBase
-    let dimensionValor: number
-    if (esDimensionPersonalizada) {
-      dimensionValor = parseFloat(campos.dimensionCustom)
-    } else {
-      const base = dimensiones.find((d) => d.etiqueta === campos.dimensionSeleccionada)
-      dimensionValor = base?.valor ?? 0
+    // Enter en un campo de los momentos 1 a 3 avanza; solo el repaso envia
+    if (paso < 4) {
+      // la marca va aqui y no en un efecto de paso: react-router aplica la URL en una transicion, y un toque entre
+      // ese commit y el efecto leeria 0 y enviaria
+      if (solicitud.siguiente() && paso === 3) entradaAlRepaso.current = Date.now()
+      return
     }
-
-    const fd = new FormData()
-    fd.append('productoId', producto._id)
-    fd.append('categoriaId', producto.categoria._id)
-    fd.append('descripcion', campos.descripcion)
-    fd.append('dimensionValor', String(dimensionValor))
-    fd.append('esDimensionPersonalizada', String(esDimensionPersonalizada))
-    fd.append('cantidad', campos.cantidad)
-    fd.append('colores', campos.colores)
-    fd.append('materiales', campos.materiales)
-    // mediodia local evita que la conversion a UTC cruce a la fecha anterior (ver AdminPedidosPage)
-    if (campos.fechaEntrega) {
-      fd.append('fechaEntrega', new Date(`${campos.fechaEntrega}T12:00:00`).toISOString())
-    }
-    archivos.forEach((f) => fd.append('imagenes', f))
-
-    try {
-      // FormData porque van archivos - api.post normal serializa a JSON y no sirve aqui
-      const pedido = await api.postForm<Pedido>('/pedidos', fd)
-      setPedidoCreado(pedido)
-    } catch (err) {
-      setErrorEnvio(err instanceof Error ? err.message : 'Error al enviar el pedido')
-    } finally {
-      setEnviando(false)
-    }
+    // [DECISION] "Enviar mi pedido" ocupa el lugar de "Siguiente": un doble toque en el momento 3 enviaria sin que el
+    // cliente vea el repaso. Un envio dentro de medio segundo de llegar al repaso se ignora; el boton sigue activo.
+    if (Date.now() - entradaAlRepaso.current < GRACIA_REPASO_MS) return
+    const creado = await solicitud.enviar()
+    if (creado) setPedidoCreado(creado)
   }
-
-  // ─── Render ───────────────────────────────────────────────────────────────
 
   if (cargando) return <p className="text-texto-secundario">Cargando…</p>
 
@@ -236,54 +166,47 @@ export function PedidoFormPage() {
 
   // pantalla de exito reemplaza el formulario entero, no se muestran los dos a la vez
   if (pedidoCreado) {
-    // mismo formato de fecha que MisPedidosPage/AdminPedidosPage - "a coordinar" si no se eligio fecha
-    const fechaTexto = pedidoCreado.fechaEntrega
-      ? new Date(pedidoCreado.fechaEntrega).toLocaleDateString('es-CO', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-        })
-      : 'a coordinar'
-    const mensajeWhatsApp = `Hola, quiero confirmar mi pedido #${pedidoCreado._id} de ${pedidoCreado.producto.nombre}. Fecha de entrega: ${fechaTexto}.`
-
+    // lo enviado ya no tiene nada "Pendiente": una linea sin valor (pedido sin fecha, celular que no es de
+    // 10 digitos) se omite en vez de pedirle al cliente algo que aqui ya no puede responder
+    const lineasEnviadas = resumenDesdePedido(pedidoCreado).filter((l) => l.valor !== null)
     return (
       <div className="max-w-md mx-auto text-center py-12 flex flex-col gap-6">
         <div className="rounded-tarjeta bg-exito-fondo border border-exito-borde p-6">
-          <p className="text-sm font-medium text-exito-texto mb-1">¡Pedido enviado con éxito!</p>
-          <p className="text-xs text-exito-texto opacity-75">
-            Número de seguimiento: {pedidoCreado._id}
+          <h1 ref={tituloExito} tabIndex={-1} className="text-sm font-medium text-exito-texto mb-1 outline-none">
+            Recibimos tu solicitud
+          </h1>
+          <p className="text-xs text-exito-texto">
+            Código: <span className="font-mono">{codigoPedido(pedidoCreado._id)}</span>
           </p>
         </div>
         <p className="text-sm text-texto-secundario">
-          Te avisaremos cuando tu pedido avance. Podés ver el estado en Mis pedidos.
+          {promesaContacto(new Date())} Hasta que confirmemos contigo el precio, la fecha y el anticipo, no empezamos a
+          producir.
         </p>
-        <div className="flex gap-3 justify-center">
+        <HojaResumen lineas={lineasEnviadas} titulo="Lo que enviaste" className="text-left lg:static lg:max-h-none" />
+        <div className="flex flex-wrap gap-3 justify-center">
           <Button variante="primario" onClick={() => navigate('/mis-pedidos')}>
             Ver mis pedidos
           </Button>
           <Button variante="secundario" onClick={() => navigate('/catalogo')}>
-            Seguir viendo
+            Seguir viendo el catálogo
           </Button>
         </div>
-        {/* canal complementario - el pedido ya quedo registrado en la plataforma con trazabilidad, esto es para dudas puntuales */}
-        <BotonWhatsApp variante="linea" mensaje={mensajeWhatsApp}>
-          Confirmar por WhatsApp
+        {/* comodidad, no mecanismo: la solicitud ya existe en la plataforma aunque el cliente no envie este mensaje */}
+        <BotonWhatsApp variante="linea" mensaje={mensajeResumenPedido(pedidoCreado)}>
+          Enviar el resumen por WhatsApp
         </BotonWhatsApp>
       </div>
     )
   }
 
-  const dimensiones = producto.categoria.dimensionesBase
-  const cantidadNumerica = parseInt(campos.cantidad, 10)
-  const precioEstimado =
-    !isNaN(cantidadNumerica) && cantidadNumerica > 0
-      ? calcularPrecioTotal(producto.precio, cantidadNumerica)
-      : null
+  const titulo = MOMENTOS[paso - 1].titulo
+  const propsMomento = { producto, campos, errores, set: solicitud.set, tituloRef: tituloMomento, intento: fallos }
 
   return (
-    <section className="max-w-xl">
-      <nav aria-label="Ruta de navegación" className="mb-6">
-        <ol className="flex items-center gap-2 text-sm text-texto-tenue">
+    <section className="flex flex-col gap-6">
+      <nav aria-label="Ruta de navegación">
+        <ol className="flex flex-wrap items-center gap-2 text-sm text-texto-tenue">
           <li><Link to="/catalogo" className="hover:text-texto-principal">Catálogo</Link></li>
           <li aria-hidden="true">/</li>
           <li>
@@ -296,171 +219,80 @@ export function PedidoFormPage() {
         </ol>
       </nav>
 
-      <div className="mb-6 rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">
-        <p className="text-xs text-texto-tenue uppercase tracking-wide">
+      {/* en el movil una sola linea compacta: el alto de la pantalla es para el momento */}
+      <div className="flex items-baseline gap-2 rounded-tarjeta border border-borde-sutil bg-superficie-hundida px-4 py-3 lg:flex-col lg:items-start lg:gap-1 lg:p-4">
+        <p className="shrink-0 text-xs text-texto-tenue uppercase tracking-wide">
           {ETIQUETAS_FAMILIA[producto.categoria.familia]}
         </p>
-        <p className="font-semibold text-texto-principal">{producto.nombre}</p>
-        <p className="text-sm text-texto-secundario">{producto.categoria.nombre}</p>
+        <p className="min-w-0 truncate font-semibold text-texto-principal">{producto.nombre}</p>
+        <p className="hidden text-sm text-texto-secundario lg:block">{producto.categoria.nombre}</p>
+      </div>
+
+      <header className="sticky top-0 z-encabezado -mx-4 flex items-center gap-3 border-b border-borde-sutil bg-superficie-base px-4 py-3 lg:hidden">
+        <AnilloProgreso paso={paso} titulo={titulo} tamano="compacto" />
+        {/* aria-hidden: el anillo ya dice "Paso X de 4: titulo" y el h2 del momento repite el titulo */}
+        <div aria-hidden="true">
+          <p className="text-xs text-texto-secundario">Paso {paso} de 4</p>
+          <p className="text-base font-semibold text-texto-principal">{titulo}</p>
+        </div>
+      </header>
+      <div className="hidden lg:flex lg:items-center lg:gap-6">
+        <AnilloProgreso paso={paso} titulo={titulo} tamano="grande" />
+        <div>
+          <p className="text-sm text-texto-secundario">Paso {paso} de 4</p>
+          <p className="text-h3 font-semibold text-texto-principal">{titulo}</p>
+        </div>
       </div>
 
       {avisoOrigenIlegible && (
-        <p className="mb-6 text-sm text-texto-secundario rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-3">
+        <p className="text-sm text-texto-secundario rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-3">
           No pudimos traer los datos de tu pedido anterior. Puedes completar el formulario igual.
         </p>
       )}
 
-      <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
-        {/* radios de dimensionesBase + opcion "personalizada" - o el input libre solo si no hay dimensiones sugeridas */}
-        <fieldset className="flex flex-col gap-3">
-          <legend className="text-sm font-medium text-texto-principal">Dimensión</legend>
-
-          {dimensiones.length > 0 && (
-            <div className="flex flex-col gap-2">
-              {dimensiones.map((d) => (
-                <label key={d.etiqueta} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="dimensionSeleccionada"
-                    value={d.etiqueta}
-                    checked={campos.dimensionSeleccionada === d.etiqueta}
-                    onChange={(e) => set('dimensionSeleccionada', e.target.value)}
-                    className="accent-accion"
-                  />
-                  <span className="text-sm text-texto-principal">
-                    {d.etiqueta}: {d.valor} {d.unidad}
-                  </span>
-                </label>
-              ))}
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="dimensionSeleccionada"
-                  value="personalizada"
-                  checked={campos.dimensionSeleccionada === 'personalizada'}
-                  onChange={(e) => set('dimensionSeleccionada', e.target.value)}
-                  className="accent-accion"
-                />
-                <span className="text-sm text-texto-principal">Medida personalizada</span>
-              </label>
-            </div>
-          )}
-
-          {(esDimensionPersonalizada || dimensiones.length === 0) && (
-            <Input
-              label="Valor en cm"
-              type="number"
-              min="1"
-              step="0.5"
-              placeholder="Ej: 25"
-              value={campos.dimensionCustom}
-              onChange={(e) => set('dimensionCustom', e.target.value)}
-              error={errores.dimensionCustom}
+      <div className="lg:grid lg:grid-cols-3 lg:gap-12">
+        {/* en el movil la barra de acciones es fija abajo (hasta 2 lineas de aviso, boton y el area segura del iPhone):
+            este relleno la despeja para que no tape el ultimo campo; valor arbitrario por el env() */}
+        <form
+          ref={formulario}
+          onSubmit={alEnviarFormulario}
+          noValidate
+          className="flex flex-col gap-6 pb-[calc(var(--space-24)+var(--space-8)+env(safe-area-inset-bottom))] lg:col-span-2 lg:pb-0"
+        >
+          {paso === 1 && <MomentoQue {...propsMomento} />}
+          {paso === 2 && (
+            <MomentoComo
+              {...propsMomento}
+              archivos={solicitud.archivos}
+              cambiarArchivos={solicitud.cambiarArchivos}
+              onProcesando={solicitud.marcarProcesando}
+              desdeOtroPedido={Boolean(pedidoOrigenId)}
             />
           )}
-        </fieldset>
-
-        <Input
-          label="Descripción del pedido"
-          type="text"
-          placeholder="Describí qué necesitás y para qué ocasión"
-          value={campos.descripcion}
-          onChange={(e) => set('descripcion', e.target.value)}
-          error={errores.descripcion}
-        />
-
-        <Input
-          label="Cantidad"
-          type="number"
-          min="1"
-          step="1"
-          value={campos.cantidad}
-          onChange={(e) => set('cantidad', e.target.value)}
-          error={errores.cantidad}
-        />
-
-        <Input
-          label="Colores"
-          type="text"
-          placeholder="Ej: dorado y blanco"
-          hint="Indicá los colores principales que querés"
-          value={campos.colores}
-          onChange={(e) => set('colores', e.target.value)}
-          error={errores.colores}
-        />
-
-        <Input
-          label="Materiales"
-          type="text"
-          placeholder="Ej: acrílico 3mm, madera terciada"
-          hint="Si no sabés qué material, describí el uso y te asesoramos"
-          value={campos.materiales}
-          onChange={(e) => set('materiales', e.target.value)}
-          error={errores.materiales}
-        />
-
-        <Input
-          label="Fecha de entrega"
-          type="date"
-          min={fechaMinimaEntrega()}
-          hint="Opcional - si no la sabés todavía, te la confirmamos por WhatsApp"
-          value={campos.fechaEntrega}
-          onChange={(e) => set('fechaEntrega', e.target.value)}
-          error={errores.fechaEntrega}
-        />
-
-        {precioEstimado && (
-          <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">
-            <p className="text-sm text-texto-secundario">Precio estimado</p>
-            <p className="text-lg font-semibold text-texto-principal tabular-nums">
-              ${precioEstimado.total.toLocaleString('es-CO')}
-            </p>
-            <p className="text-xs text-texto-tenue">
-              ${precioEstimado.unitario.toLocaleString('es-CO')} c/u × {campos.cantidad}
-            </p>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-texto-principal">
-            Imágenes de referencia
-            <span className="ml-1 font-normal text-texto-tenue">(opcional, hasta 3 JPG, máx 5 MB c/u)</span>
-          </label>
-          {pedidoOrigenId && (
-            <p className="text-xs text-texto-tenue">
-              Si quieres usar las mismas imágenes de referencia, adjúntalas de nuevo.
-            </p>
+          {paso === 3 && <MomentoCuando {...propsMomento} />}
+          {paso === 4 && (
+            <MomentoRepaso {...propsMomento} archivos={solicitud.archivos} errorEnvio={solicitud.errorEnvio} />
           )}
-          <input
-            type="file"
-            accept="image/jpeg"
-            multiple
-            onChange={handleArchivos}
-            aria-describedby={archivoError ? 'archivos-error' : undefined}
-            className="text-sm text-texto-principal file:mr-3 file:py-2 file:px-3 file:rounded-boton file:border-0 file:text-sm file:bg-superficie-hundida file:text-texto-secundario hover:file:bg-superficie-fria"
+          <BarraAcciones
+            paso={paso}
+            onAtras={solicitud.atras}
+            enviando={solicitud.enviando}
+            procesando={solicitud.procesando}
           />
-          {archivoError && (
-            <p id="archivos-error" role="alert" className="text-xs text-error-texto">
-              {archivoError}
-            </p>
-          )}
-        </div>
+        </form>
 
-        {errorEnvio && (
-          <div role="alert" className="rounded-tarjeta border border-error-borde bg-error-fondo p-3">
-            <p className="text-sm text-error-texto">{errorEnvio}</p>
-          </div>
+        {/* en el repaso la hoja ya es el contenido: dos hojas a la vez repetirian el resumen */}
+        {paso < 4 && (
+          <aside className="hidden lg:block">
+            <HojaResumen
+              lineas={resumenDesdeCampos(campos, producto, {
+                cantidad: solicitud.archivos.length,
+                obligatoria: exigeReferencia(producto.categoria.familia),
+              })}
+            />
+          </aside>
         )}
-
-        <Button
-          type="submit"
-          variante="primario"
-          disabled={enviando}
-          className="w-full"
-        >
-          {enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido'}
-        </Button>
-      </form>
+      </div>
     </section>
   )
 }

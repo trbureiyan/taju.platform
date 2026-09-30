@@ -29,11 +29,30 @@ describe('TarjetaPedido', () => {
   it('muestra la fecha de entrega si existe, si no el siguiente paso', () => {
     const conFecha = pedido({ fechaEntrega: '2026-10-18T12:00:00.000Z' })
     const { unmount } = renderizar(conFecha)
-    expect(screen.getByText(/entrega/i)).toBeInTheDocument()
+    expect(screen.getByText(/puedes recogerlo el/i)).toBeInTheDocument()
     unmount()
 
     const sinFecha = pedido({ estado: 'recibido', fechaEntrega: null })
     renderizar(sinFecha)
-    expect(screen.getByText(/lo estamos revisando/i)).toBeInTheDocument()
+    expect(screen.getByText(/recibimos tu solicitud/i)).toBeInTheDocument()
+  })
+
+  it('la fecha acordada dice entrega a domicilio, y para recoger dice que puede recogerlo', () => {
+    const { unmount } = renderizar(
+      pedido({ fechaEntrega: '2026-10-18T12:00:00.000Z', entrega: { metodo: 'domicilio', detalle: 'Cra 5' } }),
+    )
+    expect(screen.getByText(/te lo entregamos el/i)).toBeInTheDocument()
+    unmount()
+
+    renderizar(pedido({ fechaEntrega: '2026-10-18T12:00:00.000Z', entrega: { metodo: 'recoger', detalle: '' } }))
+    expect(screen.getByText(/puedes recogerlo el/i)).toBeInTheDocument()
+    expect(screen.queryByText(/te lo entregamos/i)).not.toBeInTheDocument()
+  })
+
+  // [Review Focus] un pedido cancelado no promete fecha aunque el taller la hubiera acordado
+  it('un pedido cancelado con fecha acordada dice que se cancelo y no promete entrega', () => {
+    renderizar(pedido({ estado: 'cancelado', fechaEntrega: '2026-10-18T12:00:00.000Z' }))
+    expect(screen.getByText(/este pedido se canceló/i)).toBeInTheDocument()
+    expect(screen.queryByText(/te lo entregamos/i)).not.toBeInTheDocument()
   })
 })

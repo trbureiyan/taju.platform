@@ -73,3 +73,17 @@ describe('Layout | WhatsApp en el detalle', () => {
     expect(screen.queryByRole('link', { name: 'Escríbenos por WhatsApp' })).not.toBeInTheDocument()
   })
 })
+
+describe('Layout | WhatsApp en el formulario de pedido', () => {
+  it('el flotante se oculta en el formulario: chocaria con la barra de acciones y cada momento trae su enlace de dudas', () => {
+    vi.mocked(useAuth).mockReturnValue({ usuario: null, autenticado: false, login: vi.fn(), registrar: vi.fn(), logout: vi.fn() })
+    renderEn('/pedido/prod-1')
+    expect(screen.queryByRole('link', { name: 'Escríbenos por WhatsApp' })).not.toBeInTheDocument()
+  })
+
+  it('en mis pedidos el flotante sigue', () => {
+    vi.mocked(useAuth).mockReturnValue({ usuario: null, autenticado: false, login: vi.fn(), registrar: vi.fn(), logout: vi.fn() })
+    renderEn('/mis-pedidos')
+    expect(screen.getByRole('link', { name: 'Escríbenos por WhatsApp' })).toBeInTheDocument()
+  })
+})

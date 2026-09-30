@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { api, ErrorApi, getToken } from '../lib/api'
+import { actualizarEnMemoria } from './useMisPedidos'
 import { useAuth } from '../contexts/AuthContext'
 import type { Pedido } from '../types'
 
@@ -10,7 +11,7 @@ type Estado = 'cargando' | 'listo' | 'no-encontrado' | 'error'
  * Montar con key={id}: cambiar de pedido reinicia el estado sin setState dentro del efecto.
  * @param id - Id del pedido.
  * @param inicial - Pedido de la lista en memoria de esta sesión (`pedidoEnMemoria`), si existe.
- * @returns pedido, estado ('cargando' | 'listo' | 'no-encontrado' | 'error') y reintentar().
+ * @returns pedido, estado ('cargando' | 'listo' | 'no-encontrado' | 'error') y reintentar() y reemplazar(p).
  */
 export function usePedido(id: string, inicial?: Pedido) {
   useAuth()
@@ -51,5 +52,12 @@ export function usePedido(id: string, inicial?: Pedido) {
     setIntento((n) => n + 1)
   }, [])
 
-  return { pedido, estado, reintentar }
+  // el PATCH de cancelar ya devuelve el pedido actualizado: se pinta sin volver a pedirlo ni parpadear
+  const reemplazar = useCallback((actualizado: Pedido) => {
+    setPedido(actualizado)
+    setEstado('listo')
+    actualizarEnMemoria(actualizado)
+  }, [])
+
+  return { pedido, estado, reintentar, reemplazar }
 }

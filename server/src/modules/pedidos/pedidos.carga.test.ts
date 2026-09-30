@@ -6,7 +6,7 @@ import { crearApp } from '../../app.js'
 import { Pedido } from '../../models/Pedido.js'
 import { signToken } from '../../lib/jwt.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba } from '../../test/mongo.js'
-import { crearCatalogoYCliente } from '../../test/fixtures.js'
+import { crearCatalogoYCliente, fechaFutura } from '../../test/fixtures.js'
 
 vi.mock('../../lib/cloudinary.js', () => ({
   subirImagen: vi.fn(async () => ({ url: 'https://res.cloudinary.test/taju/pedidos/ref.jpg', publicId: 'taju/pedidos/ref' })),
@@ -33,7 +33,7 @@ afterAll(async () => {
 // criterio de aceptacion del issue #17: 0 duplicados, 0 5xx ni requests sin respuesta, historial completo
 describe(`POST /api/pedidos con ${CONCURRENCIA} requests concurrentes del mismo payload`, () => {
   it('crea un solo pedido y responde un estado a cada request', async () => {
-    const { categoria, producto, cliente } = await crearCatalogoYCliente()
+    const { categoria, producto, cliente } = await crearCatalogoYCliente('papeleria')
     const token = signToken({ sub: cliente.id, email: cliente.email, rol: 'cliente' })
 
     // mismo shape que el crearPedidoSchema del controller: todo string, como llega del form-data
@@ -46,7 +46,9 @@ describe(`POST /api/pedidos con ${CONCURRENCIA} requests concurrentes del mismo 
       cantidad: '1',
       colores: 'dorado',
       materiales: 'acrílico espejo 3 mm',
-      fechaEntrega: '2026-12-12T17:00:00.000Z',
+      fechaDeseada: fechaFutura().toISOString(),
+      telefono: '3192452842',
+      entregaMetodo: 'recoger',
     }
 
     const estados: number[] = []

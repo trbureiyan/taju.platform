@@ -37,6 +37,14 @@ describe('errorHandler', () => {
     expect(status).toHaveBeenCalledWith(500)
   })
 
+  it('retorna 409 para VersionError de Mongoose (otro cambio llego antes)', () => {
+    const { req, res, next, status, json } = buildMocks()
+    const doc = new (mongoose.model('VersionPrueba', new mongoose.Schema({ n: Number })))()
+    errorHandler(new mongoose.Error.VersionError(doc, 0, []), req, res, next)
+    expect(status).toHaveBeenCalledWith(409)
+    expect(json).toHaveBeenCalledWith({ error: expect.stringMatching(/recarga/i) })
+  })
+
   it('retorna 500 generico para errores desconocidos', () => {
     const { req, res, next, status, json } = buildMocks()
     errorHandler(new Error('algo explotó'), req, res, next)

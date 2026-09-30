@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import type { Pedido } from '../../types'
 import { ETIQUETAS_ESTADO, CLASES_ESTADO, ETIQUETAS_FAMILIA } from '../../types'
-import { codigoPedido, SIGUIENTE_PASO, enCurso } from '../../lib/pedido'
+import { codigoPedido, SIGUIENTE_PASO, enCurso, fechaConHora } from '../../lib/pedido'
 import { contenidoDe } from '../vitrina/contenido'
 import { PiezaSilueta } from '../vitrina/PiezaSilueta'
 import { LineaAvance } from './LineaAvance'
@@ -15,12 +15,8 @@ export function TarjetaPedido({ pedido }: { pedido: Pedido }) {
   const entregado = !enCurso(pedido.estado)
   const contenido = contenidoDe(pedido.categoria.familia)
 
-  const proximo = pedido.fechaEntrega
-    ? `Te lo entregamos el ${new Date(pedido.fechaEntrega).toLocaleDateString('es-CO', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      })}`
+  const proximo = pedido.fechaEntrega && !entregado
+    ? `${pedido.entrega.metodo === 'recoger' ? 'Puedes recogerlo' : 'Te lo entregamos'} el ${fechaConHora(pedido.fechaEntrega)}`
     : SIGUIENTE_PASO[pedido.estado]
 
   return (
