@@ -134,6 +134,13 @@ export default {
       minHeight: {
         boton: 'var(--boton-alto)',
       },
+      // objetivo tactil cuadrado: mismo token que el alto
+      width: {
+        boton: 'var(--boton-alto)',
+      },
+      minWidth: {
+        boton: 'var(--boton-alto)',
+      },
       padding: {
         'boton-x': 'var(--boton-padding-x)',
       },
