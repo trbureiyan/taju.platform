@@ -87,8 +87,15 @@ describe('promesaVencida', () => {
 
   it('una solicitud de noche no esta atrasada a la madrugada: cuenta desde que abre el taller', () => {
     const denoche = pedidoAdmin({ estado: 'recibido', fechaSolicitud: '2026-09-28T21:00:00-05:00' })
-    expect(promesaVencida(denoche, en('2026-09-29T10:30:00-05:00'))).toBe(false)
-    expect(promesaVencida(denoche, en('2026-09-29T11:30:00-05:00'))).toBe(true)
+    expect(promesaVencida(denoche, en('2026-09-29T09:30:00-05:00'))).toBe(false)
+    expect(promesaVencida(denoche, en('2026-09-29T10:30:00-05:00'))).toBe(true)
+  })
+
+  it('una solicitud del sabado en la tarde no vence el domingo: cuenta desde el lunes a las 8', () => {
+    const sabado = pedidoAdmin({ estado: 'recibido', fechaSolicitud: '2026-10-03T15:00:00-05:00' })
+    expect(promesaVencida(sabado, en('2026-10-04T18:00:00-05:00'))).toBe(false)
+    expect(promesaVencida(sabado, en('2026-10-05T09:30:00-05:00'))).toBe(false)
+    expect(promesaVencida(sabado, en('2026-10-05T10:30:00-05:00'))).toBe(true)
   })
 
   it('una solicitud ya contactada nunca tiene la promesa vencida', () => {

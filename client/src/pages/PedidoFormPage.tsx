@@ -10,8 +10,15 @@ import { ETIQUETAS_FAMILIA } from '../types'
 import { calcularPrecioTotal } from '../lib/precio'
 import { codigoPedido } from '../lib/pedido'
 import { mensajeResumenPedido } from '../lib/mensajePedido'
-import { HORAS_DE_ENTREGA, esFestivo } from '../lib/politicas'
-import { horaEnPalabras, promesaContacto, relojBogota } from '../lib/horario'
+import {
+  esDiaConServicio,
+  explicarDiaSinServicio,
+  fechaEnPalabras,
+  horaEnPalabras,
+  horasDeEntrega,
+  primerDiaDisponible,
+  promesaContacto,
+} from '../lib/horario'
 import {
   exigeReferencia,
   normalizarCelular,
@@ -44,26 +51,6 @@ interface Errores {
   telefono?: string
   fechaDeseada?: string
   horaDeseada?: string
-}
-
-// un dia calendario de margen minimo (hoy no alcanza) - da tiempo al taller a reaccionar antes de empezar a cortar
-const DIAS_MINIMOS_ENTREGA = 1
-
-// "hoy" es el del taller en Bogota, no el del dispositivo: un cliente en otra zona no corre la fecha minima
-function fechaMinimaEntrega(): string {
-  const [y, m, d] = relojBogota(new Date()).fecha.split('-').map(Number)
-  // aritmetica en UTC puro para sumar dias sin que la zona del dispositivo mueva la fecha
-  return new Date(Date.UTC(y, m - 1, d + DIAS_MINIMOS_ENTREGA)).toISOString().slice(0, 10)
-}
-
-// mediodia de Bogota para que ningun corrimiento de zona cambie el dia que se muestra
-function fechaEnPalabras(fecha: string): string {
-  return new Date(`${fecha}T12:00:00-05:00`).toLocaleDateString('es-CO', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    timeZone: 'America/Bogota',
-  })
 }
 
 const MENSAJE_ERROR_ENVIO =
@@ -103,11 +90,6 @@ const MAX_DESCRIPCION = 500
 function instanteDeseado(fecha: string, hora: string): string {
   return new Date(`${fecha}T${hora}:00-05:00`).toISOString()
 }
-
-const OPCIONES_HORA = HORAS_DE_ENTREGA.map((h) => ({
-  valor: `${String(h).padStart(2, '0')}:00`,
-  texto: horaEnPalabras(h),
-}))
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
@@ -250,12 +232,19 @@ export function PedidoFormPage() {
 
     if (!campos.fechaDeseada) {
       next.fechaDeseada = MENSAJE_FALTA_FECHA
-    } else if (campos.fechaDeseada < fechaMinimaEntrega()) {
-      next.fechaDeseada = `Esa fecha es muy pronto para producirla. Elige una a partir del ${fechaEnPalabras(fechaMinimaEntrega())}, que es lo mínimo que necesitamos.`
-    } else if (esFestivo(campos.fechaDeseada)) {
-      next.fechaDeseada = 'Ese día es festivo y el taller no atiende. Elige otro día.'
+    } else if (campos.fechaDeseada < primerDiaDisponible(new Date())) {
+      next.fechaDeseada = `Esa fecha es muy pronto para producirla. Elige una a partir del ${fechaEnPalabras(primerDiaDisponible(new Date()))}, que es lo mínimo que necesitamos.`
+    } else if (!esDiaConServicio(campos.fechaDeseada)) {
+      next.fechaDeseada = explicarDiaSinServicio(campos.fechaDeseada)
     }
-    if (!campos.horaDeseada) next.horaDeseada = 'Elige la hora en que la necesitas. Con ella coordinamos la entrega.'
+    if (!campos.horaDeseada) {
+      next.horaDeseada = 'Elige la hora en que la necesitas. Con ella coordinamos la entrega.'
+    } else if (campos.fechaDeseada && esDiaConServicio(campos.fechaDeseada)) {
+      const hora = Number(campos.horaDeseada.slice(0, 2))
+      if (!horasDeEntrega(campos.fechaDeseada).includes(hora)) {
+        next.horaDeseada = 'Esa hora no está disponible ese día. Elige otra de la lista.'
+      }
+    }
 
     const faltaReferencia = exigeReferencia(p.categoria.familia) && archivos.length === 0
     if (faltaReferencia) setArchivoError(MENSAJE_FALTA_REFERENCIA)
@@ -364,6 +353,13 @@ export function PedidoFormPage() {
   }
 
   const dimensiones = producto.categoria.dimensionesBase
+  // las horas son las del dia elegido; mientras no haya un dia con servicio se muestran las del primer dia disponible
+  const diaDeHoras =
+    campos.fechaDeseada && esDiaConServicio(campos.fechaDeseada) ? campos.fechaDeseada : primerDiaDisponible(new Date())
+  const opcionesHora = horasDeEntrega(diaDeHoras).map((h) => ({
+    valor: `${String(h).padStart(2, '0')}:00`,
+    texto: horaEnPalabras(h),
+  }))
   const cantidadNumerica = parseInt(campos.cantidad, 10)
   const precioEstimado =
     !isNaN(cantidadNumerica) && cantidadNumerica > 0
@@ -496,7 +492,7 @@ export function PedidoFormPage() {
           <Input
             label="Fecha en que la necesitas"
             type="date"
-            min={fechaMinimaEntrega()}
+            min={primerDiaDisponible(new Date())}
             hint="Es la fecha que deseas. La acordamos contigo antes de confirmar."
             value={campos.fechaDeseada}
             onChange={(e) => set('fechaDeseada', e.target.value)}
@@ -509,7 +505,7 @@ export function PedidoFormPage() {
             error={errores.horaDeseada}
           >
             <option value="">Elige una hora</option>
-            {OPCIONES_HORA.map((o) => (
+            {opcionesHora.map((o) => (
               <option key={o.valor} value={o.valor}>
                 {o.texto}
               </option>
