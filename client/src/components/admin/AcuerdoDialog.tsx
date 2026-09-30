@@ -5,7 +5,7 @@ import { ETIQUETAS_MEDIO_PAGO, MEDIOS_PAGO } from '../../types'
 import { codigoPedido, fechaConHora } from '../../lib/pedido'
 import { isoDesdePartes, mensajeDeError, partesBogota } from '../../lib/pedidoAdmin'
 import { ANTICIPO_PORCENTAJE } from '../../lib/politicas'
-import { horaEnPalabras, horasParaAcordar } from '../../lib/horario'
+import { esDiaConServicio, horaEnPalabras, horasParaAcordar } from '../../lib/horario'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
@@ -14,7 +14,8 @@ import { useSnackbar } from '../ui/Snackbar'
 
 /**
  * Diálogo del panel de Taller para asentar lo que se acordó por fuera con el cliente: fecha y hora, entrega
- * y anticipo. La plataforma es el registro canónico; WhatsApp es solo la conversación.
+ * y anticipo. La plataforma es el registro canónico; WhatsApp es solo la conversación. Una fecha en día sin
+ * servicio se avisa pero no se bloquea: la promete el taller y una entrega excepcional es real.
  * @prop pedido - Pedido a editar, o null con el diálogo cerrado.
  * @prop onCerrar - Cierra el diálogo.
  * @prop onGuardado - Recibe el pedido actualizado que devolvió el server.
@@ -64,6 +65,7 @@ function FormularioAcuerdo({
     valor: `${String(h).padStart(2, '0')}:00`,
     texto: horaEnPalabras(h),
   }))
+  const sinServicio = Boolean(fecha) && !esDiaConServicio(fecha)
 
   async function guardar(e: FormEvent) {
     e.preventDefault()
@@ -124,6 +126,11 @@ function FormularioAcuerdo({
           ))}
         </Select>
       </div>
+      {sinServicio && (
+        <p role="status" className="text-xs text-aviso-texto">
+          Ese día no hay servicio según el horario del taller. Puedes registrarlo igual si lo acordaron así.
+        </p>
+      )}
 
       <Select label="Entrega" value={metodo} onChange={(e) => setMetodo(e.target.value as MetodoEntrega)}>
         <option value="recoger">Recoge en el taller</option>

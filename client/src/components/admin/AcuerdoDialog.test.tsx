@@ -119,4 +119,41 @@ describe('AcuerdoDialog', () => {
     expect(screen.queryByText(/failed to fetch/i)).not.toBeInTheDocument()
     expect(onCerrar).not.toHaveBeenCalled()
   })
+
+  describe('dia sin servicio', () => {
+    it('avisa que ese dia no hay servicio y no bloquea el guardado', async () => {
+      patchMock.mockResolvedValueOnce(pedidoAdmin({}))
+      // domingo 4 de octubre de 2026
+      renderizar(pedidoAdmin({ estado: 'en_revision', contactadoEn: '2026-09-28T10:00:00-05:00' }))
+      fireEvent.change(screen.getByLabelText('Fecha acordada'), { target: { value: '2026-10-04' } })
+
+      expect(screen.getByText(/ese día no hay servicio según el horario del taller/i)).toBeInTheDocument()
+
+      await userEvent.selectOptions(screen.getByLabelText('Hora acordada'), '10:00')
+      await guardar()
+
+      expect(patchMock).toHaveBeenCalledWith(
+        expect.stringContaining('/acuerdo'),
+        expect.objectContaining({ fechaEntrega: new Date('2026-10-04T10:00:00-05:00').toISOString() }),
+      )
+    })
+
+    it('en un dia sin servicio ofrece las horas de un dia ordinario', () => {
+      renderizar(pedidoAdmin({ estado: 'en_revision' }))
+      fireEvent.change(screen.getByLabelText('Fecha acordada'), { target: { value: '2026-10-04' } })
+
+      const horas = Array.from(screen.getByLabelText('Hora acordada').querySelectorAll('option')).map((o) => o.textContent)
+      expect(horas).toContain('8:00 a. m.')
+      expect(horas).toContain('5:00 p. m.')
+    })
+
+    it('no muestra el aviso en un dia con servicio y el sabado termina a las 3 p. m.', () => {
+      renderizar(pedidoAdmin({ estado: 'en_revision' }))
+      fireEvent.change(screen.getByLabelText('Fecha acordada'), { target: { value: '2026-10-03' } })
+
+      expect(screen.queryByText(/no hay servicio/i)).not.toBeInTheDocument()
+      const horas = Array.from(screen.getByLabelText('Hora acordada').querySelectorAll('option')).map((o) => o.textContent)
+      expect(horas[horas.length - 1]).toBe('3:00 p. m.')
+    })
+  })
 })
