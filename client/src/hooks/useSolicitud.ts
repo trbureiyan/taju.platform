@@ -8,6 +8,13 @@ import type { Pedido, Producto } from '../types'
 
 const TOTAL_MOMENTOS = 4
 
+// borra la clave en vez de dejarla en undefined: Object.keys(errores) cuenta solo errores reales
+function sinClave(errores: Errores, campo: keyof Errores): Errores {
+  const resto = { ...errores }
+  delete resto[campo]
+  return resto
+}
+
 // hora de Colombia fija (-05:00, sin horario de verano): la fecha pedida no depende de la zona del dispositivo
 function instanteDeseado(fecha: string, hora: string): string {
   return new Date(`${fecha}T${hora}:00-05:00`).toISOString()
@@ -48,7 +55,7 @@ export function useSolicitud(producto: Producto | null) {
   // limpia el error del campo apenas el usuario vuelve a escribir en el, no espera al proximo intento
   function set(campo: keyof Campos, valor: string) {
     setCampos((prev) => ({ ...prev, [campo]: valor }))
-    if (campo in errores) setErrores((prev) => ({ ...prev, [campo]: undefined }))
+    if (errores[campo]) setErrores((prev) => sinClave(prev, campo))
   }
 
   function precargar(parcial: Partial<Campos>) {
@@ -57,7 +64,7 @@ export function useSolicitud(producto: Producto | null) {
 
   function cambiarArchivos(nuevos: File[]) {
     setArchivos(nuevos)
-    if (errores.archivos) setErrores((prev) => ({ ...prev, archivos: undefined }))
+    if (errores.archivos) setErrores((prev) => sinClave(prev, 'archivos'))
   }
 
   function siguiente(): boolean {
@@ -86,7 +93,6 @@ export function useSolicitud(producto: Producto | null) {
       if (Object.keys(encontrados).length > 0) {
         setErrores(encontrados)
         setFallos((n) => n + 1)
-        setValidadoHasta((v) => Math.max(v, numero - 1))
         irAlPaso(numero)
         return null
       }
@@ -96,6 +102,20 @@ export function useSolicitud(producto: Producto | null) {
     setEnviando(true)
     setErrorEnvio(null)
 
+    try {
+      // armar la solicitud va dentro del try: si algo aqui lanza, el finally igual libera el formulario
+      return await api.postForm<Pedido>('/pedidos', armarSolicitud(producto))
+    } catch (err) {
+      setErrorEnvio(mensajeDeErrorDeEnvio(err))
+      return null
+    } finally {
+      enviandoRef.current = false
+      setEnviando(false)
+    }
+  }
+
+  // FormData porque van archivos - api.post normal serializa a JSON y no sirve aqui
+  function armarSolicitud(producto: Producto): FormData {
     // si eligio una dimension base, mandamos su valor numerico; si no, el que escribio a mano
     let dimensionValor: number
     if (esDimensionPersonalizada) {
@@ -120,17 +140,7 @@ export function useSolicitud(producto: Producto | null) {
     fd.append('entregaDetalle', campos.entregaMetodo === 'domicilio' ? campos.entregaDetalle : '')
     fd.append('fechaDeseada', instanteDeseado(campos.fechaDeseada, campos.horaDeseada))
     archivos.forEach((f) => fd.append('imagenes', f))
-
-    try {
-      // FormData porque van archivos - api.post normal serializa a JSON y no sirve aqui
-      return await api.postForm<Pedido>('/pedidos', fd)
-    } catch (err) {
-      setErrorEnvio(mensajeDeErrorDeEnvio(err))
-      return null
-    } finally {
-      enviandoRef.current = false
-      setEnviando(false)
-    }
+    return fd
   }
 
   return {

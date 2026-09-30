@@ -101,6 +101,34 @@ describe('useSolicitud: pasos y URL', () => {
     expect(r.result.current.s.errores.colores).toBeUndefined()
   })
 
+  it('limpiar un error borra la clave: Object.keys cuenta solo errores reales', () => {
+    const r = montar()
+    act(() => { r.result.current.s.siguiente() })
+    const antes = Object.keys(r.result.current.s.errores).length
+    act(() => r.result.current.s.set('colores', 'dorado'))
+    expect('colores' in r.result.current.s.errores).toBe(false)
+    expect(Object.keys(r.result.current.s.errores)).toHaveLength(antes - 1)
+  })
+
+  it('cambiarArchivos limpia el error de archivos', () => {
+    const topper: Producto = { ...producto, categoria: { ...producto.categoria, familia: 'toppers' } }
+    const r = montar('/pedido/prod-1', topper)
+    llenarMomento1(r)
+    act(() => { r.result.current.s.siguiente() })
+    act(() => { r.result.current.s.siguiente() })
+    expect(r.result.current.s.errores.archivos).toBeDefined()
+    act(() => r.result.current.s.cambiarArchivos([new File(['x'], 'ref.jpg', { type: 'image/jpeg' })]))
+    expect('archivos' in r.result.current.s.errores).toBe(false)
+  })
+
+  it('irAlPaso conserva los demas parametros de la URL', () => {
+    const r = montar('/pedido/prod-1?desde=abc')
+    llenarMomento1(r)
+    act(() => { r.result.current.s.siguiente() })
+    expect(r.result.current.url).toContain('desde=abc')
+    expect(r.result.current.url).toContain('paso=2')
+  })
+
   it('superficies con 5 unidades no sale del momento 1', () => {
     const superficies: Producto = {
       ...producto,
@@ -121,7 +149,7 @@ describe('useSolicitud: pasos y URL', () => {
 })
 
 describe('useSolicitud: envio', () => {
-  async function llegarAlRepaso(r: ReturnType<typeof montar>) {
+  function llegarAlRepaso(r: ReturnType<typeof montar>) {
     llenarMomento1(r)
     act(() => { r.result.current.s.siguiente() })
     llenarMomento2(r)
@@ -132,13 +160,13 @@ describe('useSolicitud: envio', () => {
 
   it('llega al repaso (momento 4) cuando los tres momentos estan completos', async () => {
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     expect(r.result.current.s.paso).toBe(4)
   })
 
   it('enviar manda la solicitud con los campos nuevos y devuelve el pedido', async () => {
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     let creado: unknown = null
     await act(async () => { creado = await r.result.current.s.enviar() })
     expect(creado).toMatchObject({ _id: 'pedido-1abcdef' })
@@ -152,7 +180,7 @@ describe('useSolicitud: envio', () => {
 
   it('no manda a la direccion escrita si volvio a "recoger"', async () => {
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     act(() => {
       r.result.current.s.set('entregaMetodo', 'domicilio')
       r.result.current.s.set('entregaDetalle', 'Barrio Cándido')
@@ -164,7 +192,7 @@ describe('useSolicitud: envio', () => {
 
   it('un doble envio seguido manda una sola solicitud', async () => {
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     await act(async () => {
       await Promise.all([r.result.current.s.enviar(), r.result.current.s.enviar()])
     })
@@ -182,10 +210,26 @@ describe('useSolicitud: envio', () => {
     expect(r.result.current.s.errores.descripcion).toBeDefined()
   })
 
+  it('si armar la solicitud falla, el formulario no queda bloqueado', async () => {
+    const r = montar()
+    llegarAlRepaso(r)
+    // fecha con formato roto: pasa la regla de fecha pero no arma un instante valido
+    act(() => r.result.current.s.set('fechaDeseada', '2099-1-5'))
+    let resultado: unknown = 'sin llamar'
+    await act(async () => { resultado = await r.result.current.s.enviar() })
+    expect(resultado).toBeNull()
+    expect(r.result.current.s.errorEnvio).toBe(MENSAJE_ERROR_ENVIO)
+    expect(r.result.current.s.enviando).toBe(false)
+    act(() => r.result.current.s.set('fechaDeseada', '2099-01-05'))
+    let creado: unknown = null
+    await act(async () => { creado = await r.result.current.s.enviar() })
+    expect(creado).toMatchObject({ _id: 'pedido-1abcdef' })
+  })
+
   it('un fallo de red muestra el mensaje propio, no el texto crudo, y conserva los datos', async () => {
     vi.mocked(api.postForm).mockRejectedValueOnce(new TypeError('Failed to fetch'))
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     await act(async () => { await r.result.current.s.enviar() })
     expect(r.result.current.s.errorEnvio).toBe(MENSAJE_ERROR_ENVIO)
     expect(r.result.current.s.campos.colores).toBe('dorado')
@@ -194,7 +238,7 @@ describe('useSolicitud: envio', () => {
   it('un 409 muestra el texto del servidor', async () => {
     vi.mocked(api.postForm).mockRejectedValueOnce(new ErrorApi('Ya recibimos este mismo pedido hace un momento.', 409))
     const r = montar()
-    await llegarAlRepaso(r)
+    llegarAlRepaso(r)
     await act(async () => { await r.result.current.s.enviar() })
     expect(r.result.current.s.errorEnvio).toBe('Ya recibimos este mismo pedido hace un momento.')
   })
