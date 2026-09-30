@@ -4,10 +4,12 @@ import {
   FAMILIAS,
   MEDIOS_PAGO,
   METODOS_ENTREGA,
+  TIPOS_IMAGEN,
   type EstadoPedido,
   type Familia,
   type MedioPago,
   type MetodoEntrega,
+  type TipoImagen,
 } from '../types/index.js'
 
 // ─── Subdocumentos ────────────────────────────────────────────────────────────
@@ -35,10 +37,10 @@ interface IDimensiones {
   esDimensionPersonalizada: boolean
 }
 
-// una por cada foto que el cliente adjunto al pedir - mimeType fijo porque upload.ts solo deja pasar JPG
+// una por cada foto que el cliente adjunto al pedir; mimeType es el real, ya verificado por upload.ts
 interface IImagenReferencia {
   nombreOriginal: string
-  mimeType: 'image/jpeg'
+  mimeType: TipoImagen
   tamano: number
   url: string
 }
@@ -129,7 +131,7 @@ const dimensionesSchema = new Schema<IDimensiones>(
 const imagenReferenciaSchema = new Schema<IImagenReferencia>(
   {
     nombreOriginal: { type: String, required: true },
-    mimeType: { type: String, default: 'image/jpeg' },
+    mimeType: { type: String, enum: TIPOS_IMAGEN, default: 'image/jpeg' },
     tamano: { type: Number, required: true },
     url: { type: String, required: true },
   },

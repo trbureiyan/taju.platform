@@ -27,6 +27,10 @@ export type MetodoEntrega = (typeof METODOS_ENTREGA)[number]
 export const MEDIOS_PAGO = ['efectivo', 'nequi', 'daviplata', 'bancolombia', 'otro'] as const
 export type MedioPago = (typeof MEDIOS_PAGO)[number]
 
+// formatos de imagen que acepta upload.ts para las referencias; el mismo string se guarda en el pedido
+export const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'] as const
+export type TipoImagen = (typeof TIPOS_IMAGEN)[number]
+
 // lo que va firmado dentro del token - sub es el id de Usuario, se llama asi por convencion JWT
 export interface JwtPayload {
   sub: string

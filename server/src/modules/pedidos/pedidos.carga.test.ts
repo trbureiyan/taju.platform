@@ -6,7 +6,7 @@ import { crearApp } from '../../app.js'
 import { Pedido } from '../../models/Pedido.js'
 import { signToken } from '../../lib/jwt.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba } from '../../test/mongo.js'
-import { crearCatalogoYCliente } from '../../test/fixtures.js'
+import { crearCatalogoYCliente, fechaFutura } from '../../test/fixtures.js'
 
 vi.mock('../../lib/cloudinary.js', () => ({
   subirImagen: vi.fn(async () => ({ url: 'https://res.cloudinary.test/taju/pedidos/ref.jpg', publicId: 'taju/pedidos/ref' })),
@@ -46,7 +46,7 @@ describe(`POST /api/pedidos con ${CONCURRENCIA} requests concurrentes del mismo 
       cantidad: '1',
       colores: 'dorado',
       materiales: 'acrílico espejo 3 mm',
-      fechaDeseada: '2026-12-12T17:00:00.000Z',
+      fechaDeseada: fechaFutura().toISOString(),
       telefono: '3192452842',
       entregaMetodo: 'recoger',
     }

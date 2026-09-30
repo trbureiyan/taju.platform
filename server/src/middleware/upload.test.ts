@@ -23,6 +23,21 @@ function jpegValido(bytes = 64): Buffer {
   return buf
 }
 
+// firma real de un PNG (89 50 4E 47 0D 0A 1A 0A) seguida de relleno
+function pngValido(bytes = 64): Buffer {
+  const buf = Buffer.alloc(bytes, 0)
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf)
+  return buf
+}
+
+// firma real de un WebP: "RIFF" + tamaño de 4 bytes + "WEBP"
+function webpValido(bytes = 64): Buffer {
+  const buf = Buffer.alloc(bytes, 0)
+  buf.write('RIFF', 0, 'ascii')
+  buf.write('WEBP', 8, 'ascii')
+  return buf
+}
+
 describe('uploadImagen', () => {
   it('deja pasar un JPEG real con mimetype image/jpeg', async () => {
     const res = await request(crearApp())
@@ -33,13 +48,52 @@ describe('uploadImagen', () => {
     expect(res.body.recibidos).toEqual(['torta.jpg'])
   })
 
-  it('rechaza un mimetype distinto de image/jpeg', async () => {
+  it('rechaza un mimetype que no sea JPG, PNG ni WebP', async () => {
     const res = await request(crearApp())
       .post('/subir')
-      .attach('imagenes', Buffer.from('\x89PNG\r\n'), { filename: 'torta.png', contentType: 'image/png' })
+      .attach('imagenes', Buffer.from('GIF89a'), { filename: 'torta.gif', contentType: 'image/gif' })
 
     expect(res.status).toBe(400)
-    expect(res.body.error).toMatch(/JPG/)
+    expect(res.body.error).toBe('Solo se aceptan imágenes JPG, PNG o WebP')
+  })
+
+  it('deja pasar un PNG real', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', pngValido(), { filename: 'torta.png', contentType: 'image/png' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.recibidos).toEqual(['torta.png'])
+  })
+
+  it('deja pasar un WebP real', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', webpValido(), { filename: 'torta.webp', contentType: 'image/webp' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.recibidos).toEqual(['torta.webp'])
+  })
+
+  it.each([
+    ['PNG', 'image/png', 'torta.png'],
+    ['WebP', 'image/webp', 'torta.webp'],
+  ])('rechaza un %s falso: declara el tipo pero los bytes no lo son', async (_nombre, contentType, filename) => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', Buffer.from('esto no es una imagen'), { filename, contentType })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Uno de los archivos no es una imagen JPG, PNG o WebP válida')
+  })
+
+  it('rechaza un archivo que declara PNG pero trae los bytes de un JPEG', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', jpegValido(), { filename: 'engano.png', contentType: 'image/png' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Uno de los archivos no es una imagen JPG, PNG o WebP válida')
   })
 
   it('rechaza un archivo de más de 5 MB con mensaje amigable', async () => {
@@ -64,7 +118,7 @@ describe('uploadImagen', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body.error).toBe('Uno de los archivos no es una imagen JPG válida')
+    expect(res.body.error).toBe('Uno de los archivos no es una imagen JPG, PNG o WebP válida')
   })
 
   it('rechaza el lote entero si uno solo de los archivos es falso', async () => {
