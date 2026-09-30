@@ -19,6 +19,8 @@ describe('mensajeResumenPedido', () => {
     expect(texto).toContain('Medida: 22 cm')
     expect(texto).toMatch(/Fecha deseada: sábado, 12 de diciembre/)
     expect(texto).toContain('Entrega: a domicilio (Cra 5 # 10-20)')
+    expect(texto).toContain('Referencias: Sin imágenes')
+    expect(texto).toContain('Celular: 319 245 2842')
     expect(texto).toContain('Descripción: Descripcion del pedido')
   })
 

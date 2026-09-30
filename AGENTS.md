@@ -28,6 +28,7 @@ taju.platform/
 │       │   ├── catalog/             # catalogo: tarjeta, estantes, barra de filtros, navegacion de familias
 │       │   ├── producto/            # detalle de producto: galeria, precio por escala, antes de pedir, especificaciones
 │       │   ├── orders/              # seguimiento de pedidos: tarjeta, linea de avance, linea de tiempo, entrega, acciones
+│       │   ├── pedido/              # solicitud de pedido: momentos, zona de referencias, tira de días, hoja de resumen
 │       │   ├── admin/               # panel de taller — tono neutro, sin acento rosa (AcuerdoDialog: fecha, entrega y anticipo; avisa sin bloquear una fecha en dia sin servicio)
 │       │   ├── vitrina/             # bloques de la landing en / + contenido.ts (texto por familia, fuente unica)
 │       │   └── shared/              # layout, nav, footer, EsperaTaller, feedback generico
