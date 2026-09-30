@@ -18,8 +18,9 @@ interface BarraAccionesProps {
 
 export function BarraAcciones({ paso, total = 4, onAtras, enviando, procesando = false }: BarraAccionesProps) {
   const esRepaso = paso === total
+  // valor arbitrario a proposito: en el iPhone el indicador de inicio tapa el borde inferior; la escala no tiene env()
   return (
-    <div className="fixed inset-x-0 bottom-0 z-encabezado border-t border-borde-sutil bg-superficie-base p-4 lg:static lg:border-0 lg:bg-transparent lg:p-0">
+    <div className="fixed inset-x-0 bottom-0 z-encabezado border-t border-borde-sutil bg-superficie-base p-4 pb-[calc(var(--space-4)+env(safe-area-inset-bottom))] lg:static lg:border-0 lg:bg-transparent lg:p-0">
       {enviando && (
         <p role="status" className="mb-2 text-center text-xs text-texto-secundario">
           Estamos enviando tu solicitud. No cierres esta página.

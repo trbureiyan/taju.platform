@@ -384,7 +384,9 @@ describe('PedidoFormPage | recorrido', () => {
 
   it('el formulario deja espacio abajo para la barra fija del movil', async () => {
     const { container } = await renderFormulario()
-    expect(container.querySelector('form')).toHaveClass('pb-24', 'lg:pb-0')
+    const form = container.querySelector('form')!
+    expect(form.className).toMatch(/pb-\[calc\(var\(--space-24\)\+var\(--space-8\)\+env\(safe-area-inset-bottom\)\)\]/)
+    expect(form).toHaveClass('lg:pb-0')
   })
 })
 

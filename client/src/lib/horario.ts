@@ -11,6 +11,16 @@ const MINUTO_MS = 60_000
 const HORA_MS = 60 * MINUTO_MS
 const DIA_MS = 24 * HORA_MS
 
+/** Tope de dias que recorren las busquedas de dias con servicio: un año basta con cualquier horario real. */
+export const MAX_DIAS_BUSQUEDA = 366
+
+// una tabla sin dias con servicio (edicion equivocada de politicas.ts) colgaria la pestaña: falla con un error claro
+function sinDiasConServicio(): Error {
+  return new Error(
+    `No hay ningún día con servicio en ${MAX_DIAS_BUSQUEDA} días: revisa HORARIO_SEMANAL y CIERRES_ADICIONALES en lib/politicas.ts`,
+  )
+}
+
 const formatoBogota = new Intl.DateTimeFormat('en-US', {
   timeZone: ZONA,
   year: 'numeric',
@@ -80,13 +90,12 @@ export function esDiaConServicio(fecha: string): boolean {
  * @returns `fecha` YYYY-MM-DD, `instante` a esa misma hora, y `dias` desde el dia de `desde`.
  */
 export function siguienteDiaConServicio(desde: Date): { fecha: string; instante: Date; dias: number } {
-  let dias = 1
-  for (;;) {
+  for (let dias = 1; dias <= MAX_DIAS_BUSQUEDA; dias += 1) {
     const instante = new Date(desde.getTime() + dias * DIA_MS)
     const { fecha } = relojBogota(instante)
     if (esDiaConServicio(fecha)) return { fecha, instante, dias }
-    dias += 1
   }
+  throw sinDiasConServicio()
 }
 
 /** Dia minimo que puede elegir el cliente para la fecha deseada: el siguiente con servicio, hoy no alcanza. */
@@ -120,6 +129,7 @@ export function diasConServicio(desde: string, cantidad: number): string[] {
   const [anio, mes, dia] = desde.split('-').map(Number)
   const dias: string[] = []
   for (let i = 0; dias.length < cantidad; i += 1) {
+    if (i > MAX_DIAS_BUSQUEDA) throw sinDiasConServicio()
     const fecha = new Date(Date.UTC(anio, mes - 1, dia + i)).toISOString().slice(0, 10)
     if (esDiaConServicio(fecha)) dias.push(fecha)
   }
@@ -142,6 +152,7 @@ export function explicarDiaSinServicio(fecha: string): string {
   const siguiente = fechaEnPalabras(siguienteDiaConServicio(new Date(`${fecha}T12:00:00-05:00`)).fecha)
   const dia = diaDeLaSemana(fecha)
   if (!HORARIO_SEMANAL[dia]) {
+    // asume que el unico dia de la semana sin servicio es el domingo: revisar si cambia HORARIO_SEMANAL
     return `Los domingos no hay servicio, así que no podemos entregarte ese día. El siguiente día disponible es el ${siguiente}.`
   }
   if (dia === 1 && esFestivo(fecha)) {

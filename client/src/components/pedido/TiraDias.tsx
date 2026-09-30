@@ -74,6 +74,7 @@ export function TiraDias({ valor, onCambio, ahora, error }: TiraDiasProps) {
           )
         })}
       </div>
+      {/* texto fijo de la tabla actual: revisarlo si cambian HORARIO_SEMANAL o CIERRES_ADICIONALES (lib/politicas.ts) */}
       <p className="text-xs text-texto-secundario">No hay servicio los domingos ni los lunes festivos.</p>
       <Input
         label="Otra fecha"

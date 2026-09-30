@@ -119,8 +119,9 @@ export function PedidoFormPage() {
     invalido.focus()
   }, [fallos, paso])
 
+  // fuera del repaso la ventana de gracia no aplica; la marca de entrada se pone en el manejador (ver abajo)
   useEffect(() => {
-    entradaAlRepaso.current = paso === 4 ? Date.now() : 0
+    if (paso !== 4) entradaAlRepaso.current = 0
   }, [paso])
 
   // el formulario se desmonta al crear el pedido: sin mover el foco, el lector de pantalla no anuncia nada
@@ -132,7 +133,9 @@ export function PedidoFormPage() {
     e.preventDefault()
     // Enter en un campo de los momentos 1 a 3 avanza; solo el repaso envia
     if (paso < 4) {
-      solicitud.siguiente()
+      // la marca va aqui y no en un efecto de paso: react-router aplica la URL en una transicion, y un toque entre
+      // ese commit y el efecto leeria 0 y enviaria
+      if (solicitud.siguiente() && paso === 3) entradaAlRepaso.current = Date.now()
       return
     }
     // [DECISION] "Enviar mi pedido" ocupa el lugar de "Siguiente": un doble toque en el momento 3 enviaria sin que el
@@ -248,12 +251,13 @@ export function PedidoFormPage() {
       )}
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-12">
-        {/* pb-24: en el movil la barra de acciones es fija abajo y taparia el ultimo campo */}
+        {/* en el movil la barra de acciones es fija abajo (hasta 2 lineas de aviso, boton y el area segura del iPhone):
+            este relleno la despeja para que no tape el ultimo campo; valor arbitrario por el env() */}
         <form
           ref={formulario}
           onSubmit={alEnviarFormulario}
           noValidate
-          className="flex flex-col gap-6 pb-24 lg:col-span-2 lg:pb-0"
+          className="flex flex-col gap-6 pb-[calc(var(--space-24)+var(--space-8)+env(safe-area-inset-bottom))] lg:col-span-2 lg:pb-0"
         >
           {paso === 1 && <MomentoQue {...propsMomento} />}
           {paso === 2 && (

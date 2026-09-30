@@ -31,6 +31,11 @@ describe('BarraAcciones', () => {
     expect(screen.getByText('Estamos preparando tu imagen…')).toBeInTheDocument()
   })
 
+  it('fija en el movil, respeta el area segura inferior del iPhone', () => {
+    const { container } = render(<BarraAcciones paso={1} onAtras={vi.fn()} enviando={false} />)
+    expect((container.firstChild as HTMLElement).className).toMatch(/env\(safe-area-inset-bottom\)/)
+  })
+
   it('mientras envia se deshabilita y una linea dice por que', () => {
     render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
     expect(screen.getByRole('button', { name: /Enviando tu pedido/ })).toBeDisabled()
