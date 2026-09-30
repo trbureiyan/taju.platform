@@ -120,6 +120,39 @@ describe('AcuerdoDialog', () => {
     expect(onCerrar).not.toHaveBeenCalled()
   })
 
+  // el select tiene que mostrar exactamente la hora que se va a guardar, aunque no este en la lista del dia
+  describe('hora fuera de la lista del dia', () => {
+    const horaElegida = () =>
+      (screen.getByLabelText('Hora acordada') as HTMLSelectElement).selectedOptions[0]?.textContent ?? ''
+
+    it('una entrega guardada a las 6 p. m. (lista anterior) se muestra tal cual, no como "Sin hora"', () => {
+      // lunes 14 de diciembre de 2026, 18:00 en Bogota
+      renderizar(pedidoAdmin({ fechaEntrega: '2026-12-14T23:00:00.000Z' }))
+
+      expect(screen.getByLabelText('Hora acordada')).toHaveValue('18:00')
+      expect(horaElegida()).toMatch(/^6:00 p\. m\./)
+    })
+
+    it('al pasar de un dia entre semana a un sabado conserva las 5 p. m. y guarda esa misma hora', async () => {
+      patchMock.mockResolvedValueOnce(pedidoAdmin({}))
+      renderizar(pedidoAdmin({ _id: 'abc123' }))
+
+      fireEvent.change(screen.getByLabelText('Fecha acordada'), { target: { value: '2026-10-02' } })
+      await userEvent.selectOptions(screen.getByLabelText('Hora acordada'), '17:00')
+      fireEvent.change(screen.getByLabelText('Fecha acordada'), { target: { value: '2026-10-03' } })
+
+      expect(screen.getByLabelText('Hora acordada')).toHaveValue('17:00')
+      expect(horaElegida()).toMatch(/^5:00 p\. m\./)
+      expect(horaElegida()).toMatch(/fuera del horario/)
+
+      await guardar()
+      await waitFor(() => expect(patchMock).toHaveBeenCalled())
+      expect(patchMock.mock.calls[0][1]).toMatchObject({
+        fechaEntrega: new Date('2026-10-03T17:00:00-05:00').toISOString(),
+      })
+    })
+  })
+
   describe('dia sin servicio', () => {
     it('avisa que ese dia no hay servicio y no bloquea el guardado', async () => {
       patchMock.mockResolvedValueOnce(pedidoAdmin({}))
@@ -145,6 +178,18 @@ describe('AcuerdoDialog', () => {
       const horas = Array.from(screen.getByLabelText('Hora acordada').querySelectorAll('option')).map((o) => o.textContent)
       expect(horas).toContain('8:00 a. m.')
       expect(horas).toContain('5:00 p. m.')
+    })
+
+    it('el aviso describe el campo de fecha solo mientras se muestra', () => {
+      renderizar(pedidoAdmin({ estado: 'en_revision' }))
+      const campoFecha = screen.getByLabelText('Fecha acordada')
+      expect(campoFecha).not.toHaveAccessibleDescription(/no hay servicio/i)
+
+      fireEvent.change(campoFecha, { target: { value: '2026-10-04' } })
+      expect(campoFecha).toHaveAccessibleDescription(/ese día no hay servicio según el horario del taller/i)
+
+      fireEvent.change(campoFecha, { target: { value: '2026-10-05' } })
+      expect(campoFecha).not.toHaveAccessibleDescription(/no hay servicio/i)
     })
 
     it('no muestra el aviso en un dia con servicio y el sabado termina a las 3 p. m.', () => {
