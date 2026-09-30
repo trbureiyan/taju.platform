@@ -13,6 +13,7 @@ export function MomentoComo({
   errores,
   set,
   tituloRef,
+  intento,
   archivos,
   cambiarArchivos,
   desdeOtroPedido = false,
@@ -27,7 +28,7 @@ export function MomentoComo({
       <h2 ref={tituloRef} tabIndex={-1} className={CLASE_TITULO}>
         Cómo lo imaginas
       </h2>
-      <AvisoErrores errores={errores} />
+      <AvisoErrores key={intento} errores={errores} />
       {desdeOtroPedido && (
         <p className="text-xs text-texto-secundario">
           Si quieres usar las mismas imágenes de referencia, adjúntalas de nuevo.

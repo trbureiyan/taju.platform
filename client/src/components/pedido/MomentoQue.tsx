@@ -5,7 +5,7 @@ import { AvisoErrores } from './AvisoErrores'
 import { cantidadMinimaDe } from '../../lib/requisitos'
 import { CLASE_TITULO, type PropsMomento } from './tipos'
 
-export function MomentoQue({ producto, campos, errores, set, tituloRef }: PropsMomento) {
+export function MomentoQue({ producto, campos, errores, set, tituloRef, intento }: PropsMomento) {
   const dimensiones = producto.categoria.dimensionesBase
   const personalizada = !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
   const minimo = cantidadMinimaDe(producto.precio)
@@ -15,7 +15,7 @@ export function MomentoQue({ producto, campos, errores, set, tituloRef }: PropsM
       <h2 ref={tituloRef} tabIndex={-1} className={CLASE_TITULO}>
         Qué necesitas
       </h2>
-      <AvisoErrores errores={errores} />
+      <AvisoErrores key={intento} errores={errores} />
 
       <fieldset className="flex flex-col gap-3">
         <legend className="text-sm font-medium text-texto-principal">Medida</legend>

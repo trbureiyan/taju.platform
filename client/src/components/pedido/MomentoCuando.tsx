@@ -7,7 +7,7 @@ import { TiraDias } from './TiraDias'
 import { horaEnPalabras, horasDeEntrega } from '../../lib/horario'
 import { CLASE_TITULO, type PropsMomento } from './tipos'
 
-export function MomentoCuando({ producto, campos, errores, set, tituloRef }: PropsMomento) {
+export function MomentoCuando({ producto, campos, errores, set, tituloRef, intento }: PropsMomento) {
   // las horas son las del dia elegido; sin un dia con servicio no hay horas que ofrecer
   const horas = horasDeEntrega(campos.fechaDeseada)
   // si el dia cambia y la hora ya no existe (el sabado cierra antes), el select vuelve a "Elige una hora"
@@ -18,7 +18,7 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef }: Pro
       <h2 ref={tituloRef} tabIndex={-1} className={CLASE_TITULO}>
         Cuándo y dónde
       </h2>
-      <AvisoErrores errores={errores} />
+      <AvisoErrores key={intento} errores={errores} />
 
       <fieldset className="flex flex-col gap-3">
         <legend className="text-sm font-medium text-texto-principal">Cómo recibes tu pedido</legend>

@@ -10,6 +10,8 @@ export interface PropsMomento {
   set: (campo: keyof Campos, valor: string) => void
   // el titulo recibe el foco al llegar al momento
   tituloRef: RefObject<HTMLHeadingElement>
+  // intentos fallidos de avanzar (useSolicitud().fallos): remonta el aviso de errores para que se anuncie otra vez
+  intento?: number
 }
 
 /** Clase del titulo (h2) de cada momento; outline-none porque recibe el foco por codigo, no por teclado. */
