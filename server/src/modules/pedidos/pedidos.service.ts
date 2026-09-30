@@ -8,7 +8,7 @@ import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { FLUJO_PEDIDO, type EstadoPedido, type MedioPago, type MetodoEntrega, type TipoImagen } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
-import { faltantesDeSolicitud } from './pedidos.requisitos.js'
+import { cantidadMinimaDe, faltantesDeSolicitud } from './pedidos.requisitos.js'
 
 // ─── Creacion ─────────────────────────────────────────────────────────────────
 
@@ -91,6 +91,8 @@ export async function crearPedido(input: CrearPedidoInput) {
     familia: categoria.familia,
     fechaDeseada: input.fechaDeseada,
     cantidadReferencias: input.archivos.length,
+    cantidad: input.cantidad,
+    cantidadMinima: cantidadMinimaDe(producto.precio?.escalas ?? []),
   })
   if (faltan.length > 0) throw new AppError(400, faltan.join(' '))
 

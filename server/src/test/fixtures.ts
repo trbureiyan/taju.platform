@@ -4,13 +4,26 @@ import { Producto } from '../models/Producto.js'
 import { Usuario } from '../models/Usuario.js'
 import type { Familia, MetodoEntrega } from '../types/index.js'
 
+/** Una fecha futura estable para los tests: dentro de 30 dias, a mediodia de Bogota. Nunca queda en el pasado. */
+export function fechaFutura(dias = 30): Date {
+  const d = new Date(Date.now() + dias * 86_400_000)
+  d.setUTCHours(17, 0, 0, 0)
+  return d
+}
+
 /** Crea categoria + producto activos y un cliente, lo minimo que crearPedido necesita para no rechazar. */
-export async function crearCatalogoYCliente(familia: Familia = 'toppers') {
+export async function crearCatalogoYCliente(
+  familia: Familia = 'toppers',
+  precio: { unitario: number | null; escalas: { cantidadMinima: number; precioUnitario: number }[] } = {
+    unitario: 35000,
+    escalas: [],
+  },
+) {
   const categoria = await Categoria.create({ nombre: 'Toppers de acrílico', familia })
   const producto = await Producto.create({
     nombre: 'Topper nombre en espejo dorado',
     categoria: categoria._id,
-    precio: { unitario: 35000, escalas: [] },
+    precio,
   })
   const cliente = await Usuario.create({
     nombre: 'Laura',
@@ -30,7 +43,7 @@ export function inputPedido(ids: { clienteId: string; productoId: string; catego
     cantidad: 1,
     colores: 'dorado',
     materiales: 'acrílico espejo 3 mm',
-    fechaDeseada: new Date('2026-12-12T17:00:00.000Z') as Date | null,
+    fechaDeseada: fechaFutura() as Date | null,
     telefono: '3192452842',
     entregaMetodo: 'recoger' as MetodoEntrega,
     entregaDetalle: '',

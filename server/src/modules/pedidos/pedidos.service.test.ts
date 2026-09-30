@@ -16,7 +16,7 @@ import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { FLUJO_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba, limpiarColecciones } from '../../test/mongo.js'
-import { crearCatalogoYCliente, inputPedido } from '../../test/fixtures.js'
+import { crearCatalogoYCliente, fechaFutura, inputPedido } from '../../test/fixtures.js'
 
 // politica de AGENTS.md: ninguna llamada real a Cloudinary en tests
 vi.mock('../../lib/cloudinary.js', () => ({
@@ -218,7 +218,7 @@ describe('crearPedido', () => {
     const pedido = await Pedido.findById(creado._id).lean()
     expect(pedido!.contacto).toEqual({ nombre: 'Laura', telefono: '3192452842' })
     expect(pedido!.entrega).toEqual({ metodo: 'domicilio', detalle: 'Cra 5 # 10-20' })
-    expect(pedido!.fechaDeseada!.toISOString()).toBe('2026-12-12T17:00:00.000Z')
+    expect(pedido!.fechaDeseada!.toISOString()).toBe(input.fechaDeseada!.toISOString())
     expect(pedido!.fechaEntrega).toBeNull()
     expect(pedido!.pago).toBeNull()
     expect(pedido!.contactadoEn).toBeNull()
@@ -357,7 +357,7 @@ describe('crearPedido', () => {
 
     await crearPedido(input)
     await crearPedido({ ...input, cantidad: 2 })
-    await crearPedido({ ...input, fechaDeseada: new Date('2026-12-19T17:00:00.000Z') })
+    await crearPedido({ ...input, fechaDeseada: fechaFutura(37) })
 
     expect(await Pedido.countDocuments()).toBe(3)
   })
@@ -402,6 +402,48 @@ describe('crearPedido', () => {
 
     falla.mockRestore()
     expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
+  })
+
+  describe('minimo de la familia y fecha', () => {
+    async function superficies(cantidad: number) {
+      const { categoria, producto, cliente } = await crearCatalogoYCliente('superficies', {
+        unitario: null,
+        escalas: [{ cantidadMinima: 12, precioUnitario: 9000 }],
+      })
+      const input = inputPedido({ clienteId: cliente.id, productoId: producto.id, categoriaId: categoria.id })
+      return { ...input, cantidad }
+    }
+
+    it('rechaza 5 unidades de superficies: el minimo sale de la escala del producto', async () => {
+      await expect(crearPedido(await superficies(5))).rejects.toThrow(/desde 12 unidades/)
+      expect(await Pedido.countDocuments()).toBe(0)
+    })
+
+    it('acepta 12 unidades de superficies', async () => {
+      const pedido = await crearPedido(await superficies(12))
+      expect(pedido.cantidad).toBe(12)
+    })
+
+    it('un producto sin escalas se pide desde 1 unidad', async () => {
+      const { input } = await pedidoBase()
+      const pedido = await crearPedido({ ...input, cantidad: 1 })
+      expect(pedido.cantidad).toBe(1)
+    })
+
+    it('rechaza una fecha deseada en el pasado, sin subir imagenes', async () => {
+      const { input } = await pedidoBase()
+      await expect(crearPedido({ ...input, fechaDeseada: new Date('2020-01-01T15:00:00.000Z') })).rejects.toThrow(
+        /ya pasó/,
+      )
+      expect(subirImagen).not.toHaveBeenCalled()
+    })
+
+    it('acepta un domingo: el servidor no rechaza dias sin servicio', async () => {
+      const { input } = await pedidoBase()
+      // domingo 6 de enero de 2030
+      const pedido = await crearPedido({ ...input, fechaDeseada: new Date('2030-01-06T15:00:00.000Z') })
+      expect(pedido.fechaDeseada!.toISOString()).toBe('2030-01-06T15:00:00.000Z')
+    })
   })
 })
 
@@ -517,6 +559,14 @@ describe('compuertas de updateEstado', () => {
     await updateEstado(id, 'confirmado', admin)
 
     expect((await Pedido.findById(id).lean())!.estado).toBe('confirmado')
+  })
+
+  it('la fecha de entrega acordada no se valida contra el calendario: un domingo confirma', async () => {
+    const id = await solicitudEn('en_revision')
+    await Pedido.updateOne({ _id: id }, { contactadoEn: new Date() })
+    await registrarAcuerdo(id, { fechaEntrega: new Date('2030-01-06T15:00:00.000Z') })
+    const confirmado = await updateEstado(id, 'confirmado', admin)
+    expect(confirmado!.estado).toBe('confirmado')
   })
 
   it('no pasa a produccion sin anticipo registrado', async () => {
