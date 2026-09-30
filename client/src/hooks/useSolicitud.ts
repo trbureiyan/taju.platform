@@ -93,6 +93,8 @@ export function useSolicitud(producto: Producto | null) {
       if (Object.keys(encontrados).length > 0) {
         setErrores(encontrados)
         setFallos((n) => n + 1)
+        // enviar valido los momentos anteriores: sin esto el tope de la URL deja al cliente atras de sus errores
+        setValidadoHasta((v) => Math.max(v, numero - 1))
         irAlPaso(numero)
         return null
       }

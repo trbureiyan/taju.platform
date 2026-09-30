@@ -1,5 +1,5 @@
 import { HojaResumen } from './HojaResumen'
-import { calcularPrecioTotal } from '../../lib/precio'
+import { calcularPrecioTotal, formatearPesos } from '../../lib/precio'
 import { exigeReferencia } from '../../lib/requisitos'
 import { resumenDesdeCampos } from '../../lib/resumenPedido'
 import { CLASE_TITULO, type PropsMomento } from './tipos'
@@ -31,10 +31,10 @@ export function MomentoRepaso({
         <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">
           <p className="text-sm text-texto-secundario">Precio estimado</p>
           <p className="text-lg font-semibold text-texto-principal tabular-nums">
-            ${precio.total.toLocaleString('es-CO')}
+            {formatearPesos(precio.total)}
           </p>
           <p className="text-xs text-texto-tenue">
-            ${precio.unitario.toLocaleString('es-CO')} c/u × {campos.cantidad}. Es una referencia: el precio final lo
+            {formatearPesos(precio.unitario)} c/u × {campos.cantidad}. Es una referencia: el precio final lo
             confirmamos contigo.
           </p>
         </div>

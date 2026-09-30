@@ -210,6 +210,18 @@ describe('useSolicitud: envio', () => {
     expect(r.result.current.s.errores.descripcion).toBeDefined()
   })
 
+  it('enviar desde el paso 2 con el momento 3 incompleto lleva al paso 3 con sus errores', async () => {
+    const r = montar()
+    llenarMomento1(r)
+    act(() => { r.result.current.s.siguiente() })
+    llenarMomento2(r)
+    await act(async () => { await r.result.current.s.enviar() })
+    expect(api.postForm).not.toHaveBeenCalled()
+    expect(r.result.current.s.paso).toBe(3)
+    expect(r.result.current.url).toContain('paso=3')
+    expect(r.result.current.s.errores.telefono).toBeDefined()
+  })
+
   it('si armar la solicitud falla, el formulario no queda bloqueado', async () => {
     const r = montar()
     llegarAlRepaso(r)

@@ -91,10 +91,12 @@ export function validarMomento(
 
   if (numero === 3) {
     const errorFecha = validarFechaDeseada(campos.fechaDeseada, ahora)
-    if (errorFecha) e.fechaDeseada = errorFecha
-    if (!campos.horaDeseada) {
+    if (errorFecha) {
+      // con la fecha en error el selector de hora esta apagado y este mensaje ya dice que hacer: no se suma otro
+      e.fechaDeseada = errorFecha
+    } else if (!campos.horaDeseada) {
       e.horaDeseada = 'Elige la hora en que la necesitas. Con ella coordinamos la entrega.'
-    } else if (!errorFecha && !horasDeEntrega(campos.fechaDeseada).includes(Number(campos.horaDeseada.slice(0, 2)))) {
+    } else if (!horasDeEntrega(campos.fechaDeseada).includes(Number(campos.horaDeseada.slice(0, 2)))) {
       e.horaDeseada = 'Esa hora no está disponible ese día. Elige otra de la lista.'
     }
     if (!REGEX_CELULAR.test(normalizarCelular(campos.telefono))) e.telefono = MENSAJE_CELULAR
