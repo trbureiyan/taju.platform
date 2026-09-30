@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { exigeReferencia, normalizarCelular, REGEX_CELULAR } from './requisitos'
+import {
+  cantidadMinimaDe,
+  exigeReferencia,
+  mensajeCantidadMinima,
+  MENSAJE_FECHA_PASADA,
+  normalizarCelular,
+  REGEX_CELULAR,
+} from './requisitos'
 
 // [Review Focus] celular pegado con espacios, guiones o +57
 describe('normalizarCelular', () => {
@@ -30,5 +37,24 @@ describe('exigeReferencia', () => {
     expect(exigeReferencia('superficies')).toBe(false)
     expect(exigeReferencia('senaletica')).toBe(false)
     expect(exigeReferencia('papeleria')).toBe(false)
+  })
+})
+
+describe('minimo por escala', () => {
+  it('cantidadMinimaDe usa la menor escala, o 1 sin escalas', () => {
+    expect(cantidadMinimaDe({ unitario: null, escalas: [{ cantidadMinima: 50, precioUnitario: 8000 }, { cantidadMinima: 12, precioUnitario: 9000 }] })).toBe(12)
+    expect(cantidadMinimaDe({ unitario: 35000, escalas: [] })).toBe(1)
+  })
+
+  it('el mensaje dice que paso, por que y que hacer, igual que el del servidor', () => {
+    expect(mensajeCantidadMinima(12)).toBe(
+      'Este producto se pide desde 12 unidades: el precio por escala solo aplica a partir de ahí. Sube la cantidad o escríbenos por WhatsApp si necesitas menos.',
+    )
+  })
+
+  it('el mensaje de fecha pasada coincide con el del servidor', () => {
+    expect(MENSAJE_FECHA_PASADA).toBe(
+      'Esa fecha ya pasó. Elige una a partir de mañana, que es lo mínimo que necesitamos para producir.',
+    )
   })
 })

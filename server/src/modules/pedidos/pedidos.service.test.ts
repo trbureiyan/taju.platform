@@ -16,7 +16,7 @@ import { AppError } from '../../lib/errors.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
 import { FLUJO_PEDIDO, type EstadoPedido } from '../../types/index.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba, limpiarColecciones } from '../../test/mongo.js'
-import { crearCatalogoYCliente, inputPedido } from '../../test/fixtures.js'
+import { crearCatalogoYCliente, fechaFutura, inputPedido } from '../../test/fixtures.js'
 
 // politica de AGENTS.md: ninguna llamada real a Cloudinary en tests
 vi.mock('../../lib/cloudinary.js', () => ({
@@ -218,7 +218,7 @@ describe('crearPedido', () => {
     const pedido = await Pedido.findById(creado._id).lean()
     expect(pedido!.contacto).toEqual({ nombre: 'Laura', telefono: '3192452842' })
     expect(pedido!.entrega).toEqual({ metodo: 'domicilio', detalle: 'Cra 5 # 10-20' })
-    expect(pedido!.fechaDeseada!.toISOString()).toBe('2026-12-12T17:00:00.000Z')
+    expect(pedido!.fechaDeseada!.toISOString()).toBe(input.fechaDeseada!.toISOString())
     expect(pedido!.fechaEntrega).toBeNull()
     expect(pedido!.pago).toBeNull()
     expect(pedido!.contactadoEn).toBeNull()
@@ -250,6 +250,16 @@ describe('crearPedido', () => {
 
     expect(subirImagen).toHaveBeenCalledOnce()
     expect(pedido.imagenesReferencia[0].url).toMatch(/^https:\/\/res\.cloudinary\.test\//)
+  })
+
+  it('guarda el tipo real de cada referencia: PNG y WebP no se anotan como JPEG', async () => {
+    const { input } = await pedidoBase()
+    const png = { originalname: 'ref.png', size: 10, buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]), mimetype: 'image/png' }
+    const webp = { originalname: 'ref.webp', size: 10, buffer: Buffer.from('RIFFxxxxWEBP'), mimetype: 'image/webp' }
+
+    const pedido = await crearPedido({ ...input, archivos: [png, webp] as Express.Multer.File[] })
+
+    expect(pedido.imagenesReferencia.map((i) => i.mimeType)).toEqual(['image/png', 'image/webp'])
   })
 
   it('rechaza con 409 el mismo pedido repetido dentro de la ventana', async () => {
@@ -347,7 +357,7 @@ describe('crearPedido', () => {
 
     await crearPedido(input)
     await crearPedido({ ...input, cantidad: 2 })
-    await crearPedido({ ...input, fechaDeseada: new Date('2026-12-19T17:00:00.000Z') })
+    await crearPedido({ ...input, fechaDeseada: fechaFutura(37) })
 
     expect(await Pedido.countDocuments()).toBe(3)
   })
@@ -392,6 +402,54 @@ describe('crearPedido', () => {
 
     falla.mockRestore()
     expect(eliminarImagen).toHaveBeenCalledWith('taju/pedidos/ref')
+  })
+
+  describe('minimo de la familia y fecha', () => {
+    async function superficies(cantidad: number) {
+      const { categoria, producto, cliente } = await crearCatalogoYCliente('superficies', {
+        unitario: null,
+        escalas: [{ cantidadMinima: 12, precioUnitario: 9000 }],
+      })
+      const input = inputPedido({ clienteId: cliente.id, productoId: producto.id, categoriaId: categoria.id })
+      return { ...input, cantidad }
+    }
+
+    it('rechaza 5 unidades de superficies: el minimo sale de la escala del producto', async () => {
+      const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+      const input = { ...(await superficies(5)), archivos: [archivo as Express.Multer.File] }
+      await expect(crearPedido(input)).rejects.toThrow(/desde 12 unidades/)
+      expect(subirImagen).not.toHaveBeenCalled()
+      expect(await Pedido.countDocuments()).toBe(0)
+    })
+
+    it('acepta 12 unidades de superficies', async () => {
+      const pedido = await crearPedido(await superficies(12))
+      expect(pedido.cantidad).toBe(12)
+    })
+
+    it('un producto sin escalas se pide desde 1 unidad', async () => {
+      const { input } = await pedidoBase()
+      const pedido = await crearPedido({ ...input, cantidad: 1 })
+      expect(pedido.cantidad).toBe(1)
+    })
+
+    it('rechaza una fecha deseada en el pasado, sin subir imagenes', async () => {
+      const { input } = await pedidoBase()
+      const archivo = { originalname: 'ref.jpg', size: 10, buffer: Buffer.from([0xff, 0xd8, 0xff]), mimetype: 'image/jpeg' }
+      await expect(
+        crearPedido({ ...input, fechaDeseada: new Date('2020-01-01T15:00:00.000Z'), archivos: [archivo as Express.Multer.File] }),
+      ).rejects.toThrow(/ya pasó/)
+      expect(subirImagen).not.toHaveBeenCalled()
+    })
+
+    it('acepta un domingo: el servidor no rechaza dias sin servicio', async () => {
+      const { input } = await pedidoBase()
+      // primer domingo a partir de dentro de 30 dias: siempre futuro, sin fecha fija que caduque
+      const domingo = fechaFutura()
+      while (domingo.getUTCDay() !== 0) domingo.setUTCDate(domingo.getUTCDate() + 1)
+      const pedido = await crearPedido({ ...input, fechaDeseada: domingo })
+      expect(pedido.fechaDeseada!.toISOString()).toBe(domingo.toISOString())
+    })
   })
 })
 
@@ -507,6 +565,14 @@ describe('compuertas de updateEstado', () => {
     await updateEstado(id, 'confirmado', admin)
 
     expect((await Pedido.findById(id).lean())!.estado).toBe('confirmado')
+  })
+
+  it('la fecha de entrega acordada no se valida contra el calendario: un domingo confirma', async () => {
+    const id = await solicitudEn('en_revision')
+    await Pedido.updateOne({ _id: id }, { contactadoEn: new Date() })
+    await registrarAcuerdo(id, { fechaEntrega: new Date('2030-01-06T15:00:00.000Z') })
+    const confirmado = await updateEstado(id, 'confirmado', admin)
+    expect(confirmado!.estado).toBe('confirmado')
   })
 
   it('no pasa a produccion sin anticipo registrado', async () => {

@@ -5,14 +5,25 @@ import { useId, type InputHTMLAttributes } from 'react'
  * @prop label - Etiqueta visible asociada al input mediante htmlFor.
  * @prop error - Mensaje de error; activa aria-invalid y muestra el mensaje en rojo. Oculta hint.
  * @prop hint - Texto de ayuda secundario; se muestra cuando no hay error activo.
+ * @prop anunciarError - Por defecto true. Si es false el error se muestra sin role=alert; lo usa el formulario por momentos, que anuncia un solo aviso de resumen.
  */
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
   hint?: string
+  anunciarError?: boolean
 }
 
-export function Input({ label, error, hint, id, className = '', ...props }: InputProps) {
+export function Input({
+  label,
+  error,
+  hint,
+  anunciarError = true,
+  id,
+  className = '',
+  'aria-describedby': describedByExterno,
+  ...props
+}: InputProps) {
   // useId en vez de derivar del label - dos Input con la misma etiqueta (ej. "Nombre" en dos formularios
   // distintos de la misma pagina) no deben terminar compartiendo id/aria-describedby
   const idGenerado = useId()
@@ -28,8 +39,8 @@ export function Input({ label, error, hint, id, className = '', ...props }: Inpu
       </label>
       <input
         id={inputId}
-        // encadena hint y error en un solo aria-describedby - un lector de pantalla lee ambos si aplican
-        aria-describedby={[hintId, errorId].filter(Boolean).join(' ') || undefined}
+        // encadena hint, error y el aviso externo que pase quien usa el campo - un lector de pantalla lee todos
+        aria-describedby={[hintId, errorId, describedByExterno].filter(Boolean).join(' ') || undefined}
         aria-invalid={error ? true : undefined}
         className={[
           'w-full rounded-campo border px-3 py-2 text-base text-texto-principal',
@@ -50,7 +61,7 @@ export function Input({ label, error, hint, id, className = '', ...props }: Inpu
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-xs text-error-texto" role="alert">
+        <p id={errorId} className="text-xs text-error-texto" role={anunciarError ? 'alert' : undefined}>
           {error}
         </p>
       )}

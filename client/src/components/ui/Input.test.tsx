@@ -65,4 +65,35 @@ describe('Input', () => {
     render(<Input label="Colores" />)
     expect(screen.getByLabelText('Colores').className).toMatch(/\bmin-h-boton\b/)
   })
+
+  it('con anunciarError={false} el error se muestra enlazado pero sin role="alert"', () => {
+    render(<Input label="Colores" error="Indica los colores." anunciarError={false} />)
+    expect(screen.getByLabelText('Colores')).toHaveAccessibleDescription('Indica los colores.')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('por defecto el error sigue anunciandose como alerta', () => {
+    render(<Input label="Colores" error="Indica los colores." />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Indica los colores.')
+  })
+
+  it('encadena el aria-describedby externo con el hint', () => {
+    render(
+      <>
+        <p id="externo">Aviso externo</p>
+        <Input label="Colores" hint="Los colores principales" aria-describedby="externo" />
+      </>,
+    )
+    expect(screen.getByLabelText('Colores')).toHaveAccessibleDescription('Los colores principales Aviso externo')
+  })
+
+  it('encadena el aria-describedby externo con el error', () => {
+    render(
+      <>
+        <p id="externo">Aviso externo</p>
+        <Input label="Colores" error="Indica los colores." aria-describedby="externo" />
+      </>,
+    )
+    expect(screen.getByLabelText('Colores')).toHaveAccessibleDescription('Indica los colores. Aviso externo')
+  })
 })

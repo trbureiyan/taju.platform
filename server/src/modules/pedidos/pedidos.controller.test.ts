@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net'
 import { crearApp } from '../../app.js'
 import { signToken } from '../../lib/jwt.js'
 import { conectarMongoDePrueba, desconectarMongoDePrueba, limpiarColecciones } from '../../test/mongo.js'
-import { crearCatalogoYCliente } from '../../test/fixtures.js'
+import { crearCatalogoYCliente, fechaFutura } from '../../test/fixtures.js'
 
 // politica de AGENTS.md: ninguna llamada real a Cloudinary en tests
 vi.mock('../../lib/cloudinary.js', () => ({
@@ -42,7 +42,7 @@ async function enviar(cambios: Record<string, string>) {
     cantidad: '30',
     colores: 'dorado',
     materiales: 'cartulina',
-    fechaDeseada: '2026-12-12T17:00:00.000Z',
+    fechaDeseada: fechaFutura().toISOString(),
     telefono: '3192452842',
     entregaMetodo: 'recoger',
     ...cambios,

@@ -8,17 +8,19 @@ import { forwardRef, useId } from 'react'
  * @prop error - Mensaje de error; cuando presente, aria-invalid se activa y se muestra en lugar del texto de ayuda.
  * @prop ayuda - Texto de ayuda; se oculta si hay error activo.
  * @prop rows - Número de filas visibles del textarea; por defecto 4.
+ * @prop anunciarError - Por defecto true. Si es false el error se muestra sin role=alert; lo usa el formulario por momentos, que anuncia un solo aviso de resumen.
  */
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string
   error?: string
   ayuda?: string
   rows?: number
+  anunciarError?: boolean
 }
 
 // forwardRef porque react-hook-form (o similar) necesita enganchar el ref directo al textarea
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, ayuda, rows = 4, className, id: idExterno, ...props }, ref) => {
+  ({ label, error, ayuda, rows = 4, anunciarError = true, className, id: idExterno, ...props }, ref) => {
     const idGenerado = useId() // React genera el id, evita colisiones si el mismo formulario repite el componente
     // si el caller pasa id, se respeta; si no, se usa el generado — igual que Input.tsx
     const id = idExterno ?? idGenerado
@@ -49,7 +51,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p id={`${id}-error`} role="alert" className="text-xs text-error-texto">
+          <p id={`${id}-error`} role={anunciarError ? 'alert' : undefined} className="text-xs text-error-texto">
             {error}
           </p>
         )}

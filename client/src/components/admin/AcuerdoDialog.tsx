@@ -1,25 +1,21 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { api } from '../../lib/api'
 import type { MedioPago, MetodoEntrega, PedidoAdmin } from '../../types'
 import { ETIQUETAS_MEDIO_PAGO, MEDIOS_PAGO } from '../../types'
 import { codigoPedido, fechaConHora } from '../../lib/pedido'
 import { isoDesdePartes, mensajeDeError, partesBogota } from '../../lib/pedidoAdmin'
-import { ANTICIPO_PORCENTAJE, HORAS_DE_ENTREGA } from '../../lib/politicas'
-import { horaEnPalabras } from '../../lib/horario'
+import { ANTICIPO_PORCENTAJE } from '../../lib/politicas'
+import { esDiaConServicio, horaEnPalabras, horasParaAcordar } from '../../lib/horario'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { useSnackbar } from '../ui/Snackbar'
 
-const OPCIONES_HORA = HORAS_DE_ENTREGA.map((h) => ({
-  valor: `${String(h).padStart(2, '0')}:00`,
-  texto: horaEnPalabras(h),
-}))
-
 /**
  * Diálogo del panel de Taller para asentar lo que se acordó por fuera con el cliente: fecha y hora, entrega
- * y anticipo. La plataforma es el registro canónico; WhatsApp es solo la conversación.
+ * y anticipo. La plataforma es el registro canónico; WhatsApp es solo la conversación. Una fecha en día sin
+ * servicio se avisa pero no se bloquea: la promete el taller y una entrega excepcional es real.
  * @prop pedido - Pedido a editar, o null con el diálogo cerrado.
  * @prop onCerrar - Cierra el diálogo.
  * @prop onGuardado - Recibe el pedido actualizado que devolvió el server.
@@ -63,6 +59,20 @@ function FormularioAcuerdo({
   const [errores, setErrores] = useState<{ fecha?: string; monto?: string }>({})
   const [guardando, setGuardando] = useState(false)
   const { avisar } = useSnackbar()
+
+  // las horas son las del dia elegido; en un dia sin servicio, las de un dia ordinario (la excepcion la promete el taller)
+  const opcionesHora = horasParaAcordar(fecha).map((h) => ({
+    valor: `${String(h).padStart(2, '0')}:00`,
+    texto: horaEnPalabras(h),
+  }))
+  // una hora que ya estaba (dato anterior, o elegida antes de cambiar el dia) y no esta en la lista del dia se
+  // agrega marcada: sin ella el select mostraria "Sin hora" y el guardado mandaria la hora oculta
+  if (hora && !opcionesHora.some((o) => o.valor === hora)) {
+    opcionesHora.push({ valor: hora, texto: `${horaEnPalabras(Number(hora.slice(0, 2)))} (fuera del horario de ese día)` })
+    opcionesHora.sort((a, b) => a.valor.localeCompare(b.valor))
+  }
+  const sinServicio = Boolean(fecha) && !esDiaConServicio(fecha)
+  const avisoId = useId()
 
   async function guardar(e: FormEvent) {
     e.preventDefault()
@@ -113,16 +123,22 @@ function FormularioAcuerdo({
           value={fecha}
           onChange={(e) => setFecha(e.target.value)}
           error={errores.fecha}
+          aria-describedby={sinServicio ? avisoId : undefined}
         />
         <Select label="Hora acordada" value={hora} onChange={(e) => setHora(e.target.value)}>
           <option value="">Sin hora</option>
-          {OPCIONES_HORA.map((o) => (
+          {opcionesHora.map((o) => (
             <option key={o.valor} value={o.valor}>
               {o.texto}
             </option>
           ))}
         </Select>
       </div>
+      {sinServicio && (
+        <p id={avisoId} role="status" className="text-xs text-aviso-texto">
+          Ese día no hay servicio según el horario del taller. Puedes registrarlo igual si lo acordaron así.
+        </p>
+      )}
 
       <Select label="Entrega" value={metodo} onChange={(e) => setMetodo(e.target.value as MetodoEntrega)}>
         <option value="recoger">Recoge en el taller</option>
