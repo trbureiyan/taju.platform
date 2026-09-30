@@ -13,6 +13,14 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef, inten
   // si el dia cambia y la hora ya no existe (el sabado cierra antes), el select vuelve a "Elige una hora"
   const horaVigente = horas.includes(Number(campos.horaDeseada.slice(0, 2))) ? campos.horaDeseada : ''
 
+  // una hora guardada que el nuevo dia no ofrece se borra: el select, la hoja de resumen y la validacion deben coincidir
+  function cambiarDia(fecha: string) {
+    set('fechaDeseada', fecha)
+    if (campos.horaDeseada && !horasDeEntrega(fecha).includes(Number(campos.horaDeseada.slice(0, 2)))) {
+      set('horaDeseada', '')
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <h2 ref={tituloRef} tabIndex={-1} className={CLASE_TITULO}>
@@ -52,7 +60,7 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef, inten
         )}
       </fieldset>
 
-      <TiraDias valor={campos.fechaDeseada} onCambio={(fecha) => set('fechaDeseada', fecha)} error={errores.fechaDeseada} />
+      <TiraDias valor={campos.fechaDeseada} onCambio={cambiarDia} error={errores.fechaDeseada} />
 
       <Select
         label="Hora en que la necesitas"

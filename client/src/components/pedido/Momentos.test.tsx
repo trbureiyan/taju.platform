@@ -135,6 +135,35 @@ describe('MomentoCuando', () => {
     expect(horas[horas.length - 1]).toBe('3:00 p. m.')
   })
 
+  // [CodeRabbit] cambiar el dia deja guardada una hora que ya no existe ese dia: la hoja de resumen la mostraria
+  // mientras el select dice "Elige una hora"
+  describe('al cambiar de dia', () => {
+    async function elegirSabado(hora: string) {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-09-30T10:00:00-05:00'))
+      try {
+        const p = props({ campos: { fechaDeseada: '2026-10-09', horaDeseada: hora } })
+        render(<MomentoCuando {...p} />)
+        await userEvent.click(screen.getByRole('radio', { name: 'sábado, 10 de octubre' }))
+        return p
+      } finally {
+        vi.useRealTimers()
+      }
+    }
+
+    it('borra la hora guardada si ese dia no la ofrece (el sabado cierra antes)', async () => {
+      const p = await elegirSabado('17:00')
+      expect(p.set).toHaveBeenCalledWith('fechaDeseada', '2026-10-10')
+      expect(p.set).toHaveBeenCalledWith('horaDeseada', '')
+    })
+
+    it('conserva la hora guardada si ese dia tambien la ofrece', async () => {
+      const p = await elegirSabado('10:00')
+      expect(p.set).toHaveBeenCalledWith('fechaDeseada', '2026-10-10')
+      expect(p.set).not.toHaveBeenCalledWith('horaDeseada', '')
+    })
+  })
+
   it('el celular usa teclado numerico y autocompletado', () => {
     render(<MomentoCuando {...props()} />)
     const celular = screen.getByLabelText('Tu celular')
