@@ -252,6 +252,16 @@ describe('crearPedido', () => {
     expect(pedido.imagenesReferencia[0].url).toMatch(/^https:\/\/res\.cloudinary\.test\//)
   })
 
+  it('guarda el tipo real de cada referencia: PNG y WebP no se anotan como JPEG', async () => {
+    const { input } = await pedidoBase()
+    const png = { originalname: 'ref.png', size: 10, buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]), mimetype: 'image/png' }
+    const webp = { originalname: 'ref.webp', size: 10, buffer: Buffer.from('RIFFxxxxWEBP'), mimetype: 'image/webp' }
+
+    const pedido = await crearPedido({ ...input, archivos: [png, webp] as Express.Multer.File[] })
+
+    expect(pedido.imagenesReferencia.map((i) => i.mimeType)).toEqual(['image/png', 'image/webp'])
+  })
+
   it('rechaza con 409 el mismo pedido repetido dentro de la ventana', async () => {
     const { input } = await pedidoBase()
 

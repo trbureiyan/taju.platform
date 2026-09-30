@@ -6,7 +6,7 @@ import { Producto } from '../../models/Producto.js'
 import { Usuario } from '../../models/Usuario.js'
 import { IdempotenciaPedido } from '../../models/IdempotenciaPedido.js'
 import { subirImagen, eliminarImagen } from '../../lib/cloudinary.js'
-import { FLUJO_PEDIDO, type EstadoPedido, type MedioPago, type MetodoEntrega } from '../../types/index.js'
+import { FLUJO_PEDIDO, type EstadoPedido, type MedioPago, type MetodoEntrega, type TipoImagen } from '../../types/index.js'
 import { AppError } from '../../lib/errors.js'
 import { faltantesDeSolicitud } from './pedidos.requisitos.js'
 
@@ -113,7 +113,7 @@ export async function crearPedido(input: CrearPedidoInput) {
   // que dura esa subida, no indefinidamente.
   interface ImagenSubida {
     nombreOriginal: string
-    mimeType: 'image/jpeg'
+    mimeType: TipoImagen
     tamano: number
     url: string
     publicId: string
@@ -125,7 +125,8 @@ export async function crearPedido(input: CrearPedidoInput) {
   const resultadosSubida = await Promise.allSettled<ImagenSubida>(
     input.archivos.map(async (file) => {
       const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
-      return { nombreOriginal: file.originalname, mimeType: 'image/jpeg', tamano: file.size, url, publicId }
+      // upload.ts ya verifico tipo y firma
+      return { nombreOriginal: file.originalname, mimeType: file.mimetype as TipoImagen, tamano: file.size, url, publicId }
     }),
   )
   const subidasExitosas = resultadosSubida
@@ -191,7 +192,7 @@ function armarPedido(
   producto: { _id: Types.ObjectId; nombre: string },
   categoria: { _id: Types.ObjectId; nombre: string; familia: string },
   cliente: { nombre: string },
-  imagenesReferencia: { nombreOriginal: string; mimeType: 'image/jpeg'; tamano: number; url: string }[],
+  imagenesReferencia: { nombreOriginal: string; mimeType: TipoImagen; tamano: number; url: string }[],
 ) {
   return {
     _id: pedidoId,

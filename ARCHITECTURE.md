@@ -12,7 +12,7 @@ Active. Este documento refleja la arquitectura implementada en el repositorio ac
 
 Cumple con 2 necesidades operativas principales:
 
-1. **Catálogo y Recepción de Pedidos Personalizados (Cliente Final y Profesional)**: Permite a los clientes explorar productos organizados en 4 familias canónicas (`toppers`, `superficies`, `senaletica`, `papeleria`), configurar dimensiones base o personalizadas, especificar materiales/colores, adjuntar referencias visuales (JPG) y enviar solicitudes de pedido con cálculo de precios unitarios o por escalas de volumen.
+1. **Catálogo y Recepción de Pedidos Personalizados (Cliente Final y Profesional)**: Permite a los clientes explorar productos organizados en 4 familias canónicas (`toppers`, `superficies`, `senaletica`, `papeleria`), configurar dimensiones base o personalizadas, especificar materiales/colores, adjuntar referencias visuales (JPG, PNG o WebP) y enviar solicitudes de pedido con cálculo de precios unitarios o por escalas de volumen.
 2. **Gestión de Taller y Control de Producción (Administrador)**: Panel operativo con tono neutro que gestiona el ciclo de vida de los pedidos mediante una máquina de estados lineal finita, confirmación obligatoria de dimensiones no estándar, asignación de fechas de entrega, gestión del catálogo/categorías y visualización de carga de trabajo.
 
 El proyecto se enmarca dentro del Proyecto Integrador II (PI-II), implementando integridad histórica estricta (requisito DA05) mediante snapshots de datos embebidos al momento de registrar pedidos.
@@ -34,7 +34,7 @@ El proyecto se enmarca dentro del Proyecto Integrador II (PI-II), implementando 
 | Password Hashing | bcryptjs | 2.4.3 | Hasheo de contraseñas en registro y verificación en login |
 | Auth JWT | jsonwebtoken | 9.0.2 | Emisión y verificación de tokens firmados (expiración 8h) |
 | Client Auth Storage | Memoria JavaScript | Nativo | Token en memoria del módulo (`api.ts`), sin `localStorage` ni cookies |
-| File Upload Middleware | Multer | 2.0.2 | Procesamiento en memoria (`memoryStorage`) de imágenes JPG (máx. 3 archivos, 5 MB) |
+| File Upload Middleware | Multer | 2.0.2 | Procesamiento en memoria (`memoryStorage`) de imágenes JPG, PNG y WebP (máx. 3 archivos, 5 MB) |
 | Cloud Asset Storage | Cloudinary | 2.4.0 | Almacenamiento seguro de imágenes de referencia (`taju/pedidos`) |
 | Schema Validation | Zod + Type Guards | 3.23.8 | Validación de tipos y contratos en runtime |
 | Monorepo Manager | pnpm workspaces | >=9.0.0 | Gestión de workspaces (`client`, `server`) con dependencias fijas |
@@ -62,7 +62,7 @@ graph TD
         RoutesRoot["Router Raíz (/api)\n(routes/index.ts)"]
         
         AuthMW["Middleware Auth & RBAC\n(requireAuth, requireRol, attachUsuarioOpcional)"]
-        UploadMW["Middleware Upload\n(uploadImagen - Multer + Magic Bytes JPG)"]
+        UploadMW["Middleware Upload\n(uploadImagen - Multer + Magic Bytes JPG/PNG/WebP)"]
         
         ModAuth["Módulo Auth\n(auth.controller / auth.service)"]
         ModCatalog["Módulo Catálogo & Categorías\n(catalog.controller / catalog.service)"]
@@ -107,7 +107,7 @@ Ejecuta validaciones transversales antes de invocar la lógica de negocio en los
 2. **`rbac.ts`**:
    - `requireRol(...roles: Rol[])`: Middleware factory de autorización por rol (`cliente` | `administrador`). Verifica que `req.usuario.rol` pertenezca al conjunto admitido; responde `403 Forbidden` en caso contrario.
 3. **`upload.ts`**:
-   - `uploadImagen`: Maneja carga multipart mediante Multer en memoria (`memoryStorage`). Limita hasta 3 archivos de máximo 5 MB cada uno. Ejecuta doble validación: inspección de MIME-type declarado (`image/jpeg`) e inspección estricta de los primeros 3 bytes de firma binaria (`0xFF 0xD8 0xFF`), bloqueando payloads falsificados.
+   - `uploadImagen`: Maneja carga multipart mediante Multer en memoria (`memoryStorage`). Limita hasta 3 archivos de máximo 5 MB cada uno. Ejecuta doble validación: inspección de MIME-type declarado (`image/jpeg`, `image/png` o `image/webp`) e inspección estricta de la firma binaria que corresponde a ese tipo (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF` + `WEBP`), bloqueando payloads falsificados.
 4. **`lib/errors.ts`**:
    - `asyncHandler`: Envoltorio para handlers asíncronos de Express 4 que redirige excepciones no capturadas al middleware final.
    - `errorHandler`: Captura instancias de `AppError` retornando el código HTTP explícito y mensaje amigable; cualquier otra excepción no controlada se registra en log y responde `500 Internal Server Error`.
@@ -273,8 +273,8 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 
 1. Límite de tamaño: 5 MB por archivo, máximo 3 archivos por petición.
 2. Almacenamiento en memoria: No se crean archivos temporales en el disco del servidor.
-3. Validación de cabecera MIME: Filtra peticiones que no declaren `image/jpeg`.
-4. Inspección binaria de magic bytes: Verifica que el buffer inicie con la secuencia real de JPEG (`0xFF 0xD8 0xFF`), impidiendo la carga de ejecutables o scripts disfrazados.
+3. Validación de cabecera MIME: Filtra peticiones que no declaren `image/jpeg`, `image/png` o `image/webp`.
+4. Inspección binaria de magic bytes: Verifica que el buffer inicie con la firma real del tipo declarado (JPEG, PNG o WebP), de modo que un PNG que declara ser JPEG se rechaza, impidiendo la carga de ejecutables o scripts disfrazados.
 5. Transmisión directa a Cloudinary: Carga mediante data URI base64 en la carpeta aislada `taju/pedidos`.
 
 ---
