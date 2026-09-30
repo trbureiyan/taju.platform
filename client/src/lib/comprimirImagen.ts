@@ -62,10 +62,14 @@ export async function comprimirImagen(archivo: File): Promise<File> {
   const ancho = Math.round(bitmap.width * escala)
   const alto = Math.round(bitmap.height * escala)
 
-  let blob = await aBlob(dibujar(bitmap, ancho, alto, false), 'image/webp')
-  // un navegador sin WebP en toBlob devuelve PNG: se reintenta en JPEG
-  if (!blob || blob.type !== 'image/webp') blob = await aBlob(dibujar(bitmap, ancho, alto, true), 'image/jpeg')
-  bitmap.close?.()
+  let blob: Blob | null
+  try {
+    blob = await aBlob(dibujar(bitmap, ancho, alto, false), 'image/webp')
+    // un navegador sin WebP en toBlob devuelve PNG: se reintenta en JPEG
+    if (!blob || blob.type !== 'image/webp') blob = await aBlob(dibujar(bitmap, ancho, alto, true), 'image/jpeg')
+  } finally {
+    bitmap.close?.()
+  }
   if (!blob) throw new ErrorImagen(MENSAJE_IMAGEN_ILEGIBLE)
 
   let resultado = archivo

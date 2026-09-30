@@ -96,4 +96,12 @@ describe('comprimirImagen', () => {
     expect(error).toBeInstanceOf(ErrorImagen)
     expect((error as Error).message).toBe(MENSAJE_IMAGEN_ILEGIBLE)
   })
+
+  it('libera el bitmap aunque falle el dibujo', async () => {
+    const close = vi.fn()
+    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 4000, height: 3000, close })))
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
+    await expect(comprimirImagen(archivoDe(4 * MB))).rejects.toBeInstanceOf(ErrorImagen)
+    expect(close).toHaveBeenCalled()
+  })
 })

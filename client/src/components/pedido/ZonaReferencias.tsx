@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ChangeEvent, type DragEvent } from 'react'
+import { useEffect, useId, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
 import {
   comprimirImagen,
@@ -29,38 +29,51 @@ function peso(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
+// cada vista previa es duena de su URL de objeto: se crea y se revoca en el mismo efecto, asi que el
+// desmontaje simulado de StrictMode no deja una URL revocada en pantalla. Se asigna por ref (sin setState en el efecto)
+function VistaPrevia({ archivo }: { archivo: File }) {
+  const ref = useRef<HTMLImageElement>(null)
+  useEffect(() => {
+    const url = URL.createObjectURL(archivo)
+    if (ref.current) ref.current.src = url
+    return () => URL.revokeObjectURL(url)
+  }, [archivo])
+  return <img ref={ref} alt="" className="h-12 w-12 shrink-0 rounded-campo object-cover" />
+}
+
 export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 3 }: ZonaReferenciasProps) {
   const id = useId()
   const [arrastrando, setArrastrando] = useState(false)
   const [procesando, setProcesando] = useState(false)
   const [mensaje, setMensaje] = useState<string | null>(null)
 
-  // las vistas previas son URLs de objeto: se crean al cambiar la lista y se liberan al cambiarla o desmontar
-  const vistas = useMemo(() => archivos.map((f) => URL.createObjectURL(f)), [archivos])
-  useEffect(() => () => vistas.forEach((u) => URL.revokeObjectURL(u)), [vistas])
-
   const lleno = archivos.length >= max
   const errorId = error ? `${id}-error` : undefined
   const mensajeId = mensaje ? `${id}-mensaje` : undefined
 
   async function agregar(nuevos: File[]) {
-    setMensaje(null)
+    const avisos: string[] = []
     const validos = nuevos.filter((f) => TIPOS_IMAGEN_ACEPTADOS.includes(f.type))
-    if (validos.length < nuevos.length) setMensaje(MENSAJE_FORMATO_IMAGEN)
+    if (validos.length < nuevos.length) avisos.push(MENSAJE_FORMATO_IMAGEN)
     const lugar = max - archivos.length
     const aceptados = validos.slice(0, lugar)
-    if (validos.length > lugar) setMensaje(`Caben hasta ${max} imágenes. Quita alguna si quieres cambiarla.`)
-    if (aceptados.length === 0) return
+    if (validos.length > lugar) avisos.push(`Caben hasta ${max} imágenes. Quita alguna si quieres cambiarla.`)
 
-    setProcesando(true)
-    try {
-      const listos = await Promise.all(aceptados.map(comprimirImagen))
-      onCambio([...archivos, ...listos])
-    } catch (err) {
-      setMensaje(err instanceof ErrorImagen ? err.message : MENSAJE_IMAGEN_ILEGIBLE)
-    } finally {
+    const listos: File[] = []
+    if (aceptados.length > 0) {
+      setProcesando(true)
+      // en orden y una por una: si una falla, las que ya salieron bien se conservan
+      for (const archivo of aceptados) {
+        try {
+          listos.push(await comprimirImagen(archivo))
+        } catch (err) {
+          avisos.push(err instanceof ErrorImagen ? err.message : MENSAJE_IMAGEN_ILEGIBLE)
+        }
+      }
+      if (listos.length > 0) onCambio([...archivos, ...listos])
       setProcesando(false)
     }
+    setMensaje(avisos.length > 0 ? avisos.join(' ') : null)
   }
 
   function alElegir(e: ChangeEvent<HTMLInputElement>) {
@@ -125,7 +138,13 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
           <ImagePlus aria-hidden="true" size={24} className="text-texto-secundario" />
         )}
         <span className="text-base font-medium text-texto-principal">
-          {procesando ? 'Preparando tu imagen…' : lleno ? 'Ya tienes 3 imágenes' : 'Toca para elegir o arrastra aquí'}
+          {procesando ? (
+            <span role="status">Preparando tu imagen…</span>
+          ) : lleno ? (
+            `Ya tienes ${max} imágenes`
+          ) : (
+            'Toca para elegir o arrastra aquí'
+          )}
         </span>
         <span className="text-xs text-texto-secundario">
           {lleno ? 'Quita una si quieres cambiarla.' : 'JPG, PNG o WebP. Las reducimos para que suban rápido.'}
@@ -147,7 +166,7 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
         <ul className="flex flex-col gap-2">
           {archivos.map((archivo, i) => (
             <li key={`${archivo.name}-${i}`} className="flex items-center gap-3 rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-2">
-              <img src={vistas[i]} alt="" className="h-12 w-12 shrink-0 rounded-campo object-cover" />
+              <VistaPrevia archivo={archivo} />
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm text-texto-principal">{archivo.name}</span>
                 <span className="text-xs text-texto-secundario tabular-nums">{peso(archivo.size)}</span>
@@ -155,8 +174,10 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
               <button
                 type="button"
                 onClick={() => quitar(i)}
+                // quitar mientras se procesa lo pisaria la lista vieja al terminar
+                disabled={procesando}
                 aria-label={`Quitar ${archivo.name}`}
-                className="flex h-boton w-boton shrink-0 items-center justify-center rounded-boton text-texto-secundario transition-transform duration-normal ease-estandar hover:bg-superficie-elevada active:scale-97 focus-visible:outline-none focus-visible:shadow-foco"
+                className="flex h-boton w-boton shrink-0 items-center disabled:opacity-50 disabled:cursor-not-allowed justify-center rounded-boton text-texto-secundario transition-transform duration-normal ease-estandar hover:bg-superficie-elevada active:scale-97 focus-visible:outline-none focus-visible:shadow-foco"
               >
                 <X aria-hidden="true" size={18} />
               </button>

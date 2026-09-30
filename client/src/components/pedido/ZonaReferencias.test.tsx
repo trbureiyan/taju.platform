@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { StrictMode, useState } from 'react'
 import { ZonaReferencias } from './ZonaReferencias'
 import { MENSAJE_FORMATO_IMAGEN } from '../../lib/comprimirImagen'
 
@@ -21,7 +21,8 @@ function Contenedor({ inicial = [] as File[], obligatoria = false, error }: { in
 
 beforeEach(() => {
   vi.mocked(comprimirImagen).mockReset().mockImplementation(async (f) => f)
-  URL.createObjectURL = vi.fn(() => 'blob:vista-previa')
+  let n = 0
+  URL.createObjectURL = vi.fn(() => `blob:vista-previa-${++n}`)
   URL.revokeObjectURL = vi.fn()
 })
 
@@ -96,5 +97,61 @@ describe('ZonaReferencias', () => {
     expect(screen.getByText(/obligatoria/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAccessibleDescription(/Adjunta una imagen/)
     expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('las vistas previas sobreviven a un desmontaje y montaje simulados (StrictMode)', () => {
+    const { container, unmount } = render(
+      <StrictMode>
+        <Contenedor inicial={[img('a.jpg')]} />
+      </StrictMode>,
+    )
+    const src = container.querySelector('img')!.getAttribute('src')!
+    expect(src).toMatch(/^blob:vista-previa-/)
+    // la URL que quedo en la pantalla no es una de las ya revocadas
+    const revocadas = vi.mocked(URL.revokeObjectURL).mock.calls.map((c) => c[0])
+    expect(revocadas).not.toContain(src)
+    unmount()
+    expect(vi.mocked(URL.revokeObjectURL).mock.calls.map((c) => c[0])).toContain(src)
+  })
+
+  it('libera la URL de la vista previa al quitar la imagen', async () => {
+    const { container } = render(<Contenedor inicial={[img('a.jpg')]} />)
+    const src = container.querySelector('img')!.getAttribute('src')
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar a.jpg' }))
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(src)
+  })
+
+  it('mientras procesa no se puede quitar una imagen (evita que reaparezca)', async () => {
+    let terminar!: (f: File) => void
+    vi.mocked(comprimirImagen).mockImplementationOnce(() => new Promise<File>((r) => { terminar = r }))
+    render(<Contenedor inicial={[img('a.jpg')]} />)
+    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), img('b.jpg'))
+    expect(await screen.findByRole('status')).toHaveTextContent('Preparando tu imagen')
+    expect(screen.getByRole('button', { name: 'Quitar a.jpg' })).toBeDisabled()
+    const b = img('b.jpg')
+    terminar(b)
+    expect(await screen.findByText('b.jpg')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar a.jpg' })).toBeEnabled()
+  })
+
+  it('si una imagen falla, guarda las otras y muestra el mensaje de la que fallo', async () => {
+    vi.mocked(comprimirImagen)
+      .mockImplementationOnce(async (f) => f)
+      .mockRejectedValueOnce(new ErrorImagen('Esa imagen pesa demasiado, incluso reducida.'))
+    render(<Contenedor />)
+    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), [img('buena.jpg'), img('mala.jpg')])
+    expect(await screen.findByText('buena.jpg')).toBeInTheDocument()
+    expect(screen.queryByText('mala.jpg')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('pesa demasiado')
+  })
+
+  it('si hay formato invalido y ademas sobran archivos, muestra ambos avisos', async () => {
+    render(<Contenedor inicial={[img('1.jpg'), img('2.jpg')]} />)
+    fireEvent.change(screen.getByLabelText(/Elige imágenes de referencia/i), {
+      target: { files: [img('3.jpg'), img('4.jpg'), new File(['x'], 'doc.pdf', { type: 'application/pdf' })] },
+    })
+    const alerta = await screen.findByRole('alert')
+    expect(alerta).toHaveTextContent(MENSAJE_FORMATO_IMAGEN)
+    expect(alerta).toHaveTextContent(/hasta 3 imágenes/i)
   })
 })
