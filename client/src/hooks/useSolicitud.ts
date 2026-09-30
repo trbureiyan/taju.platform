@@ -3,7 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { mensajeDeErrorDeEnvio } from '../lib/errorEnvio'
 import { normalizarCelular } from '../lib/requisitos'
-import { CAMPOS_INICIALES, validarMomento, type Campos, type Errores } from '../lib/validarSolicitud'
+import {
+  CAMPOS_INICIALES,
+  esMedidaPersonalizada,
+  validarMomento,
+  type Campos,
+  type Errores,
+} from '../lib/validarSolicitud'
 import type { Pedido, Producto } from '../types'
 
 const TOTAL_MOMENTOS = 4
@@ -42,7 +48,7 @@ export function useSolicitud(producto: Producto | null) {
   const pedidoValido = Number.isInteger(pedido) && pedido >= 1 ? pedido : 1
   const paso = Math.min(pedidoValido, TOTAL_MOMENTOS, validadoHasta + 1)
 
-  const esDimensionPersonalizada = !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
+  const esDimensionPersonalizada = producto ? esMedidaPersonalizada(campos.dimensionSeleccionada, producto) : false
 
   function irAlPaso(destino: number) {
     setSearchParams((prev) => {

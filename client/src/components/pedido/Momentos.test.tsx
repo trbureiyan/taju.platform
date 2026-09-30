@@ -51,10 +51,23 @@ describe('MomentoQue', () => {
   })
 
   it('muestra el valor en cm solo con medida personalizada o sin medidas sugeridas', () => {
-    const { rerender } = render(<MomentoQue {...props({ campos: { dimensionSeleccionada: 'Media libra' } })} />)
+    const { rerender } = render(<MomentoQue {...props()} />)
+    // sin tarjeta elegida todavia no hay valor en cm que pedir
+    expect(screen.queryByLabelText('Valor en cm')).not.toBeInTheDocument()
+    rerender(<MomentoQue {...props({ campos: { dimensionSeleccionada: 'Media libra' } })} />)
     expect(screen.queryByLabelText('Valor en cm')).not.toBeInTheDocument()
     rerender(<MomentoQue {...props({ campos: { dimensionSeleccionada: 'personalizada' } })} />)
     expect(screen.getByLabelText('Valor en cm')).toBeInTheDocument()
+  })
+
+  it('sin tarjeta elegida marca las tarjetas y las enlaza al mensaje', () => {
+    const mensaje = 'Elige una medida sugerida o marca Otra medida y escríbela en centímetros.'
+    render(<MomentoQue {...props({ errores: { dimensionSeleccionada: mensaje } })} />)
+    for (const radio of screen.getAllByRole('radio')) {
+      expect(radio).toHaveAttribute('aria-invalid', 'true')
+      expect(radio).toHaveAccessibleDescription(mensaje)
+    }
+    expect(screen.getByText(mensaje)).toBeInTheDocument()
   })
 
   it('superficies dice el minimo en la ayuda de la cantidad y usa teclado numerico', () => {

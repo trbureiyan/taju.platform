@@ -41,6 +41,18 @@ export const CAMPOS_INICIALES: Campos = {
   horaDeseada: '',
 }
 
+export const MENSAJE_FALTA_MEDIDA =
+  'Nos falta la medida de tu pieza. Elige una medida sugerida o marca Otra medida y escríbela en centímetros: la necesitamos para cotizar y producir.'
+
+/**
+ * Si la medida pedida es la que escribe el cliente en centimetros. Unica regla para el formulario, el resumen y el
+ * envio: con medidas sugeridas solo "Otra medida" lo es (no haber elegido ninguna es un dato que falta); sin
+ * medidas sugeridas siempre lo es.
+ */
+export function esMedidaPersonalizada(dimensionSeleccionada: string, producto: Producto): boolean {
+  return producto.categoria.dimensionesBase.length === 0 || dimensionSeleccionada === 'personalizada'
+}
+
 export const MOMENTOS = [
   { numero: 1, titulo: 'Qué necesitas' },
   { numero: 2, titulo: 'Cómo lo imaginas' },
@@ -63,8 +75,10 @@ export function validarMomento(
   const e: Errores = {}
 
   if (numero === 1) {
-    const personalizada = !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
-    if (personalizada && !campos.dimensionCustom.trim()) {
+    const personalizada = esMedidaPersonalizada(campos.dimensionSeleccionada, producto)
+    if (!personalizada && !campos.dimensionSeleccionada) {
+      e.dimensionSeleccionada = MENSAJE_FALTA_MEDIDA
+    } else if (personalizada && !campos.dimensionCustom.trim()) {
       e.dimensionCustom = 'Nos falta la medida en centímetros. Sin ella no podemos calcular la proporción de tu pieza.'
     } else if (personalizada && parseFloat(campos.dimensionCustom) <= 0) {
       e.dimensionCustom = 'Necesitamos una medida mayor a 0 para calcular tu pieza. Escríbela en centímetros.'

@@ -2,6 +2,7 @@ import type { Pedido, Producto } from '../types'
 import { fechaConHora } from './pedido'
 import { fechaEnPalabras, horaEnPalabras } from './horario'
 import { normalizarCelular } from './requisitos'
+import { esMedidaPersonalizada } from './validarSolicitud'
 
 /** Una linea del resumen. `valor: null` es "pendiente": el cliente todavia no lo responde. */
 export interface LineaResumen {
@@ -49,17 +50,19 @@ export function resumenDesdeCampos(
   producto: Producto,
   refs: { cantidad: number; obligatoria: boolean },
 ): LineaResumen[] {
-  const personalizada = !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
   const base = producto.categoria.dimensionesBase.find((d) => d.etiqueta === campos.dimensionSeleccionada)
   let medida: string | null = null
-  if (!personalizada && base) medida = `${base.valor} ${base.unidad}`
-  else if (campos.dimensionSeleccionada === 'personalizada' || !producto.categoria.dimensionesBase.length) {
+  if (esMedidaPersonalizada(campos.dimensionSeleccionada, producto)) {
     medida = texto(campos.dimensionCustom) ? `${campos.dimensionCustom.trim()} cm (personalizada)` : null
+  } else if (base) {
+    medida = `${base.valor} ${base.unidad}`
   }
-  const fecha =
-    campos.fechaDeseada && campos.horaDeseada
-      ? `${fechaEnPalabras(campos.fechaDeseada)}, ${horaEnPalabras(Number(campos.horaDeseada.slice(0, 2)))}`
-      : null
+  // con el dia elegido la hoja ya lo muestra; la hora que falta se dice en la misma linea
+  let fecha: string | null = null
+  if (campos.fechaDeseada) {
+    const hora = campos.horaDeseada ? horaEnPalabras(Number(campos.horaDeseada.slice(0, 2))) : 'hora pendiente'
+    fecha = `${fechaEnPalabras(campos.fechaDeseada)}, ${hora}`
+  }
 
   return [
     { clave: 'producto', etiqueta: 'Producto', valor: producto.nombre },

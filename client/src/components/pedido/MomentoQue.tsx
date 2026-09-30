@@ -1,13 +1,17 @@
+import { useId } from 'react'
 import { Input } from '../ui/Input'
 import { TarjetaOpcion } from '../ui/TarjetaOpcion'
 import { BotonWhatsApp } from '../shared/BotonWhatsApp'
 import { AvisoErrores } from './AvisoErrores'
 import { cantidadMinimaDe } from '../../lib/requisitos'
+import { esMedidaPersonalizada } from '../../lib/validarSolicitud'
 import { CLASE_TITULO, type PropsMomento } from './tipos'
 
 export function MomentoQue({ producto, campos, errores, set, tituloRef, intento }: PropsMomento) {
   const dimensiones = producto.categoria.dimensionesBase
-  const personalizada = !campos.dimensionSeleccionada || campos.dimensionSeleccionada === 'personalizada'
+  const personalizada = esMedidaPersonalizada(campos.dimensionSeleccionada, producto)
+  const idErrorMedida = useId()
+  const errorMedida = errores.dimensionSeleccionada
   const minimo = cantidadMinimaDe(producto.precio)
 
   return (
@@ -30,6 +34,8 @@ export function MomentoQue({ producto, campos, errores, set, tituloRef, intento 
                 onChange={(v) => set('dimensionSeleccionada', v)}
                 titulo={d.etiqueta}
                 descripcion={`${d.valor} ${d.unidad}`}
+                invalida={Boolean(errorMedida)}
+                idError={errorMedida ? idErrorMedida : undefined}
               />
             ))}
             <TarjetaOpcion
@@ -39,10 +45,17 @@ export function MomentoQue({ producto, campos, errores, set, tituloRef, intento 
               onChange={(v) => set('dimensionSeleccionada', v)}
               titulo="Otra medida"
               descripcion="La escribes tú, en centímetros"
+              invalida={Boolean(errorMedida)}
+              idError={errorMedida ? idErrorMedida : undefined}
             />
           </div>
         )}
-        {(personalizada || dimensiones.length === 0) && (
+        {errorMedida && (
+          <p id={idErrorMedida} className="text-xs text-error-texto">
+            {errorMedida}
+          </p>
+        )}
+        {personalizada && (
           <Input
             label="Valor en cm"
             type="number"

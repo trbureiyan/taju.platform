@@ -197,10 +197,12 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
 
     expect(screen.getByRole('heading', { name: 'Qué necesitas' })).toBeInTheDocument()
-    const valor = screen.getByLabelText('Valor en cm')
-    expect(valor).toHaveAttribute('aria-invalid', 'true')
+    // sin tarjeta elegida no hay valor en cm a la vista: el error va en las tarjetas de medida
+    expect(screen.queryByLabelText('Valor en cm')).not.toBeInTheDocument()
+    const tarjeta = screen.getByRole('radio', { name: /Media libra/ })
+    expect(tarjeta).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getAllByRole('alert')).toHaveLength(1)
-    expect(valor).toHaveFocus()
+    expect(tarjeta).toHaveFocus()
   })
 
   // el aviso se remonta en cada intento fallido: un lector de pantalla lo vuelve a anunciar aunque el texto no cambie
@@ -238,6 +240,30 @@ describe('PedidoFormPage | recorrido', () => {
     await userEvent.type(cantidad, '12')
     await siguiente()
     expect(await screen.findByRole('heading', { name: 'Cómo lo imaginas' })).toBeInTheDocument()
+  })
+
+  // la hoja no puede decir "Pendiente" de una medida que si se envia
+  it('Otra medida llega al repaso y al envio con su valor', async () => {
+    await renderFormulario()
+    await userEvent.click(screen.getByRole('radio', { name: /Otra medida/ }))
+    await userEvent.type(screen.getByLabelText('Valor en cm'), '30')
+    await userEvent.type(screen.getByLabelText('Colores'), 'dorado')
+    await userEvent.type(screen.getByLabelText('Materiales'), 'acrílico espejo')
+    await siguiente()
+    await completarMomento2()
+    await siguiente()
+    await completarMomento3()
+    await siguiente()
+    await screen.findByRole('heading', { name: 'Repaso' })
+
+    const hoja = screen.getByRole('region', { name: 'Tu solicitud' })
+    expect(hoja).toHaveTextContent('30 cm (personalizada)')
+    expect(hoja).not.toHaveTextContent('Pendiente')
+    pasarLaGracia()
+    await enviar()
+    await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })
+    expect(camposEnviados().get('dimensionValor')).toBe('30')
+    expect(camposEnviados().get('esDimensionPersonalizada')).toBe('true')
   })
 
   it('un topper sin referencia no avanza y el error queda enlazado a la zona', async () => {

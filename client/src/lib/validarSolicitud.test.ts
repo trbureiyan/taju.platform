@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CAMPOS_INICIALES, validarMomento, type Campos } from './validarSolicitud'
+import { CAMPOS_INICIALES, esMedidaPersonalizada, MENSAJE_FALTA_MEDIDA, validarMomento, type Campos } from './validarSolicitud'
 import { mensajeCantidadMinima, MENSAJE_FALTA_REFERENCIA } from './requisitos'
 import type { Producto } from '../types'
 
@@ -37,13 +37,43 @@ const completos: Campos = {
 }
 const imagen = new File(['x'], 'ref.jpg', { type: 'image/jpeg' })
 
+describe('esMedidaPersonalizada', () => {
+  it('es personalizada solo con Otra medida o si el producto no tiene medidas sugeridas', () => {
+    expect(esMedidaPersonalizada('', producto)).toBe(false)
+    expect(esMedidaPersonalizada('Media libra', producto)).toBe(false)
+    expect(esMedidaPersonalizada('personalizada', producto)).toBe(true)
+    expect(esMedidaPersonalizada('', superficies)).toBe(true)
+  })
+})
+
 describe('momento 1: que necesitas', () => {
   it('con todo completo no hay errores', () => {
     expect(validarMomento(1, completos, [], producto, lunes)).toEqual({})
   })
 
-  it('sin medida elegida exige el valor en cm', () => {
-    const e = validarMomento(1, { ...completos, dimensionSeleccionada: '' }, [], producto, lunes)
+  // con medidas sugeridas, no elegir ninguna tarjeta no es "personalizada": falta elegir
+  it('con medidas sugeridas y ninguna elegida pide elegir una tarjeta, no el valor en cm', () => {
+    const e = validarMomento(1, { ...completos, dimensionSeleccionada: '', dimensionCustom: '25' }, [], producto, lunes)
+    expect(e.dimensionSeleccionada).toMatch(/Elige una medida sugerida/)
+    expect(e.dimensionSeleccionada).toBe(MENSAJE_FALTA_MEDIDA)
+    expect(e.dimensionCustom).toBeUndefined()
+  })
+
+  it('con una tarjeta elegida no pide nada de la medida', () => {
+    const e = validarMomento(1, { ...completos, dimensionSeleccionada: 'Media libra' }, [], producto, lunes)
+    expect(e.dimensionSeleccionada).toBeUndefined()
+    expect(e.dimensionCustom).toBeUndefined()
+  })
+
+  it('Otra medida exige el valor en cm', () => {
+    const e = validarMomento(1, { ...completos, dimensionSeleccionada: 'personalizada', dimensionCustom: '' }, [], producto, lunes)
+    expect(e.dimensionCustom).toMatch(/Nos falta la medida en centímetros/)
+    expect(e.dimensionSeleccionada).toBeUndefined()
+  })
+
+  it('sin medidas sugeridas la medida siempre es personalizada y exige el valor en cm', () => {
+    const e = validarMomento(1, { ...completos, dimensionSeleccionada: '', cantidad: '12' }, [], superficies, lunes)
+    expect(e.dimensionSeleccionada).toBeUndefined()
     expect(e.dimensionCustom).toMatch(/Nos falta la medida en centímetros/)
   })
 

@@ -9,6 +9,8 @@ import { Check } from 'lucide-react'
  * @prop onChange - Recibe `value` al elegirla.
  * @prop titulo - Texto principal; es el nombre accesible del radio.
  * @prop descripcion - Texto de apoyo opcional bajo el titulo.
+ * @prop invalida - Marca el radio como invalido (el grupo tiene un error).
+ * @prop idError - Id del mensaje de error del grupo, enlazado por aria-describedby.
  */
 interface TarjetaOpcionProps {
   name: string
@@ -18,9 +20,21 @@ interface TarjetaOpcionProps {
   titulo: string
   descripcion?: string
   disabled?: boolean
+  invalida?: boolean
+  idError?: string
 }
 
-export function TarjetaOpcion({ name, value, checked, onChange, titulo, descripcion, disabled }: TarjetaOpcionProps) {
+export function TarjetaOpcion({
+  name,
+  value,
+  checked,
+  onChange,
+  titulo,
+  descripcion,
+  disabled,
+  invalida,
+  idError,
+}: TarjetaOpcionProps) {
   return (
     <label className={['relative block', disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'].join(' ')}>
       <input
@@ -29,6 +43,8 @@ export function TarjetaOpcion({ name, value, checked, onChange, titulo, descripc
         value={value}
         checked={checked}
         disabled={disabled}
+        aria-invalid={invalida ? true : undefined}
+        aria-describedby={idError}
         onChange={() => onChange(value)}
         className="peer sr-only"
       />

@@ -68,6 +68,23 @@ describe('resumenDesdeCampos', () => {
     expect(valor(lineas, 'medida')).toBe('25 cm (personalizada)')
   })
 
+  // sin tarjeta elegida en un producto con medidas sugeridas no hay medida (no se envia: la validacion la pide)
+  it('sin tarjeta elegida la medida queda pendiente aunque haya un valor en cm viejo', () => {
+    const lineas = resumenDesdeCampos({ ...vacios, dimensionCustom: '25' }, producto, { cantidad: 0, obligatoria: false })
+    expect(valor(lineas, 'medida')).toBeNull()
+  })
+
+  it('sin medidas sugeridas el valor en cm es la medida', () => {
+    const sinBase = { ...producto, categoria: { ...producto.categoria, dimensionesBase: [] } }
+    const lineas = resumenDesdeCampos({ ...vacios, dimensionCustom: '25' }, sinBase, { cantidad: 0, obligatoria: false })
+    expect(valor(lineas, 'medida')).toBe('25 cm (personalizada)')
+  })
+
+  it('con el dia elegido y sin hora muestra el dia y que falta la hora', () => {
+    const lineas = resumenDesdeCampos({ ...vacios, fechaDeseada: '2026-10-05' }, producto, { cantidad: 0, obligatoria: false })
+    expect(valor(lineas, 'fecha')).toBe('lunes, 5 de octubre, hora pendiente')
+  })
+
   it('sin referencias y sin obligacion dice "Sin imágenes", no pendiente', () => {
     const lineas = resumenDesdeCampos(vacios, producto, { cantidad: 0, obligatoria: false })
     expect(valor(lineas, 'referencias')).toBe('Sin imágenes')
