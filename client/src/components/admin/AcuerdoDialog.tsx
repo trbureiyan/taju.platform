@@ -4,18 +4,13 @@ import type { MedioPago, MetodoEntrega, PedidoAdmin } from '../../types'
 import { ETIQUETAS_MEDIO_PAGO, MEDIOS_PAGO } from '../../types'
 import { codigoPedido, fechaConHora } from '../../lib/pedido'
 import { isoDesdePartes, mensajeDeError, partesBogota } from '../../lib/pedidoAdmin'
-import { ANTICIPO_PORCENTAJE, HORAS_DE_ENTREGA } from '../../lib/politicas'
-import { horaEnPalabras } from '../../lib/horario'
+import { ANTICIPO_PORCENTAJE } from '../../lib/politicas'
+import { horaEnPalabras, horasParaAcordar } from '../../lib/horario'
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { useSnackbar } from '../ui/Snackbar'
-
-const OPCIONES_HORA = HORAS_DE_ENTREGA.map((h) => ({
-  valor: `${String(h).padStart(2, '0')}:00`,
-  texto: horaEnPalabras(h),
-}))
 
 /**
  * Diálogo del panel de Taller para asentar lo que se acordó por fuera con el cliente: fecha y hora, entrega
@@ -63,6 +58,12 @@ function FormularioAcuerdo({
   const [errores, setErrores] = useState<{ fecha?: string; monto?: string }>({})
   const [guardando, setGuardando] = useState(false)
   const { avisar } = useSnackbar()
+
+  // las horas son las del dia elegido; en un dia sin servicio, las de un dia ordinario (la excepcion la promete el taller)
+  const opcionesHora = horasParaAcordar(fecha).map((h) => ({
+    valor: `${String(h).padStart(2, '0')}:00`,
+    texto: horaEnPalabras(h),
+  }))
 
   async function guardar(e: FormEvent) {
     e.preventDefault()
@@ -116,7 +117,7 @@ function FormularioAcuerdo({
         />
         <Select label="Hora acordada" value={hora} onChange={(e) => setHora(e.target.value)}>
           <option value="">Sin hora</option>
-          {OPCIONES_HORA.map((o) => (
+          {opcionesHora.map((o) => (
             <option key={o.valor} value={o.valor}>
               {o.texto}
             </option>

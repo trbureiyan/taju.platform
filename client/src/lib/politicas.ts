@@ -1,12 +1,24 @@
 // los numeros del taller en un solo lugar: los textos, los limites y el panel los leen de aqui.
 // Cambiar una politica es tocar una linea; ninguna otra parte del cliente repite estos valores.
 
-export const HORARIO_ATENCION: { diasHabiles: readonly number[]; apertura: number; cierre: number } = {
-  // getDay() de Colombia: todos los dias, domingo incluido; los festivos se excluyen en FESTIVOS
-  diasHabiles: [0, 1, 2, 3, 4, 5, 6],
-  apertura: 9,
-  cierre: 18,
+// getDay() de Colombia: 0 domingo a 6 sabado. null = sin servicio. Es la unica fuente de dias y horas del taller:
+// el horario de atencion, la promesa de contacto, el "vencida" del panel y las horas de entrega salen de aqui.
+export const HORARIO_SEMANAL: Record<number, { apertura: number; cierre: number } | null> = {
+  0: null,
+  1: { apertura: 8, cierre: 18 },
+  2: { apertura: 8, cierre: 18 },
+  3: { apertura: 8, cierre: 18 },
+  4: { apertura: 8, cierre: 18 },
+  5: { apertura: 8, cierre: 18 },
+  6: { apertura: 8, cierre: 16 },
 }
+
+// horas antes del cierre en que sigue siendo valida la ultima hora de entrega (provisional, por confirmar con el taller)
+export const MARGEN_ULTIMA_ENTREGA_HORAS = 1
+
+// fechas MM-DD en que el taller cierra aunque no caigan en lunes; vacia hasta que el taller confirme cuales
+// (Navidad, Año Nuevo, Semana Santa...). Un festivo que cae en lunes ya cierra por regla, no hace falta listarlo
+export const CIERRES_ADICIONALES: readonly string[] = []
 
 // [DECISION] festivos calculados (Pascua + Ley Emiliani) y no una lista escrita a mano - la lista obligaba a
 // extenderla cada diciembre. Tradeoff: una reforma legal no se refleja sola; se corrige aqui, y con la regla de
@@ -88,7 +100,7 @@ export function esFestivo(fecha: string): boolean {
   return festivos.has(fecha)
 }
 
-// plazo en horas habiles para escribirle al cliente despues de una solicitud
+// plazo en horas de atencion para escribirle al cliente despues de una solicitud
 export const PLAZO_CONTACTO_HORAS = 2
 
 // anticipo habitual sobre el valor acordado; solo orienta al taller, la plataforma no cobra
@@ -96,9 +108,3 @@ export const ANTICIPO_PORCENTAJE = 50
 
 // dias sin respuesta para marcar una solicitud como vencida en el panel (la cancelacion la decide una persona)
 export const DIAS_SIN_RESPUESTA = 3
-
-// horas ofrecidas al pedir o acordar una entrega: de la apertura al cierre, una por hora
-export const HORAS_DE_ENTREGA: readonly number[] = Array.from(
-  { length: HORARIO_ATENCION.cierre - HORARIO_ATENCION.apertura + 1 },
-  (_, i) => HORARIO_ATENCION.apertura + i,
-)
