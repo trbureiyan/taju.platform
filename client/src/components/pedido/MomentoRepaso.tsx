@@ -1,4 +1,5 @@
 import { HojaResumen } from './HojaResumen'
+import { BotonWhatsApp } from '../shared/BotonWhatsApp'
 import { calcularPrecioTotal, formatearPesos } from '../../lib/precio'
 import { exigeReferencia } from '../../lib/requisitos'
 import { resumenDesdeCampos } from '../../lib/resumenPedido'
@@ -49,6 +50,11 @@ export function MomentoRepaso({
       <p className="text-xs text-texto-secundario">
         Enviar no te compromete a nada: primero confirmamos contigo el precio, la fecha y el anticipo.
       </p>
+
+      {/* el flotante no se monta en el formulario: esta es la salida a WhatsApp que promete el error de envio */}
+      <BotonWhatsApp variante="linea" mensaje={`Hola, estoy revisando mi solicitud de: ${producto.nombre}. Tengo una duda.`}>
+        ¿Dudas? Escríbenos
+      </BotonWhatsApp>
     </div>
   )
 }

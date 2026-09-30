@@ -145,6 +145,14 @@ describe('MomentoRepaso', () => {
     expect(screen.getByText(/enviar no te compromete a nada/i)).toBeInTheDocument()
   })
 
+  // el flotante no se monta en el formulario: sin este enlace el repaso no tendria salida a WhatsApp
+  it('lleva el enlace de dudas con el nombre del producto', () => {
+    render(<MomentoRepaso {...props()} archivos={[]} errorEnvio={null} />)
+    const enlace = screen.getByRole('link', { name: /Dudas/i })
+    expect(enlace).toHaveAttribute('href', expect.stringContaining('wa.me'))
+    expect(decodeURIComponent(enlace.getAttribute('href')!)).toContain('Topper nombre en espejo dorado')
+  })
+
   it('muestra el error de envio como alerta', () => {
     render(<MomentoRepaso {...props()} archivos={[]} errorEnvio="No pudimos enviar tu pedido." />)
     expect(screen.getByRole('alert')).toHaveTextContent('No pudimos enviar tu pedido.')

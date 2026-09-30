@@ -20,6 +20,9 @@ import { codigoPedido } from '../lib/pedido'
 import { ETIQUETAS_FAMILIA } from '../types'
 import type { Pedido, Producto } from '../types'
 
+// ventana tras llegar al repaso en la que un envio se toma como el segundo toque de un doble toque en Siguiente
+const GRACIA_REPASO_MS = 500
+
 /**
  * Formulario de solicitud en cuatro momentos (que, como, cuando, repaso). Esta pagina es la carcasa: carga el
  * producto, precarga "Pedir de nuevo", muestra el progreso y el momento activo, y la pantalla de exito. El estado,
@@ -46,6 +49,10 @@ export function PedidoFormPage() {
   const formulario = useRef<HTMLFormElement>(null)
   // ultimo momento cuyo titulo ya se enfoco; null hasta la primera vista del formulario
   const momentoEnfocado = useRef<number | null>(null)
+  // ultimo intento fallido cuyo foco ya se atendio
+  const falloAtendido = useRef(0)
+  // cuando se entro al repaso; 0 fuera de el
+  const entradaAlRepaso = useRef(0)
 
   useEffect(() => {
     if (!productoId) return
@@ -100,12 +107,21 @@ export function PedidoFormPage() {
     tituloMomento.current?.focus()
   }, [paso, producto, pedidoCreado])
 
-  // tras un intento fallido el foco va al primer campo marcado; va despues del efecto del titulo para ganarle
-  // cuando enviar() devuelve al cliente a un momento anterior con errores
+  // tras un intento fallido el foco va al primer campo marcado, una vez por intento. Depende tambien de paso: cuando
+  // enviar() devuelve al cliente a un momento anterior, react-router cambia la URL en una transicion, asi que fallos
+  // se aplica aun en el repaso (sin campos marcados) y el momento con el error llega en un render posterior.
+  // Declarado despues del efecto del titulo para ganarle en ese render.
   useEffect(() => {
-    if (fallos === 0) return
-    formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
-  }, [fallos])
+    if (fallos <= falloAtendido.current) return
+    const invalido = formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')
+    if (!invalido) return
+    falloAtendido.current = fallos
+    invalido.focus()
+  }, [fallos, paso])
+
+  useEffect(() => {
+    entradaAlRepaso.current = paso === 4 ? Date.now() : 0
+  }, [paso])
 
   // el formulario se desmonta al crear el pedido: sin mover el foco, el lector de pantalla no anuncia nada
   useEffect(() => {
@@ -119,6 +135,9 @@ export function PedidoFormPage() {
       solicitud.siguiente()
       return
     }
+    // [DECISION] "Enviar mi pedido" ocupa el lugar de "Siguiente": un doble toque en el momento 3 enviaria sin que el
+    // cliente vea el repaso. Un envio dentro de medio segundo de llegar al repaso se ignora; el boton sigue activo.
+    if (Date.now() - entradaAlRepaso.current < GRACIA_REPASO_MS) return
     const creado = await solicitud.enviar()
     if (creado) setPedidoCreado(creado)
   }
@@ -208,7 +227,8 @@ export function PedidoFormPage() {
 
       <header className="sticky top-0 z-encabezado -mx-4 flex items-center gap-3 border-b border-borde-sutil bg-superficie-base px-4 py-3 lg:hidden">
         <AnilloProgreso paso={paso} titulo={titulo} tamano="compacto" />
-        <div>
+        {/* aria-hidden: el anillo ya dice "Paso X de 4: titulo" y el h2 del momento repite el titulo */}
+        <div aria-hidden="true">
           <p className="text-xs text-texto-secundario">Paso {paso} de 4</p>
           <p className="text-base font-semibold text-texto-principal">{titulo}</p>
         </div>

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { PedidoFormPage } from './PedidoFormPage'
 import { api, ErrorApi } from '../lib/api'
 import { esDiaConServicio } from '../lib/horario'
@@ -63,6 +63,16 @@ function Ubicacion() {
   return <output data-testid="ubicacion">{useLocation().search}</output>
 }
 
+// hace lo que el Atras/Adelante del navegador: volver a una entrada ?paso=4 del historial sin pasar por Siguiente
+function SaltoAlRepaso() {
+  const navigate = useNavigate()
+  return (
+    <button type="button" onClick={() => navigate({ search: '?paso=4' })}>
+      historial al repaso
+    </button>
+  )
+}
+
 function montar(ruta: string) {
   return render(
     <MemoryRouter initialEntries={[ruta]}>
@@ -71,6 +81,7 @@ function montar(ruta: string) {
         <Route path="/catalogo" element={<p>catalogo</p>} />
       </Routes>
       <Ubicacion />
+      <SaltoAlRepaso />
     </MemoryRouter>,
   )
 }
@@ -113,11 +124,19 @@ async function hastaMomento3() {
   await siguiente()
   await screen.findByRole('heading', { name: 'Cuándo y dónde' })
 }
+// el repaso ignora un envio en su primer medio segundo (doble toque en Siguiente): el reloj avanza un segundo,
+// como el cliente que lee antes de enviar
+function pasarLaGracia() {
+  const ahora = Date.now()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(ahora + 1000)
+}
 async function llegarAlRepaso() {
   await hastaMomento3()
   await completarMomento3()
   await siguiente()
   await screen.findByRole('heading', { name: 'Repaso' })
+  pasarLaGracia()
 }
 function camposEnviados() {
   return vi.mocked(api.postForm).mock.calls[0][1] as FormData
@@ -157,12 +176,13 @@ describe('PedidoFormPage | recorrido', () => {
 
   it('el anillo dice el paso y el momento, y el paso queda en la URL', async () => {
     await renderFormulario()
-    expect(screen.getAllByRole('img', { name: 'Paso 1 de 4: Qué necesitas' }).length).toBeGreaterThan(0)
+    // dos anillos: el compacto del movil y el grande de escritorio (uno de los dos oculto por CSS)
+    expect(screen.getAllByRole('img', { name: 'Paso 1 de 4: Qué necesitas' })).toHaveLength(2)
 
     await completarMomento1()
     await siguiente()
 
-    expect(await screen.findAllByRole('img', { name: 'Paso 2 de 4: Cómo lo imaginas' })).not.toHaveLength(0)
+    expect(await screen.findAllByRole('img', { name: 'Paso 2 de 4: Cómo lo imaginas' })).toHaveLength(2)
     expect(screen.getByTestId('ubicacion')).toHaveTextContent('?paso=2')
   })
 
@@ -282,6 +302,10 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
     await screen.findByRole('heading', { name: 'Cuándo y dónde' })
     expect(screen.getByRole('link', { name: /Dudas/ })).toBeInTheDocument()
+    await completarMomento3()
+    await siguiente()
+    await screen.findByRole('heading', { name: 'Repaso' })
+    expect(screen.getByRole('link', { name: /Dudas/ })).toBeInTheDocument()
   })
 
   it('la hoja lateral existe solo antes del repaso; en el repaso la hoja es el contenido', async () => {
@@ -360,6 +384,7 @@ describe('PedidoFormPage | celular y entrega', () => {
     await completarMomento3({ celular: '+57 319-245-2842' })
     await siguiente()
     await screen.findByRole('heading', { name: 'Repaso' })
+    pasarLaGracia()
     await enviar()
 
     await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })
@@ -383,6 +408,7 @@ describe('PedidoFormPage | celular y entrega', () => {
     await completarMomento3()
     await siguiente()
     await screen.findByRole('heading', { name: 'Repaso' })
+    pasarLaGracia()
     await enviar()
 
     await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })
@@ -399,6 +425,7 @@ describe('PedidoFormPage | celular y entrega', () => {
     await completarMomento3()
     await siguiente()
     await screen.findByRole('heading', { name: 'Repaso' })
+    pasarLaGracia()
     await enviar()
 
     await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })
@@ -432,6 +459,47 @@ describe('PedidoFormPage | envio', () => {
     const alerta = await enviarCon(new ErrorApi('Error al procesar imagen: Too many files', 400))
     expect(alerta).toHaveTextContent(MENSAJE_ERROR_ENVIO)
     expect(alerta).not.toHaveTextContent('Too many files')
+  })
+
+  // "Enviar mi pedido" aparece en el mismo lugar que "Siguiente": un doble toque no puede saltarse el repaso.
+  // Reloj quieto entre los dos toques = llegan dentro de la ventana de gracia
+  it('un doble toque en Siguiente del momento 3 se queda en el repaso sin enviar', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-28T10:00:00-05:00'))
+    await hastaMomento3()
+    await completarMomento3()
+
+    const boton = screen.getByRole('button', { name: 'Siguiente' })
+    await userEvent.click(boton)
+    await userEvent.click(boton)
+
+    expect(await screen.findByRole('heading', { name: 'Repaso' })).toBeInTheDocument()
+    expect(api.postForm).not.toHaveBeenCalled()
+
+    vi.setSystemTime(new Date('2026-09-28T10:00:01-05:00'))
+    await enviar()
+    expect(await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })).toBeInTheDocument()
+    expect(api.postForm).toHaveBeenCalledOnce()
+  })
+
+  it('si al enviar falta un dato de un momento anterior, vuelve ahi con el foco en el campo marcado', async () => {
+    await llegarAlRepaso()
+    for (const momento of ['Cuándo y dónde', 'Cómo lo imaginas', 'Qué necesitas']) {
+      await userEvent.click(screen.getByRole('button', { name: 'Atrás' }))
+      await screen.findByRole('heading', { name: momento })
+    }
+    await userEvent.clear(screen.getByLabelText('Colores'))
+    await userEvent.click(screen.getByRole('button', { name: 'historial al repaso' }))
+    await screen.findByRole('heading', { name: 'Repaso' })
+    pasarLaGracia()
+
+    await enviar()
+
+    expect(await screen.findByRole('heading', { name: 'Qué necesitas' })).toBeInTheDocument()
+    const colores = screen.getByLabelText('Colores')
+    expect(colores).toHaveAttribute('aria-invalid', 'true')
+    await waitFor(() => expect(colores).toHaveFocus())
+    expect(api.postForm).not.toHaveBeenCalled()
   })
 
   it('dos clics seguidos envian una sola vez', async () => {
