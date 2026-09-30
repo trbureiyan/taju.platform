@@ -82,6 +82,7 @@ export function TiraDias({ valor, onCambio, ahora, error }: TiraDiasProps) {
         value={enLaTira ? '' : valor}
         onChange={(e) => onCambio(e.target.value)}
         error={mensaje}
+        anunciarError={false}
       />
     </fieldset>
   )

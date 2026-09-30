@@ -5,17 +5,20 @@ import { useId, type InputHTMLAttributes } from 'react'
  * @prop label - Etiqueta visible asociada al input mediante htmlFor.
  * @prop error - Mensaje de error; activa aria-invalid y muestra el mensaje en rojo. Oculta hint.
  * @prop hint - Texto de ayuda secundario; se muestra cuando no hay error activo.
+ * @prop anunciarError - Por defecto true. Si es false el error se muestra sin role=alert; lo usa el formulario por momentos, que anuncia un solo aviso de resumen.
  */
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
   error?: string
   hint?: string
+  anunciarError?: boolean
 }
 
 export function Input({
   label,
   error,
   hint,
+  anunciarError = true,
   id,
   className = '',
   'aria-describedby': describedByExterno,
@@ -58,7 +61,7 @@ export function Input({
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-xs text-error-texto" role="alert">
+        <p id={errorId} className="text-xs text-error-texto" role={anunciarError ? 'alert' : undefined}>
           {error}
         </p>
       )}

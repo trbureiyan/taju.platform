@@ -5,14 +5,16 @@ import { useId, type SelectHTMLAttributes } from 'react'
  * @prop label - Etiqueta visible asociada al select mediante htmlFor.
  * @prop error - Mensaje de error; activa aria-invalid y oculta hint.
  * @prop hint - Texto de ayuda; se muestra cuando no hay error activo.
+ * @prop anunciarError - Por defecto true. Si es false el error se muestra sin role=alert; lo usa el formulario por momentos, que anuncia un solo aviso de resumen.
  */
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string
   error?: string
   hint?: string
+  anunciarError?: boolean
 }
 
-export function Select({ label, error, hint, id, className = '', children, ...props }: SelectProps) {
+export function Select({ label, error, hint, anunciarError = true, id, className = '', children, ...props }: SelectProps) {
   const idGenerado = useId()
   const selectId = id ?? idGenerado
   const hintId = hint && !error ? `${selectId}-hint` : undefined
@@ -45,7 +47,7 @@ export function Select({ label, error, hint, id, className = '', children, ...pr
         </p>
       )}
       {error && (
-        <p id={errorId} className="text-xs text-error-texto" role="alert">
+        <p id={errorId} className="text-xs text-error-texto" role={anunciarError ? 'alert' : undefined}>
           {error}
         </p>
       )}
