@@ -55,8 +55,9 @@ export interface HorarioDia {
 }
 
 /**
- * Unico punto que decide si el taller atiende un dia. Un festivo solo cierra si cae en lunes (los puentes de la
- * Ley Emiliani); el resto se trabaja, salvo las fechas de CIERRES_ADICIONALES.
+ * Unico punto que decide si el taller atiende un dia. Un festivo cierra el taller cuando cae en lunes (los
+ * trasladados por la Ley Emiliani y cualquier otro que coincida con lunes); el resto se trabaja, salvo las fechas
+ * de CIERRES_ADICIONALES.
  * @param fecha - `YYYY-MM-DD` en Colombia.
  * @returns Apertura y cierre en horas (0 a 24), o `null` si ese dia no hay servicio.
  */
