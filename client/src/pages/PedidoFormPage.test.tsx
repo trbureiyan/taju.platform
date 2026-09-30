@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { PedidoFormPage } from './PedidoFormPage'
 import { api, ErrorApi } from '../lib/api'
-import { esFestivo } from '../lib/politicas'
+import { esDiaConServicio } from '../lib/horario'
 import { codigoPedido } from '../lib/pedido'
 import { MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA } from '../lib/requisitos'
 import { pedido } from '../test/pedidos'
@@ -46,11 +46,11 @@ function fechaLocal(dias: number): string {
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
 }
 
-// primera fecha a 7 dias o mas que no sea festivo, en el mismo formato que el componente
+// primera fecha a 7 dias o mas en que el taller atiende, en el mismo formato que el componente
 function fechaHabil(): string {
   for (let d = 7; ; d += 1) {
     const f = fechaLocal(d)
-    if (!esFestivo(f)) return f
+    if (esDiaConServicio(f)) return f
   }
 }
 
@@ -255,22 +255,49 @@ describe('PedidoFormPage', () => {
       expect(api.postForm).not.toHaveBeenCalled()
     })
 
-    it('rechaza un festivo: el taller no atiende ese dia, pero un domingo comun si', async () => {
-      // reloj fijo para que el festivo de referencia (12 de octubre de 2026) quede en el futuro del formulario
+    it('rechaza un lunes festivo y dice cual es el siguiente dia disponible', async () => {
       vi.useFakeTimers({ toFake: ['Date'] })
       vi.setSystemTime(new Date('2026-09-28T10:00:00-05:00'))
       try {
         await conMedidaYTextos({ fecha: false })
         const campoFecha = screen.getByLabelText('Fecha en que la necesitas')
-
         fireEvent.change(campoFecha, { target: { value: '2026-10-12' } })
         await enviar()
-        expect(campoFecha).toHaveAccessibleDescription(/es festivo/)
+        expect(campoFecha).toHaveAccessibleDescription(
+          'Ese lunes es festivo y el taller está cerrado. El siguiente día disponible es el martes, 13 de octubre.',
+        )
         expect(api.postForm).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
 
-        fireEvent.change(campoFecha, { target: { value: '2026-10-11' } }) // domingo comun
+    it('rechaza un domingo: no hay servicio ese dia', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-09-28T10:00:00-05:00'))
+      try {
+        await conMedidaYTextos({ fecha: false })
+        const campoFecha = screen.getByLabelText('Fecha en que la necesitas')
+        fireEvent.change(campoFecha, { target: { value: '2026-10-11' } })
         await enviar()
-        expect(api.postForm).toHaveBeenCalledOnce()
+        expect(campoFecha).toHaveAccessibleDescription(/Los domingos no hay servicio/)
+        expect(api.postForm).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('el sabado ofrece horas hasta las 3 p. m. porque el taller cierra a las 4', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      vi.setSystemTime(new Date('2026-09-28T10:00:00-05:00'))
+      try {
+        await conMedidaYTextos({ fecha: false, hora: false })
+        fireEvent.change(screen.getByLabelText('Fecha en que la necesitas'), { target: { value: '2026-10-03' } })
+        const horas = Array.from(screen.getByLabelText('Hora en que la necesitas').querySelectorAll('option')).map(
+          (o) => o.textContent,
+        )
+        expect(horas[horas.length - 1]).toBe('3:00 p. m.')
+        expect(horas).not.toContain('4:00 p. m.')
       } finally {
         vi.useRealTimers()
       }

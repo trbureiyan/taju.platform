@@ -15,7 +15,8 @@ function inicioSemana(fecha: Date): Date {
   return d
 }
 
-// lunes a domingo: el taller atiende y entrega todos los dias, salvo festivos
+// semana de lunes a domingo: el taller atiende de lunes a viernes y los sabados hasta las 4, los domingos no hay
+// servicio y solo cierra el festivo que cae en lunes (ver HORARIO_SEMANAL y horarioDelDia)
 function etiquetaSemana(lunes: Date): string {
   const domingo = new Date(lunes)
   domingo.setDate(lunes.getDate() + 6)
