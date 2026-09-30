@@ -30,7 +30,8 @@ const ESTILO_ARCO: Record<EstadoArco, string> = {
 // a 48 px se leeria como un trazo defectuoso. Agregarla no cambia esta interfaz.
 export function AnilloProgreso({ paso, total = 4, titulo, tamano = 'compacto' }: AnilloProgresoProps) {
   const grosor = tamano === 'grande' ? 8 : 10
-  const hueco = tamano === 'grande' ? 5 : 7
+  // con extremos redondos cada arco sobresale grosor/2 por punta: el hueco debe superar el grosor para que quede aire visible
+  const hueco = grosor + 4
   const tramo = CIRCUNFERENCIA / total
   const largo = tramo - hueco
 

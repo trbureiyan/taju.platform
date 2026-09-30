@@ -25,4 +25,21 @@ describe('AnilloProgreso', () => {
     rerender(<AnilloProgreso paso={1} titulo="Uno" tamano="grande" />)
     expect(container.firstElementChild).toHaveClass('w-24')
   })
+
+  it.each([
+    ['compacto', 3],
+    ['compacto', 4],
+    ['grande', 3],
+    ['grande', 4],
+  ] as const)('tamano %s con %i arcos deja aire visible entre arcos', (tamano, total) => {
+    const { container } = render(<AnilloProgreso paso={1} total={total} titulo="Uno" tamano={tamano} />)
+    const c = container.querySelector('circle')!
+    const radio = Number(c.getAttribute('r'))
+    const grosor = Number(c.getAttribute('stroke-width'))
+    const largo = Number(c.getAttribute('stroke-dasharray')!.split(' ')[0])
+    const tramo = (2 * Math.PI * radio) / total
+    expect(largo).toBeGreaterThan(0)
+    // los extremos redondos sobresalen grosor/2 por punta: al hueco real hay que restarle el grosor
+    expect(tramo - largo - grosor).toBeGreaterThan(0)
+  })
 })
