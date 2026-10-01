@@ -62,42 +62,45 @@ export function CalendarioMes({ valor, onCambio, ahora }: CalendarioMesProps) {
         </button>
       </div>
 
-      <div role="grid" aria-labelledby={idTitulo} className="grid grid-cols-7 gap-1">
-        {DIAS_SEMANA.map((d) => (
-          <span key={d} role="columnheader" className="text-center text-xs uppercase text-texto-secundario">
-            {d}
-          </span>
-        ))}
-        {Array.from({ length: huecos }, (_, i) => (
-          <span key={`h${i}`} role="gridcell" aria-hidden="true" />
-        ))}
-        {Array.from({ length: totalDias }, (_, i) => {
-          const fecha = iso(anio, mes, i + 1)
-          const disponible = fecha >= minimo && esDiaConServicio(fecha)
-          const elegido = fecha === valor
-          return (
-            <span key={fecha} role="gridcell" className="flex justify-center">
-              <button
-                type="button"
-                disabled={!disponible}
-                aria-pressed={elegido}
-                aria-label={fechaEnPalabras(fecha)}
-                onClick={() => onCambio(fecha)}
-                className={[
-                  'h-boton w-full rounded-boton text-base tabular-nums transition-[background-color,transform] duration-normal ease-estandar active:scale-97',
-                  'focus-visible:outline-none focus-visible:shadow-foco',
-                  elegido
-                    ? 'bg-accion font-semibold text-accion-texto'
-                    : disponible
-                      ? 'text-texto-principal hover:bg-superficie-elevada'
-                      : 'cursor-not-allowed text-texto-deshabilitado',
-                ].join(' ')}
-              >
-                {i + 1}
-              </button>
+      {/* 7 x 44 px no cabe en un celular de 320 px dentro del formulario: la rejilla se desplaza en vez de achicar el objetivo táctil */}
+      <div className="overflow-x-auto">
+        <div role="grid" aria-labelledby={idTitulo} className="grid grid-cols-[repeat(7,minmax(44px,1fr))] gap-1">
+          {DIAS_SEMANA.map((d) => (
+            <span key={d} role="columnheader" className="text-center text-xs uppercase text-texto-secundario">
+              {d}
             </span>
-          )
-        })}
+          ))}
+          {Array.from({ length: huecos }, (_, i) => (
+            <span key={`h${i}`} role="gridcell" aria-hidden="true" />
+          ))}
+          {Array.from({ length: totalDias }, (_, i) => {
+            const fecha = iso(anio, mes, i + 1)
+            const disponible = fecha >= minimo && esDiaConServicio(fecha)
+            const elegido = fecha === valor
+            return (
+              <span key={fecha} role="gridcell" className="flex justify-center">
+                <button
+                  type="button"
+                  disabled={!disponible}
+                  aria-pressed={elegido}
+                  aria-label={fechaEnPalabras(fecha)}
+                  onClick={() => onCambio(fecha)}
+                  className={[
+                    'h-boton w-full rounded-boton text-base tabular-nums transition-[background-color,transform] duration-normal ease-estandar active:scale-97',
+                    'focus-visible:outline-none focus-visible:shadow-foco',
+                    elegido
+                      ? 'bg-accion font-semibold text-accion-texto'
+                      : disponible
+                        ? 'text-texto-principal hover:bg-superficie-elevada'
+                        : 'cursor-not-allowed text-texto-deshabilitado',
+                  ].join(' ')}
+                >
+                  {i + 1}
+                </button>
+              </span>
+            )
+          })}
+        </div>
       </div>
 
       <p className="text-xs text-texto-secundario">

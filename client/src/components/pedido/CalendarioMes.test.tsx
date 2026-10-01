@@ -54,6 +54,14 @@ describe('CalendarioMes', () => {
     expect(screen.getByText('diciembre de 2026')).toBeInTheDocument()
   })
 
+  // [CodeRabbit] a 320 px siete columnas de 1fr dejaban cada dia en ~33 px; el minimo tactil es 44 px
+  it('cada dia mide al menos 44 px y la rejilla se desplaza si no cabe', () => {
+    render(<CalendarioMes valor="" onCambio={vi.fn()} ahora={ahora} />)
+    const rejilla = screen.getByRole('grid')
+    expect(rejilla.className).toContain('minmax(44px,1fr)')
+    expect(rejilla.parentElement).toHaveClass('overflow-x-auto')
+  })
+
   it('explica por que hay dias grises', () => {
     render(<CalendarioMes valor="" onCambio={vi.fn()} ahora={ahora} />)
     expect(screen.getByText(/días en gris no tienen servicio/i)).toBeInTheDocument()
