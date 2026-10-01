@@ -18,7 +18,10 @@ vi.mock('./pages/CatalogoPage', () => ({
 // jsdom reporta el error lanzado al renderizar como "uncaught" y ensucia la salida
 const atender = (e: ErrorEvent) => e.preventDefault()
 beforeEach(() => window.addEventListener('error', atender))
-afterEach(() => window.removeEventListener('error', atender))
+afterEach(() => {
+  window.removeEventListener('error', atender)
+  vi.restoreAllMocks()
+})
 
 describe('App | rutas', () => {
   it('si una pagina falla al renderizar, se ve un aviso con salidas y el menu sigue visible', async () => {
@@ -27,7 +30,6 @@ describe('App | rutas', () => {
     render(<App />)
     expect(await screen.findByRole('alert')).toHaveTextContent('Algo salió mal en esta pantalla')
     expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0)
-    vi.restoreAllMocks()
   })
 
   it('una ruta que no existe muestra "No encontramos esta página" y el menu sigue visible', async () => {
