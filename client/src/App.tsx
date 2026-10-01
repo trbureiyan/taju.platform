@@ -14,6 +14,7 @@ import { ProductoDetailPage } from './pages/ProductoDetailPage'
 import { PedidoFormPage } from './pages/PedidoFormPage'
 import { MisPedidosPage } from './pages/MisPedidosPage'
 import { PedidoDetallePage } from './pages/PedidoDetallePage'
+import { NotFoundPage } from './pages/NotFoundPage'
 import { EsperaTaller } from './components/shared/EsperaTaller'
 
 // el panel de taller no viaja en la primera carga: ningun cliente lo abre y la Vitrina es la puerta de entrada
@@ -106,6 +107,8 @@ export default function App() {
                       </ProtectedRoute>
                     }
                   />
+                  {/* siempre al final: lo que no coincide con ninguna ruta de arriba */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
             </Layout>
