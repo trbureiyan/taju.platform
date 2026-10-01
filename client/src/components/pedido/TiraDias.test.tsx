@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TiraDias } from './TiraDias'
 
@@ -41,24 +41,31 @@ describe('TiraDias', () => {
     expect(screen.getByRole('radio', { name: 'martes, 6 de octubre' })).toBeChecked()
   })
 
-  it('"otra fecha" usa el primer dia disponible como minimo', () => {
+  it('el calendario esta cerrado y se abre con "Ver el calendario"', async () => {
     render(<TiraDias valor="" onCambio={vi.fn()} ahora={sabadoEnLaTarde} />)
-    expect(screen.getByLabelText('Otra fecha')).toHaveAttribute('min', '2026-10-05')
+    const boton = screen.getByRole('button', { name: 'Ver el calendario' })
+    expect(boton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument()
+
+    await userEvent.click(boton)
+
+    expect(screen.getByRole('button', { name: 'Ocultar el calendario' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('grid')).toBeInTheDocument()
   })
 
-  it('"otra fecha" en domingo da el mensaje con el siguiente dia disponible', () => {
-    const onCambio = vi.fn()
-    render(<TiraDias valor="2026-10-18" onCambio={onCambio} ahora={sabadoEnLaTarde} />)
-    // 18 de octubre es domingo y queda fuera de los 14 dias de la tira, asi que se muestra en "otra fecha"
-    expect(screen.getByLabelText('Otra fecha')).toHaveValue('2026-10-18')
-    expect(screen.getByLabelText('Otra fecha')).toHaveAccessibleDescription(/Los domingos no hay servicio/)
-  })
-
-  it('escribir una fecha en "otra fecha" la avisa', () => {
+  it('elegir un dia lejano en el calendario avisa la fecha', async () => {
     const onCambio = vi.fn()
     render(<TiraDias valor="" onCambio={onCambio} ahora={sabadoEnLaTarde} />)
-    fireEvent.change(screen.getByLabelText('Otra fecha'), { target: { value: '2026-11-03' } })
-    expect(onCambio).toHaveBeenCalledWith('2026-11-03')
+    await userEvent.click(screen.getByRole('button', { name: 'Ver el calendario' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+    await userEvent.click(screen.getByRole('button', { name: 'martes, 17 de noviembre' }))
+    expect(onCambio).toHaveBeenCalledWith('2026-11-17')
+  })
+
+  it('una fecha en domingo fuera de la tira muestra el mensaje con el siguiente dia disponible', () => {
+    // 18 de octubre es domingo y queda fuera de los 14 dias de la tira
+    render(<TiraDias valor="2026-10-18" onCambio={vi.fn()} ahora={sabadoEnLaTarde} />)
+    expect(screen.getByText(/Los domingos no hay servicio/)).toBeInTheDocument()
   })
 
   it('muestra el error de validacion que le pasa el momento', () => {

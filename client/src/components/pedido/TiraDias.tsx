@@ -1,5 +1,5 @@
-import { useId, useMemo } from 'react'
-import { Input } from '../ui/Input'
+import { useId, useMemo, useState } from 'react'
+import { CalendarioMes } from './CalendarioMes'
 import { diasConServicio, fechaEnPalabras, primerDiaDisponible } from '../../lib/horario'
 import { validarFechaDeseada } from '../../lib/fechaDeseada'
 
@@ -7,7 +7,7 @@ const CANTIDAD_DE_DIAS = 14
 
 /**
  * Elige el dia en que el cliente necesita su pedido. Lista solo dias con servicio (sin celdas grises) desde el
- * primer dia realmente disponible; "otra fecha" cubre cualquier otro dia y explica si no hay servicio.
+ * primer dia realmente disponible; "Ver el calendario" abre un calendario de mes para cualquier otro dia.
  * @prop valor - Fecha elegida `YYYY-MM-DD`, o vacio.
  * @prop onCambio - Recibe la fecha elegida.
  * @prop ahora - Momento actual (se inyecta en los tests).
@@ -32,11 +32,12 @@ function partes(fecha: string): { semana: string; dia: string; mes: string } {
 
 export function TiraDias({ valor, onCambio, ahora, error }: TiraDiasProps) {
   const id = useId()
+  const [calendario, setCalendario] = useState(false)
   const momento = ahora ?? new Date()
   const minimo = primerDiaDisponible(momento)
   const dias = useMemo(() => diasConServicio(minimo, CANTIDAD_DE_DIAS), [minimo])
   const enLaTira = dias.includes(valor)
-  // una fecha fuera de la tira (o invalida) se ve y se explica en "otra fecha"
+  // una fecha fuera de la tira (por ejemplo heredada o invalida) se explica bajo el selector
   const errorOtra = valor && !enLaTira ? validarFechaDeseada(valor, momento) : null
   const mensaje = error ?? errorOtra ?? undefined
 
@@ -76,15 +77,16 @@ export function TiraDias({ valor, onCambio, ahora, error }: TiraDiasProps) {
       </div>
       {/* texto fijo de la tabla actual: revisarlo si cambian HORARIO_SEMANAL o CIERRES_ADICIONALES (lib/politicas.ts) */}
       <p className="text-xs text-texto-secundario">No hay servicio los domingos ni los lunes festivos.</p>
-      <Input
-        label="Otra fecha"
-        type="date"
-        min={minimo}
-        value={enLaTira ? '' : valor}
-        onChange={(e) => onCambio(e.target.value)}
-        error={mensaje}
-        anunciarError={false}
-      />
+      <button
+        type="button"
+        aria-expanded={calendario}
+        onClick={() => setCalendario((v) => !v)}
+        className="min-h-boton self-start text-sm font-medium text-texto-principal underline underline-offset-4 focus-visible:outline-none focus-visible:shadow-foco"
+      >
+        {calendario ? 'Ocultar el calendario' : 'Ver el calendario'}
+      </button>
+      {calendario && <CalendarioMes valor={valor} onCambio={onCambio} ahora={ahora} />}
+      {mensaje && <p className="text-xs text-error-texto">{mensaje}</p>}
     </fieldset>
   )
 }
