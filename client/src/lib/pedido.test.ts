@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { codigoPedido, SIGUIENTE_PASO, enCurso, avance, fechaConHora } from './pedido'
+import { codigoPedido, SIGUIENTE_PASO, enCurso, avance, fechaConHora, normalizarPedido } from './pedido'
+import { resumenDesdePedido } from './resumenPedido'
+import { pedido, antiguo } from '../test/pedidos'
 import { ESTADOS_PEDIDO } from '../types'
 
 describe('codigoPedido', () => {
@@ -41,5 +43,26 @@ describe('avance', () => {
 describe('fechaConHora', () => {
   it('escribe dia, fecha y hora en la hora de Colombia sin depender de la zona del dispositivo', () => {
     expect(fechaConHora('2026-12-12T17:00:00-05:00')).toMatch(/sábado.*12 de diciembre.*5:00/)
+  })
+})
+
+describe('normalizarPedido', () => {
+  it('completa lo que un pedido antiguo no trae para que ninguna vista lance', () => {
+    const p = normalizarPedido(antiguo(pedido({})))
+    expect(p.contacto).toEqual({ nombre: '', telefono: '' })
+    expect(p.entrega).toEqual({ metodo: 'recoger', detalle: '' })
+    expect(p.fechaDeseada).toBeNull()
+    expect(p.pago).toBeNull()
+    expect(p.contactadoEn).toBeNull()
+  })
+
+  it('no toca un pedido completo', () => {
+    const completo = pedido({ contacto: { nombre: 'Laura', telefono: '3192452842' }, entrega: { metodo: 'domicilio', detalle: 'Barrio Cándido' } })
+    expect(normalizarPedido(completo)).toEqual(completo)
+  })
+
+  it('el resumen de un pedido antiguo no lanza y omite lo que no se sabe', () => {
+    const lineas = resumenDesdePedido(normalizarPedido(antiguo(pedido({}))))
+    expect(lineas.find((l) => l.clave === 'celular')).toMatchObject({ valor: null })
   })
 })

@@ -4,7 +4,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { useMisPedidos, olvidarMisPedidos, pedidoEnMemoria, actualizarEnMemoria } from './useMisPedidos'
 import { api } from '../lib/api'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
-import { pedido } from '../test/pedidos'
+import { pedido, antiguo } from '../test/pedidos'
 
 const sesion = vi.hoisted(() => ({ token: null as string | null }))
 vi.mock('../lib/api', () => ({
@@ -34,6 +34,14 @@ describe('useMisPedidos', () => {
     expect(getMock).toHaveBeenCalledExactlyOnceWith('/pedidos/mis-pedidos')
     expect(result.current.pedidos).toHaveLength(1)
     expect(result.current.error).toBeNull()
+  })
+
+  it('completa un pedido con forma antigua (sin contacto ni entrega) para que la lista no lance', async () => {
+    getMock.mockResolvedValueOnce([antiguo(pedido({}))])
+    const { result } = usarMisPedidos()
+    await waitFor(() => expect(result.current.cargando).toBe(false))
+    expect(result.current.pedidos[0].contacto).toEqual({ nombre: '', telefono: '' })
+    expect(result.current.pedidos[0].entrega).toEqual({ metodo: 'recoger', detalle: '' })
   })
 
   it('expone el error y reintentar vuelve a pedir', async () => {

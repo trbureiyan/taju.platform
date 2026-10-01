@@ -19,11 +19,19 @@ describe('HojaResumen', () => {
     expect(screen.getByText('Pendiente')).toBeInTheDocument()
   })
 
-  it('en escritorio es un panel con altura maxima y scroll interno', () => {
-    const { container } = render(<HojaResumen lineas={lineas} />)
+  it('con fija es un panel lateral con altura maxima y scroll interno', () => {
+    const { container } = render(<HojaResumen lineas={lineas} fija />)
     const clases = (container.firstElementChild as HTMLElement).className
     expect(clases).toContain('lg:sticky')
     expect(clases).toContain('lg:overflow-y-auto')
     expect(clases).toContain('lg:max-h-')
+  })
+
+  it('por defecto NO es fija: en el repaso y en la pantalla de exito no se pega ni tapa lo que sigue', () => {
+    const { container } = render(<HojaResumen lineas={lineas} />)
+    const clases = (container.firstElementChild as HTMLElement).className
+    expect(clases).not.toContain('sticky')
+    expect(clases).not.toContain('overflow-y-auto')
+    expect(clases).not.toContain('lg:static')
   })
 })

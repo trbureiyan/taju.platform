@@ -1,4 +1,4 @@
-import { FLUJO_PEDIDO, type EstadoPedido } from '../types'
+import { FLUJO_PEDIDO, type EstadoPedido, type Pedido, type PedidoAdmin } from '../types'
 
 /**
  * Código de pedido para nombrar el mismo pedido por WhatsApp entre cliente y taller.
@@ -52,4 +52,23 @@ export function fechaConHora(iso: string): string {
     timeZone: 'America/Bogota',
   })
   return `${dia}, ${hora}`
+}
+
+/**
+ * Completa lo que un pedido guardado antes de la solicitud no trae (contacto, entrega, fechas, anticipo). El servidor
+ * actual siempre los manda, pero un documento antiguo, o un servidor sin actualizar, no: las vistas leen estos campos
+ * sin proteger y un pedido asi dejaba la pantalla en blanco.
+ * @param crudo - Pedido tal como llega de la API.
+ * @returns El mismo pedido con los campos faltantes en su valor vacio.
+ */
+export function normalizarPedido<T extends Pedido | PedidoAdmin>(crudo: T): T {
+  return {
+    ...crudo,
+    contacto: crudo.contacto ?? { nombre: '', telefono: '' },
+    entrega: crudo.entrega ?? { metodo: 'recoger', detalle: '' },
+    fechaDeseada: crudo.fechaDeseada ?? null,
+    fechaEntrega: crudo.fechaEntrega ?? null,
+    pago: crudo.pago ?? null,
+    contactadoEn: crudo.contactadoEn ?? null,
+  }
 }
