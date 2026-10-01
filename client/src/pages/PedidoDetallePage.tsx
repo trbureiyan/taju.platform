@@ -22,7 +22,7 @@ function paresDePedido(pedido: Pedido): ParEspecificacion[] {
         : `${pedido.dimensiones.valor} ${pedido.dimensiones.unidad}`,
     },
     { etiqueta: 'Cantidad', valor: pedido.cantidad },
-    { etiqueta: 'Celular', valor: pedido.contacto.telefono },
+    ...(pedido.contacto?.telefono ? [{ etiqueta: 'Celular', valor: pedido.contacto.telefono }] : []),
     { etiqueta: 'Colores', valor: pedido.colores },
     { etiqueta: 'Materiales', valor: pedido.materiales },
     { etiqueta: 'Descripción', valor: pedido.descripcion },

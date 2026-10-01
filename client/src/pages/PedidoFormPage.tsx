@@ -16,7 +16,7 @@ import { exigeReferencia } from '../lib/requisitos'
 import { resumenDesdeCampos, resumenDesdePedido } from '../lib/resumenPedido'
 import { mensajeResumenPedido } from '../lib/mensajePedido'
 import { promesaContacto } from '../lib/horario'
-import { codigoPedido } from '../lib/pedido'
+import { codigoPedido, normalizarPedido } from '../lib/pedido'
 import { ETIQUETAS_FAMILIA } from '../types'
 import type { Pedido, Producto } from '../types'
 
@@ -142,7 +142,7 @@ export function PedidoFormPage() {
     // cliente vea el repaso. Un envio dentro de medio segundo de llegar al repaso se ignora; el boton sigue activo.
     if (Date.now() - entradaAlRepaso.current < GRACIA_REPASO_MS) return
     const creado = await solicitud.enviar()
-    if (creado) setPedidoCreado(creado)
+    if (creado) setPedidoCreado(normalizarPedido(creado))
   }
 
   if (cargando) return <p className="text-texto-secundario">Cargando…</p>
@@ -183,7 +183,7 @@ export function PedidoFormPage() {
           {promesaContacto(new Date())} Hasta que confirmemos contigo el precio, la fecha y el anticipo, no empezamos a
           producir.
         </p>
-        <HojaResumen lineas={lineasEnviadas} titulo="Lo que enviaste" className="text-left lg:static lg:max-h-none" />
+        <HojaResumen lineas={lineasEnviadas} titulo="Lo que enviaste" className="text-left" />
         <div className="flex flex-wrap gap-3 justify-center">
           <Button variante="primario" onClick={() => navigate('/mis-pedidos')}>
             Ver mis pedidos
@@ -257,7 +257,7 @@ export function PedidoFormPage() {
           ref={formulario}
           onSubmit={alEnviarFormulario}
           noValidate
-          className="flex flex-col gap-6 pb-[calc(var(--space-24)+var(--space-8)+env(safe-area-inset-bottom))] lg:col-span-2 lg:pb-0"
+          className="flex flex-col gap-6 pb-[calc(var(--space-24)+var(--space-8)+env(safe-area-inset-bottom))] min-w-0 lg:col-span-2 lg:pb-0"
         >
           {paso === 1 && <MomentoQue {...propsMomento} />}
           {paso === 2 && (
@@ -285,6 +285,7 @@ export function PedidoFormPage() {
         {paso < 4 && (
           <aside className="hidden lg:block">
             <HojaResumen
+              fija
               lineas={resumenDesdeCampos(campos, producto, {
                 cantidad: solicitud.archivos.length,
                 obligatoria: exigeReferencia(producto.categoria.familia),

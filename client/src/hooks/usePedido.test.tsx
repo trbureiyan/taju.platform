@@ -5,7 +5,7 @@ import { usePedido } from './usePedido'
 import { useMisPedidos, pedidoEnMemoria, olvidarMisPedidos } from './useMisPedidos'
 import { api, ErrorApi } from '../lib/api'
 import { AuthProvider, useAuth } from '../contexts/AuthContext'
-import { pedido } from '../test/pedidos'
+import { pedido, antiguo } from '../test/pedidos'
 
 const sesion = vi.hoisted(() => ({ token: null as string | null }))
 vi.mock('../lib/api', async (original) => {
@@ -43,6 +43,15 @@ describe('usePedido', () => {
     const { result } = renderHook(() => usePedido('p1', pedido({ _id: 'p1' })), { wrapper })
     expect(result.current.estado).toBe('listo')
     await waitFor(() => expect(getMock).toHaveBeenCalledWith('/pedidos/p1'))
+  })
+
+  it('completa un pedido con forma antigua que llega del server', async () => {
+    const { wrapper } = conNav()
+    getMock.mockResolvedValueOnce(antiguo(pedido({ _id: 'p1' })))
+    const { result } = renderHook(() => usePedido('p1'), { wrapper })
+    await waitFor(() => expect(result.current.estado).toBe('listo'))
+    expect(result.current.pedido?.contacto).toEqual({ nombre: '', telefono: '' })
+    expect(result.current.pedido?.entrega).toEqual({ metodo: 'recoger', detalle: '' })
   })
 
   it('un 404 marca no-encontrado (pedido inexistente o de otro cliente)', async () => {

@@ -26,7 +26,7 @@ export function MomentoRepaso({
       </h2>
       <p className="text-sm text-texto-secundario">Revisa que todo esté bien. Después de enviar te escribimos por WhatsApp.</p>
 
-      <HojaResumen lineas={lineas} className="lg:static lg:max-h-none" />
+      <HojaResumen lineas={lineas} />
 
       {precio && (
         <div className="rounded-tarjeta border border-borde-sutil bg-superficie-hundida p-4">

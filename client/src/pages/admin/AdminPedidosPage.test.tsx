@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { AdminPedidosPage } from './AdminPedidosPage'
 import { SnackbarProvider } from '../../components/ui/Snackbar'
 import { api, ErrorApi } from '../../lib/api'
-import { pedidoAdmin } from '../../test/pedidos'
+import { pedidoAdmin, antiguo } from '../../test/pedidos'
 import { codigoPedido } from '../../lib/pedido'
 
 // ErrorApi real: la pagina solo muestra el texto del server en un 409, el resto cae a un aviso neutro
@@ -24,6 +24,24 @@ function renderizar() {
 }
 
 describe('AdminPedidosPage', () => {
+  it('una fila con forma antigua (sin contacto ni entrega) se pinta sin dejar el panel en blanco', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce([antiguo(pedidoAdmin({ _id: 'abc123' }))])
+    renderizar()
+
+    expect(await screen.findByText(codigoPedido('abc123'))).toBeInTheDocument()
+  })
+
+  it('la respuesta de "Ya le escribí" con forma antigua tampoco rompe la fila', async () => {
+    vi.mocked(api.get).mockResolvedValueOnce([pedidoAdmin({ _id: 'abc123', estado: 'recibido' })])
+    vi.mocked(api.post).mockResolvedValueOnce(antiguo(pedidoAdmin({ _id: 'abc123', estado: 'en_revision' })))
+    renderizar()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ya le escribí' }))
+
+    expect(await screen.findByText(/tj-abc123 marcado como contactado/i)).toBeInTheDocument()
+    expect(screen.getByText(codigoPedido('abc123'))).toBeInTheDocument()
+  })
+
   it('muestra la columna Código con el mismo codigo que ve el cliente', async () => {
     vi.mocked(api.get).mockResolvedValueOnce([pedidoAdmin({ _id: 'abc123' })])
     renderizar()

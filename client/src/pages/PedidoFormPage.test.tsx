@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { PedidoFormPage } from './PedidoFormPage'
 import { api, ErrorApi } from '../lib/api'
-import { esDiaConServicio } from '../lib/horario'
+import { esDiaConServicio, fechaEnPalabras } from '../lib/horario'
 import { codigoPedido } from '../lib/pedido'
 import { MENSAJE_CELULAR, MENSAJE_FALTA_REFERENCIA } from '../lib/requisitos'
 import { MENSAJE_ERROR_ENVIO } from '../lib/errorEnvio'
@@ -117,7 +117,7 @@ async function completarMomento2(opciones: { referencia?: boolean } = {}) {
 }
 async function completarMomento3(opciones: { celular?: string } = {}) {
   const { celular = '319 245 2842' } = opciones
-  fireEvent.change(screen.getByLabelText('Otra fecha'), { target: { value: fechaHabil() } })
+  await userEvent.click(screen.getByRole('radio', { name: fechaEnPalabras(fechaHabil()) }))
   await userEvent.selectOptions(screen.getByLabelText('Hora en que la necesitas'), '10:00')
   await userEvent.type(screen.getByLabelText('Tu celular'), celular)
 }
@@ -405,25 +405,29 @@ describe('PedidoFormPage | fecha', () => {
     expect(screen.getByRole('radio', { name: 'martes, 13 de octubre' })).toBeInTheDocument()
   })
 
-  it('otra fecha en domingo lo explica y no deja avanzar', async () => {
+  it('el calendario deja los domingos y los lunes festivos deshabilitados', async () => {
     await momento3ConRelojFijo()
-    const otra = screen.getByLabelText('Otra fecha')
-    fireEvent.change(otra, { target: { value: '2026-10-11' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Ver el calendario' }))
+    // con el reloj en el 28 de septiembre el calendario abre en septiembre
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+
+    expect(screen.getByRole('button', { name: 'domingo, 11 de octubre' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'lunes, 12 de octubre' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'martes, 13 de octubre' })).toBeEnabled()
+  })
+
+  it('una fecha lejana elegida en el calendario llega al repaso', async () => {
+    await momento3ConRelojFijo()
+    await userEvent.click(screen.getByRole('button', { name: 'Ver el calendario' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+    await userEvent.click(screen.getByRole('button', { name: 'martes, 17 de noviembre' }))
+    await userEvent.selectOptions(screen.getByLabelText('Hora en que la necesitas'), '10:00')
     await userEvent.type(screen.getByLabelText('Tu celular'), '319 245 2842')
     await siguiente()
 
-    expect(otra).toHaveAccessibleDescription(/Los domingos no hay servicio/)
-    expect(screen.getByRole('heading', { name: 'Cuándo y dónde' })).toBeInTheDocument()
-  })
-
-  it('otra fecha en un lunes festivo dice que el taller esta cerrado', async () => {
-    await momento3ConRelojFijo()
-    const otra = screen.getByLabelText('Otra fecha')
-    fireEvent.change(otra, { target: { value: '2026-10-12' } })
-    await siguiente()
-
-    expect(otra).toHaveAccessibleDescription(/festivo y el taller está cerrado/)
-    expect(screen.getByRole('heading', { name: 'Cuándo y dónde' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Repaso' })
+    expect(screen.getByText(/17 de noviembre/)).toBeInTheDocument()
   })
 
   it('el sabado ofrece horas hasta las 3 p. m.', async () => {
@@ -661,7 +665,7 @@ describe('PedidoFormPage | Pedir de nuevo (?desde=)', () => {
     expect(screen.getByLabelText('Tu celular')).toHaveValue('3001234567')
     expect(screen.getByRole('radio', { name: /A domicilio en Neiva/ })).toBeChecked()
     expect(screen.getByLabelText('Barrio o dirección')).toHaveValue('Cra 5 # 10-20')
-    expect(screen.getByLabelText('Otra fecha')).toHaveValue('')
+    expect(screen.queryByRole('radio', { name: /, \d+ de /, checked: true })).not.toBeInTheDocument()
   })
 
   it('no precarga si el pedido de origen es de otro producto (?desde= manipulado a mano)', async () => {
@@ -695,5 +699,15 @@ describe('PedidoFormPage | producto no disponible', () => {
     montar('/pedido/prod-1?desde=pedido-anterior')
     expect(await screen.findByText(/ya no está disponible/i)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /ir al catálogo/i })).toHaveAttribute('href', '/catalogo')
+  })
+})
+
+describe('PedidoFormPage | maquetacion', () => {
+  it('la columna del formulario puede encogerse (min-w-0) y el repaso no monta ninguna hoja fija', async () => {
+    await llegarAlRepaso()
+    expect(document.querySelector('form')).toHaveClass('min-w-0')
+    // la unica hoja fija es la del aside (hidden en movil); el repaso trae la suya sin sticky
+    const repaso = screen.getByRole('heading', { name: 'Repaso' }).closest('form')!
+    expect(repaso.querySelector('[class*="lg:sticky"]')).toBeNull()
   })
 })
