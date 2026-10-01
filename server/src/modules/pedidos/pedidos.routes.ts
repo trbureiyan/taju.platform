@@ -20,16 +20,16 @@ const limitePedidos = rateLimit({
 const router = Router()
 
 // todo requiere sesion - a diferencia del catalogo, ver pedidos siempre exige estar logueado
-router.get('/', requireAuth, requireRol('administrador'), pedidosController.getAllPedidos)
-router.post('/', requireAuth, uploadImagen, pedidosController.crearPedido)
+router.get('/', limitePedidos, requireAuth, requireRol('administrador'), pedidosController.getAllPedidos)
+router.post('/', limitePedidos, requireAuth, uploadImagen, pedidosController.crearPedido)
 
 // '/mis-pedidos' va antes de '/:id' o express la confundiria con un id de pedido
-router.get('/mis-pedidos', requireAuth, pedidosController.getMisPedidos)
+router.get('/mis-pedidos', limitePedidos, requireAuth, pedidosController.getMisPedidos)
 
 router.patch('/:id/estado', limitePedidos, requireAuth, requireRol('administrador'), pedidosController.actualizarEstado)
 router.post('/:id/contacto', limitePedidos, requireAuth, requireRol('administrador'), pedidosController.marcarContactado)
 router.patch('/:id/acuerdo', limitePedidos, requireAuth, requireRol('administrador'), pedidosController.registrarAcuerdo)
 router.patch('/:id/cancelar', limitePedidos, requireAuth, pedidosController.cancelarMiPedido)
-router.get('/:id', requireAuth, pedidosController.getPedidoById)
+router.get('/:id', limitePedidos, requireAuth, pedidosController.getPedidoById)
 
 export default router
