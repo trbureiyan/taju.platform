@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { Dialog } from '../../components/ui/Dialog'
 import { useSnackbar } from '../../components/ui/Snackbar'
 import { AcuerdoDialog } from '../../components/admin/AcuerdoDialog'
-import { codigoPedido, fechaConHora } from '../../lib/pedido'
+import { codigoPedido, fechaConHora, normalizarPedido } from '../../lib/pedido'
 import { enlaceWhatsAppA } from '../../lib/whatsapp'
 import { mensajeAlCliente } from '../../lib/mensajePedido'
 import { limiteDeContacto } from '../../lib/horario'
@@ -45,13 +45,13 @@ export function AdminPedidosPage() {
   useEffect(() => {
     api
       .get<PedidoAdmin[]>('/pedidos')
-      .then(setPedidos)
+      .then((crudos) => setPedidos(crudos.map(normalizarPedido)))
       .catch(() => setError(ERROR_CARGA))
       .finally(() => setCargando(false))
   }, [])
 
   function reemplazarFila(actualizado: PedidoAdmin) {
-    setPedidos((prev) => prev.map((p) => (p._id === actualizado._id ? actualizado : p)))
+    setPedidos((prev) => prev.map((p) => (p._id === actualizado._id ? normalizarPedido(actualizado) : p)))
   }
 
   // las tres acciones de una fila comparten el mismo ciclo: en vuelo, reemplazar la fila con la respuesta del

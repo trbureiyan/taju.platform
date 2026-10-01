@@ -6,7 +6,7 @@ import { api, ErrorApi } from '../lib/api'
 import { AuthProvider } from '../contexts/AuthContext'
 import { SnackbarProvider } from '../components/ui/Snackbar'
 import { olvidarMisPedidos } from '../hooks/useMisPedidos'
-import { pedido } from '../test/pedidos'
+import { pedido, antiguo } from '../test/pedidos'
 import { codigoPedido } from '../lib/pedido'
 
 vi.mock('../lib/api', async (original) => {
@@ -43,6 +43,14 @@ describe('PedidoDetallePage', () => {
     expect(screen.getAllByText(codigoPedido('abc123')).length).toBeGreaterThan(0)
     const whatsapp = screen.getAllByRole('link', { name: /escríbenos por este pedido/i })[0]
     expect(whatsapp.getAttribute('href')).toContain(encodeURIComponent(codigoPedido('abc123')))
+  })
+
+  it('un pedido antiguo sin contacto se pinta sin fila de Celular vacia', async () => {
+    getMock.mockResolvedValueOnce(antiguo(pedido({ _id: 'abc123', nombre: 'Topper luna' })))
+    renderizar('abc123')
+
+    await waitFor(() => expect(screen.getByText('Topper luna')).toBeInTheDocument())
+    expect(screen.queryByText('Celular')).not.toBeInTheDocument()
   })
 
   it('un 404 muestra "No encontramos este pedido" con enlace a Mis pedidos', async () => {

@@ -47,3 +47,10 @@ export function pedido(parcial: {
 export function pedidoAdmin(parcial: Parameters<typeof pedido>[0] = {}): PedidoAdmin {
   return { ...pedido(parcial), cliente: { _id: 'c1', email: 'laura@taju.co' } }
 }
+
+/** Forma que guardaba el servidor anterior a la solicitud: sin contacto, entrega, fechaDeseada, pago ni contactadoEn. */
+export function antiguo<T extends object>(p: T): T {
+  const copia: Record<string, unknown> = { ...(p as Record<string, unknown>) }
+  for (const k of ['contacto', 'entrega', 'fechaDeseada', 'pago', 'contactadoEn']) delete copia[k]
+  return copia as T
+}

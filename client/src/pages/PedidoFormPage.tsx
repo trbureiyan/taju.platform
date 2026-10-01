@@ -16,7 +16,7 @@ import { exigeReferencia } from '../lib/requisitos'
 import { resumenDesdeCampos, resumenDesdePedido } from '../lib/resumenPedido'
 import { mensajeResumenPedido } from '../lib/mensajePedido'
 import { promesaContacto } from '../lib/horario'
-import { codigoPedido } from '../lib/pedido'
+import { codigoPedido, normalizarPedido } from '../lib/pedido'
 import { ETIQUETAS_FAMILIA } from '../types'
 import type { Pedido, Producto } from '../types'
 
@@ -142,7 +142,7 @@ export function PedidoFormPage() {
     // cliente vea el repaso. Un envio dentro de medio segundo de llegar al repaso se ignora; el boton sigue activo.
     if (Date.now() - entradaAlRepaso.current < GRACIA_REPASO_MS) return
     const creado = await solicitud.enviar()
-    if (creado) setPedidoCreado(creado)
+    if (creado) setPedidoCreado(normalizarPedido(creado))
   }
 
   if (cargando) return <p className="text-texto-secundario">Cargando…</p>

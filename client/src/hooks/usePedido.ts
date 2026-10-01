@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { api, ErrorApi, getToken } from '../lib/api'
 import { actualizarEnMemoria } from './useMisPedidos'
 import { useAuth } from '../contexts/AuthContext'
+import { normalizarPedido } from '../lib/pedido'
 import type { Pedido } from '../types'
 
 type Estado = 'cargando' | 'listo' | 'no-encontrado' | 'error'
@@ -33,7 +34,7 @@ export function usePedido(id: string, inicial?: Pedido) {
       .get<Pedido>(`/pedidos/${id}`)
       .then((p) => {
         if (cancelado) return
-        setPedido(p)
+        setPedido(normalizarPedido(p))
         setEstado('listo')
       })
       .catch((err: unknown) => {
@@ -54,9 +55,10 @@ export function usePedido(id: string, inicial?: Pedido) {
 
   // el PATCH de cancelar ya devuelve el pedido actualizado: se pinta sin volver a pedirlo ni parpadear
   const reemplazar = useCallback((actualizado: Pedido) => {
-    setPedido(actualizado)
+    const listo = normalizarPedido(actualizado)
+    setPedido(listo)
     setEstado('listo')
-    actualizarEnMemoria(actualizado)
+    actualizarEnMemoria(listo)
   }, [])
 
   return { pedido, estado, reintentar, reemplazar }

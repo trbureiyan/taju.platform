@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, getToken } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { normalizarPedido } from '../lib/pedido'
 import type { Pedido } from '../types'
 
 interface Estado {
@@ -65,7 +66,8 @@ export function useMisPedidos() {
     let cancelado = false
     api
       .get<Pedido[]>('/pedidos/mis-pedidos')
-      .then((pedidos) => {
+      .then((crudos) => {
+        const pedidos = crudos.map(normalizarPedido)
         if (getToken() === token) cache = { token, pedidos }
         if (!cancelado) setEstado({ pedidos, cargando: false, error: null })
       })
