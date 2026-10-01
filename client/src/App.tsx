@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider } from './contexts/AuthContext'
 import { SnackbarProvider } from './components/ui/Snackbar'
 import { Layout } from './components/shared/Layout'
+import { ErrorBoundary } from './components/shared/ErrorBoundary'
 import { ProtectedRoute } from './components/shared/ProtectedRoute'
 import { VitrinaPage } from './pages/VitrinaPage'
 import { CatalogoPage } from './pages/CatalogoPage'
@@ -28,6 +29,12 @@ const AdminCalendarioPage = lazy(() =>
   import('./pages/admin/AdminCalendarioPage').then((m) => ({ default: m.AdminCalendarioPage }))
 )
 
+// resetKey por ruta: tras un fallo, navegar a otra pantalla vuelve a montar el contenido sin recargar
+function ConRedDeSeguridad({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation()
+  return <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
+}
+
 const cargarFuncionesMovimiento = () => import('./lib/motionFeatures').then((m) => m.default)
 
 // AuthProvider afuera de BrowserRouter: el estado de sesion no depende de la ruta actual
@@ -40,6 +47,7 @@ export default function App() {
           <BrowserRouter>
             <SnackbarProvider>
             <Layout>
+              <ConRedDeSeguridad>
               <Suspense
                 fallback={
                   <EsperaTaller
@@ -111,6 +119,7 @@ export default function App() {
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
+              </ConRedDeSeguridad>
             </Layout>
             </SnackbarProvider>
           </BrowserRouter>
