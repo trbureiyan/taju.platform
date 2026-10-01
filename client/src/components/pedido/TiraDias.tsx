@@ -41,7 +41,7 @@ export function TiraDias({ valor, onCambio, ahora, error }: TiraDiasProps) {
   const mensaje = error ?? errorOtra ?? undefined
 
   return (
-    <fieldset className="flex flex-col gap-3">
+    <fieldset className="flex min-w-0 flex-col gap-3">
       <legend className="text-sm font-medium text-texto-principal">Día en que la necesitas</legend>
       <div className="flex gap-2 overflow-x-auto pb-2">
         {dias.map((fecha) => {

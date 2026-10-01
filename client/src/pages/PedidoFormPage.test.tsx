@@ -697,3 +697,13 @@ describe('PedidoFormPage | producto no disponible', () => {
     expect(screen.getByRole('link', { name: /ir al catálogo/i })).toHaveAttribute('href', '/catalogo')
   })
 })
+
+describe('PedidoFormPage | maquetacion', () => {
+  it('la columna del formulario puede encogerse (min-w-0) y el repaso no monta ninguna hoja fija', async () => {
+    await llegarAlRepaso()
+    expect(document.querySelector('form')).toHaveClass('min-w-0')
+    // la unica hoja fija es la del aside (hidden en movil); el repaso trae la suya sin sticky
+    const repaso = screen.getByRole('heading', { name: 'Repaso' }).closest('form')!
+    expect(repaso.querySelector('[class*="lg:sticky"]')).toBeNull()
+  })
+})

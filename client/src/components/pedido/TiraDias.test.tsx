@@ -6,6 +6,11 @@ import { TiraDias } from './TiraDias'
 const sabadoEnLaTarde = new Date('2026-10-03T15:00:00-05:00')
 
 describe('TiraDias', () => {
+  it('el fieldset puede encogerse (min-w-0): sin eso la tira de 14 dias ensancha la columna y queda bajo el resumen', () => {
+    const { container } = render(<TiraDias valor="" onCambio={vi.fn()} ahora={sabadoEnLaTarde} />)
+    expect(container.querySelector('fieldset')).toHaveClass('min-w-0')
+  })
+
   it('lista solo dias con servicio, empezando en el primero disponible', () => {
     render(<TiraDias valor="" onCambio={vi.fn()} ahora={sabadoEnLaTarde} />)
     const dias = screen.getAllByRole('radio').map((r) => r.getAttribute('aria-label'))
