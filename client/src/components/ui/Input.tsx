@@ -52,7 +52,7 @@ export function Input({
             'min-h-boton outline-none transition-shadow focus-visible:shadow-foco',
             // el borde rojo ya comunica el error - el anillo de foco se mantiene igual, nunca se quita
             error ? 'border-error-borde' : 'border-borde-defecto hover:border-borde-activo',
-            accion ? 'pr-14' : '',
+            accion ? 'pr-12' : '',
             className,
           ]
             .filter(Boolean)

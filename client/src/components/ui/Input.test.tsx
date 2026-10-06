@@ -106,10 +106,10 @@ describe('Input | accion', () => {
   })
   it('reserva espacio a la derecha para que el texto no quede bajo la acción', () => {
     render(<Input label="Contraseña" accion={<span>x</span>} />)
-    expect(screen.getByLabelText('Contraseña')).toHaveClass('pr-14')
+    expect(screen.getByLabelText('Contraseña')).toHaveClass('pr-12')
   })
   it('sin acción no cambia el padding', () => {
     render(<Input label="Correo" />)
-    expect(screen.getByLabelText('Correo')).not.toHaveClass('pr-14')
+    expect(screen.getByLabelText('Correo')).not.toHaveClass('pr-12')
   })
 })
