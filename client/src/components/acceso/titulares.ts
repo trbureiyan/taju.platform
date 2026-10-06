@@ -27,7 +27,12 @@ const TEXTOS: Record<Modo, Record<Exclude<MotivoDeAcceso, null> | 'general', { t
   },
 }
 
-/** Titular y apoyo de la vista de acceso. El motivo sale del destino al que la persona quería llegar. */
+/**
+ * Titular y apoyo de la vista de acceso. El motivo sale del destino al que la persona quería llegar.
+ * @param modo - 'registro' o 'ingreso'.
+ * @param motivo - Por qué se pide la cuenta (ver `motivoDeRetorno`); null usa el texto general.
+ * @returns El titular (h1) y la frase de apoyo de esa vista.
+ */
 export function titularDeAcceso(modo: Modo, motivo: MotivoDeAcceso): { titulo: string; apoyo: string } {
   return TEXTOS[modo][motivo ?? 'general']
 }

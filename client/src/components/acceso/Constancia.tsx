@@ -8,6 +8,7 @@ import { resorte } from '../../lib/movimiento'
  * Constancia de la cuenta: se llena mientras la persona escribe. Es decoración: va oculta a lectores de pantalla
  * (el lector ya anuncia cada campo) y solo la confirmación final se anuncia, en un role=status aparte.
  * @prop modo - 'registro' muestra nombre, correo, fecha y contraseña; 'ingreso' es sobrio y solo refleja el correo.
+ * @prop correo - Correo tal como se teclea; se muestra recortado y también en el ingreso.
  * @prop nombre - Solo registro. En ingreso se ignora: mostrar el nombre de una cuenta existente filtraría qué correos tienen cuenta.
  * @prop contrasenaDefinida - La contraseña llegó al mínimo. Nunca se recibe ni se muestra el valor.
  * @prop confirmada - La cuenta se creó: las líneas se completan y se anuncia el éxito.

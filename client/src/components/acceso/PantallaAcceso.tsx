@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
  * @prop titulo - Titular: explica el motivo de la cuenta.
  * @prop apoyo - Frase de apoyo bajo el titular.
  * @prop constancia - La constancia (franja u hoja según el ancho).
+ * @prop children - El formulario de la vista (registro o ingreso).
  */
 interface PantallaAccesoProps {
   titulo: string
