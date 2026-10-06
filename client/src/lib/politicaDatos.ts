@@ -1,5 +1,5 @@
 // espejo de VERSION_POLITICA_DATOS en server/src/modules/auth/auth.service.ts: se suben juntas cuando el texto cambia de fondo
-export const VERSION_POLITICA_DATOS = '2026-10-06'
+export const VERSION_POLITICA_DATOS = '2026-10-06.2'
 
 // [DECISION] solo se publica lo necesario: el art. 12 de la Ley 1581 pide identificar al responsable, una dirección
 // (física o electrónica) y un teléfono. TaJú confirmó publicar estos datos. Una prueba bloquea el paso a main si vuelve
@@ -46,6 +46,12 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
     titulo: 'Con quién los compartimos',
     parrafos: [
       'Con los servicios que hacen funcionar la plataforma: MongoDB Atlas (base de datos), Cloudinary (imágenes), Render y Vercel (alojamiento), Google Maps (el mapa de nuestra ubicación en el pie de página) y WhatsApp, el canal por el que te escribimos. Solo reciben lo necesario para prestarnos el servicio y pueden guardar la información en servidores fuera de Colombia.',
+    ],
+  },
+  {
+    titulo: 'Cuánto tiempo guardamos tus datos',
+    parrafos: [
+      'Guardamos tus datos mientras tu cuenta exista. Hoy no los borramos automáticamente por inactividad. Si quieres que borremos tu cuenta y tus datos, escríbenos; los borramos, salvo lo que el taller deba conservar por obligaciones legales.',
     ],
   },
   {
