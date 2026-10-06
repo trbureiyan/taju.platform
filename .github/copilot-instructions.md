@@ -252,6 +252,8 @@ Ubicación: `*.test.ts(x)` junto al archivo que prueban. Mocking de Cloudinary: 
 
 ## Áreas de riesgo conocidas
 
+- **Acceso:** `RegistrarPage` y `LoginPage` comparten `PantallaAcceso`, `Constancia` y `FormularioIngreso` (`components/acceso/`). El destino viaja en `?redirect=` y solo se acepta si pasa `rutaDeRetorno` (`lib/retorno.ts`); `lib/validarAcceso.ts` espeja `auth.controller.ts` y los errores se traducen por código HTTP, nunca con el texto del servidor. El registro envía `aceptaDatos: true`; `/datos` (ruta pública) muestra `lib/politicaDatos.ts`, cuya prueba falla en PR a `main` mientras queden `[PENDIENTE]`.
+- **Sesión vencida en el pedido:** un 401 al enviar abre `FormularioIngreso` en un `Dialog` sin navegar (el estado vive en memoria). El token dura 8 h.
 - **Auth / JWT:** token en memoria del cliente, sin persistencia. Cualquier cambio en el payload afecta todas las rutas autenticadas.
 - **RBAC:** `server/src/middleware/rbac.ts` valida el rol `administrador` en rutas de taller.
 - **Cloudinary:** llamadas reales solo en producción; en tests, interceptar el módulo completo.

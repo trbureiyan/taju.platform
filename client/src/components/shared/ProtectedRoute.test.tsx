@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { useAuth } from '../../contexts/AuthContext'
 import { RUTA_INICIO_POR_ROL, type Rol, type Usuario } from '../../types'
 
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: vi.fn() }))
+
+function Login() {
+  return <p>pantalla de login {useLocation().search}</p>
+}
 
 function sesion(usuario: Usuario | null) {
   vi.mocked(useAuth).mockReturnValue({
@@ -34,7 +38,7 @@ function renderEn(rolRequerido?: Rol) {
             </ProtectedRoute>
           }
         />
-        <Route path="/login" element={<p>pantalla de login</p>} />
+        <Route path="/login" element={<Login />} />
         <Route path={RUTA_INICIO_POR_ROL.cliente} element={<p>inicio cliente</p>} />
         <Route path={RUTA_INICIO_POR_ROL.administrador} element={<p>inicio administrador</p>} />
       </Routes>
@@ -50,21 +54,27 @@ describe('ProtectedRoute', () => {
   it('sin sesion redirige a /login', () => {
     sesion(null)
     renderEn('cliente')
-    expect(screen.getByText('pantalla de login')).toBeInTheDocument()
+    expect(screen.getByText(/pantalla de login/)).toBeInTheDocument()
     expect(screen.queryByText('contenido protegido')).not.toBeInTheDocument()
+  })
+
+  it('sin sesion conserva la ruta de origen en ?redirect=', () => {
+    sesion(null)
+    renderEn('cliente')
+    expect(screen.getByText(/pantalla de login \?redirect=\/protegida/)).toBeInTheDocument()
   })
 
   it('sin sesion redirige a /login aunque la ruta no pida rol', () => {
     sesion(null)
     renderEn()
-    expect(screen.getByText('pantalla de login')).toBeInTheDocument()
+    expect(screen.getByText(/pantalla de login/)).toBeInTheDocument()
   })
 
   it('cliente en ruta de administrador va a su propio inicio, no a /login', () => {
     sesion(usuarioCon('cliente'))
     renderEn('administrador')
     expect(screen.getByText('inicio cliente')).toBeInTheDocument()
-    expect(screen.queryByText('pantalla de login')).not.toBeInTheDocument()
+    expect(screen.queryByText(/pantalla de login/)).not.toBeInTheDocument()
   })
 
   it('administrador en ruta de cliente va al panel de taller', () => {

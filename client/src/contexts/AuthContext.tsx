@@ -11,7 +11,8 @@ interface AuthContextValue extends AuthState {
   // devuelven el usuario autenticado para que la pagina decida el destino (por rol) sin esperar
   // el proximo render - el estado de React aun no se actualizo en el mismo tick del await
   login: (email: string, password: string) => Promise<Usuario>
-  registrar: (nombre: string, email: string, password: string) => Promise<Usuario>
+  // aceptaDatos va tipado como `true`: el server rechaza el registro sin autorización explícita
+  registrar: (nombre: string, email: string, password: string, aceptaDatos: true) => Promise<Usuario>
   logout: () => void
 }
 
@@ -43,11 +44,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // login y registrar terminan igual (token + usuario autenticado), solo cambia el endpoint que golpean
-  const registrar = useCallback(async (nombre: string, email: string, password: string) => {
+  const registrar = useCallback(async (nombre: string, email: string, password: string, aceptaDatos: true) => {
     const { token, usuario } = await api.post<LoginResponse>('/auth/registrar', {
       nombre,
       email,
       password,
+      aceptaDatos,
     })
     setToken(token)
     setState({ usuario, autenticado: true })

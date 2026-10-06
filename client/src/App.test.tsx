@@ -32,6 +32,12 @@ describe('App | rutas', () => {
     expect(screen.getAllByRole('navigation').length).toBeGreaterThan(0)
   })
 
+  it('la ruta /datos es publica y muestra la politica de datos', async () => {
+    window.history.pushState({}, '', '/datos')
+    render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Cómo tratamos tus datos' })).toBeInTheDocument()
+  })
+
   it('una ruta que no existe muestra "No encontramos esta página" y el menu sigue visible', async () => {
     window.history.pushState({}, '', '/ruta-que-no-existe')
     render(<App />)

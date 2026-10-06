@@ -4,6 +4,8 @@ import { MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA, MENSAJE_FECHA_PASADA } f
 export const MENSAJE_ERROR_ENVIO =
   'No pudimos enviar tu pedido porque algo falló en la conexión con el taller. Tus datos siguen aquí: prueba de nuevo en unos segundos o escríbenos por WhatsApp.'
 
+export const MENSAJE_SESION_VENCIDA = 'Tu sesión venció. Ingresa de nuevo: tus datos siguen aquí.'
+
 // mensajes de subida de server/src/middleware/upload.ts, escritos para el cliente
 const MENSAJES_SUBIDA = new Set([
   'Cada imagen debe pesar menos de 5 MB',
@@ -26,11 +28,12 @@ function sonSoloRequisitos(texto: string): boolean {
 /**
  * Texto a mostrar cuando falla el envio de la solicitud.
  * [DECISION] lista blanca que falla cerrada: el texto del server llega tal cual solo en el 409 o en un 400 conocido;
- * red caida (TypeError), 5xx y cualquier otro 400 ("Solicitud inválida", errores de multer) reciben el de respaldo.
+ * el 401 tiene texto propio (sesion vencida); red caida (TypeError), 5xx y cualquier otro 400 ("Solicitud inválida", errores de multer) reciben el de respaldo.
  * Si el server agrega un 400 escrito para el cliente, sumarlo aqui a mano o el cliente vera el de respaldo.
  */
 export function mensajeDeErrorDeEnvio(err: unknown): string {
   if (!(err instanceof ErrorApi)) return MENSAJE_ERROR_ENVIO
+  if (err.estado === 401) return MENSAJE_SESION_VENCIDA
   if (err.estado === 409) return err.message
   if (err.estado === 400 && (MENSAJES_SUBIDA.has(err.message) || sonSoloRequisitos(err.message))) return err.message
   return MENSAJE_ERROR_ENVIO
