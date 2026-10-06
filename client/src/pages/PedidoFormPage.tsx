@@ -3,6 +3,8 @@ import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { api } from '../lib/api'
 import { Button } from '../components/ui/Button'
 import { AnilloProgreso } from '../components/ui/AnilloProgreso'
+import { Dialog } from '../components/ui/Dialog'
+import { FormularioIngreso } from '../components/acceso/FormularioIngreso'
 import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
 import { HojaResumen } from '../components/pedido/HojaResumen'
 import { BarraAcciones } from '../components/pedido/BarraAcciones'
@@ -280,6 +282,15 @@ export function PedidoFormPage() {
             procesando={solicitud.procesando}
           />
         </form>
+
+        {/* [DECISION] el ingreso va en un dialogo y no en /login: el estado del formulario vive en memoria y navegar lo
+            perderia. El aviso (z-aviso 400) queda sobre el dialogo (z-modal 300), asi que un error de login se ve. */}
+        <Dialog abierto={solicitud.sesionVencida} titulo="Tu sesión venció" onCerrar={solicitud.cerrarSesionVencida}>
+          <p className="text-sm text-texto-secundario">
+            Ingresa de nuevo: tus datos siguen aquí y puedes enviar tu solicitud.
+          </p>
+          <FormularioIngreso alIngresar={solicitud.cerrarSesionVencida} />
+        </Dialog>
 
         {/* en el repaso la hoja ya es el contenido: dos hojas a la vez repetirian el resumen */}
         {paso < 4 && (
