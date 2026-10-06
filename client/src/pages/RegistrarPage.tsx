@@ -19,7 +19,7 @@ export function RegistrarPage() {
     setError(null)
     setCargando(true)
     try {
-      const usuario = await registrar(nombre, email, password)
+      const usuario = await registrar(nombre, email, password, true)
       // navigate en vez de window.location.href: un reload completo perderia el token recien guardado en memoria
       navigate(RUTA_INICIO_POR_ROL[usuario.rol], { replace: true })
     } catch (err) {
