@@ -97,3 +97,19 @@ describe('Input', () => {
     expect(screen.getByLabelText('Colores')).toHaveAccessibleDescription('Indica los colores. Aviso externo')
   })
 })
+
+describe('Input | accion', () => {
+  it('pinta la acción dentro del campo sin romper la etiqueta', () => {
+    render(<Input label="Contraseña" accion={<button type="button">ver</button>} />)
+    expect(screen.getByLabelText('Contraseña')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'ver' })).toBeInTheDocument()
+  })
+  it('reserva espacio a la derecha para que el texto no quede bajo la acción', () => {
+    render(<Input label="Contraseña" accion={<span>x</span>} />)
+    expect(screen.getByLabelText('Contraseña')).toHaveClass('pr-12')
+  })
+  it('sin acción no cambia el padding', () => {
+    render(<Input label="Correo" />)
+    expect(screen.getByLabelText('Correo')).not.toHaveClass('pr-12')
+  })
+})
