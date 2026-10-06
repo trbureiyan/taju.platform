@@ -11,6 +11,7 @@ import { VitrinaPage } from './pages/VitrinaPage'
 import { CatalogoPage } from './pages/CatalogoPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegistrarPage } from './pages/RegistrarPage'
+import { DatosPage } from './pages/DatosPage'
 import { ProductoDetailPage } from './pages/ProductoDetailPage'
 import { PedidoFormPage } from './pages/PedidoFormPage'
 import { MisPedidosPage } from './pages/MisPedidosPage'
@@ -63,6 +64,7 @@ export default function App() {
                   <Route path="/catalogo/:id" element={<ProductoDetailPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/registrar" element={<RegistrarPage />} />
+                  <Route path="/datos" element={<DatosPage />} />
 
                   {/* ─── Cliente autenticado ─── */}
                   <Route
