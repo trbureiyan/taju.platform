@@ -29,13 +29,15 @@ export function BotonWhatsApp({ mensaje, variante = 'linea', children }: BotonWh
         rel="noopener noreferrer"
         aria-label="Escríbenos por WhatsApp"
         className={[
-          'fixed bottom-6 right-6 z-elevado flex items-center justify-center w-14 h-14 rounded-full',
-          'bg-accion-sec-fondo text-accion-sec-texto border border-accion-sec-borde shadow-lg',
+          'fixed bottom-6 right-6 z-elevado block w-16 h-16 rounded-full',
           'transition-transform duration-normal ease-estandar hover:-translate-y-0.5 active:scale-97',
           'focus-visible:outline-none focus-visible:shadow-foco',
         ].join(' ')}
       >
-        <MessageCircle aria-hidden="true" size={26} />
+        {/* [DECISION] logo oficial de WhatsApp como imagen estática en public/terceros, no como componente: lleva sus
+            colores de marca (verde y blanco) y las reglas del sistema prohíben hexadecimales en componentes. Lucide no
+            trae iconos de marca; es la excepción a "un solo set de iconos", solo para este botón. */}
+        <img src="/terceros/whatsapp.svg" alt="" className="w-full h-full" />
       </a>
     )
   }
