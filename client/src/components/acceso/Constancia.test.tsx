@@ -23,6 +23,23 @@ describe('Constancia | escritorio', () => {
     expect(screen.getAllByText('Pendiente')).toHaveLength(3) // nombre, correo y contraseña
   })
 
+  it('el valor se actualiza en el mismo nodo: la animación no se repite en cada tecla', () => {
+    simularMedios([ESCRITORIO])
+    const { rerender } = render(<Constancia modo="registro" nombre="A" ahora={lunes10am} />)
+    const antes = screen.getByText('A')
+    rerender(<Constancia modo="registro" nombre="An" ahora={lunes10am} />)
+    expect(screen.getByText('An')).toBe(antes)
+  })
+
+  it('en ingreso no hay línea de nombre y sí correo, fecha y la frase', () => {
+    simularMedios([ESCRITORIO])
+    render(<Constancia modo="ingreso" correo="ana@taju.co" ahora={lunes10am} />)
+    expect(screen.queryByText('Cuenta a nombre de')).not.toBeInTheDocument()
+    expect(screen.getByText('ana@taju.co')).toBeInTheDocument()
+    expect(screen.getByText('Fecha')).toBeInTheDocument()
+    expect(screen.getByText('Con tu cuenta sigues tus pedidos y envías solicitudes.')).toBeInTheDocument()
+  })
+
   it('la fecha es la de Bogotá desde el inicio, no la de UTC', () => {
     simularMedios([ESCRITORIO])
     render(<Constancia modo="registro" ahora={lunes10pm} />)
@@ -82,6 +99,20 @@ describe('Constancia | franja móvil', () => {
     const texto = screen.getByText(new RegExp(`Cuenta a nombre de ${largo.slice(0, 10)}`))
     expect(texto).toHaveClass('truncate')
     expect(texto.parentElement).toHaveClass('min-h-boton')
+  })
+
+  it('la franja va oculta a lectores, con la fecha de Bogotá', () => {
+    render(<Constancia modo="registro" ahora={lunes10pm} />)
+    const franja = screen.getByText(/Tu cuenta quedará a tu nombre/)
+    expect(franja.closest('[aria-hidden="true"]')).not.toBeNull()
+    expect(franja).toHaveTextContent('lunes, 5 de octubre')
+  })
+
+  it('el status móvil empieza vacío y anuncia la confirmación', () => {
+    const { rerender } = render(<Constancia modo="registro" ahora={lunes10am} />)
+    expect(screen.getByRole('status')).toBeEmptyDOMElement()
+    rerender(<Constancia modo="registro" confirmada ahora={lunes10am} />)
+    expect(screen.getByRole('status')).toHaveTextContent('Listo, tu cuenta quedó creada')
   })
 
   it('en ingreso muestra el correo y no un nombre', () => {

@@ -42,7 +42,6 @@ function Linea({ etiqueta, valor, reducido }: { etiqueta: string; valor: string 
         ) : (
           <>
             <m.span
-              key={valor}
               initial={reducido ? false : { opacity: 0.4 }}
               animate={{ opacity: 1 }}
               transition={resorte('efectosRapido')}
