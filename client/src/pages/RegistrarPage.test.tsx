@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { RegistrarPage } from './RegistrarPage'
@@ -10,6 +10,22 @@ import { simularMedios } from '../test/setup'
 import { RUTA_INICIO_POR_ROL, type Usuario } from '../types'
 
 vi.mock('../contexts/AuthContext', () => ({ useAuth: vi.fn() }))
+
+// registra cada navegación y además navega de verdad, para que el marcador Destino siga funcionando
+const navegar = vi.hoisted(() => vi.fn())
+vi.mock('react-router-dom', async (orig) => {
+  const real = await orig<typeof import('react-router-dom')>()
+  return {
+    ...real,
+    useNavigate: () => {
+      const navigate = real.useNavigate()
+      return (...args: Parameters<typeof navigate>) => {
+        navegar(...args)
+        return navigate(...args)
+      }
+    },
+  }
+})
 
 const ana: Usuario = { _id: 'u1', nombre: 'Ana', email: 'ana@taju.co', rol: 'cliente' }
 const registrar = vi.fn()
@@ -44,6 +60,7 @@ const enviar = () => userEvent.click(screen.getByRole('button', { name: 'Crear c
 beforeEach(() => {
   simularMedios()
   registrar.mockReset()
+  navegar.mockClear()
   vi.mocked(useAuth).mockReturnValue({ usuario: null, autenticado: false, login: vi.fn(), registrar, logout: vi.fn() })
 })
 afterEach(() => {
@@ -124,9 +141,9 @@ describe('RegistrarPage', () => {
     await enviar()
     expect(await screen.findByText('Listo, tu cuenta quedó creada.')).toBeInTheDocument()
     await vi.advanceTimersByTimeAsync(400)
-    expect(screen.queryByText(/destino pedido/)).not.toBeInTheDocument() // aún en la espera
-    await vi.advanceTimersByTimeAsync(400)
-    expect(await screen.findByText('destino pedido /pedido/p1')).toBeInTheDocument()
+    expect(screen.queryByText(/destino pedido/)).not.toBeInTheDocument() // 400 ms: aún en la espera de 650
+    await act(() => vi.advanceTimersByTimeAsync(300))
+    expect(screen.getByText('destino pedido /pedido/p1')).toBeInTheDocument()
   })
 
   it('con movimiento reducido la espera es de 300 ms', async () => {
@@ -137,8 +154,9 @@ describe('RegistrarPage', () => {
     await llenar()
     await enviar()
     await screen.findByText('Listo, tu cuenta quedó creada.')
-    await vi.advanceTimersByTimeAsync(350)
-    expect(await screen.findByText('destino pedido /pedido/p1')).toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(350))
+    // 350 ms alcanza para 300 pero no para 650
+    expect(screen.getByText('destino pedido /pedido/p1')).toBeInTheDocument()
   })
 
   it('un doble toque durante la solicitud y la espera registra una sola vez', async () => {
@@ -158,7 +176,7 @@ describe('RegistrarPage', () => {
     await screen.findByText('Listo, tu cuenta quedó creada.')
     vista.unmount()
     await vi.advanceTimersByTimeAsync(700)
-    expect(screen.queryByText(/destino pedido/)).not.toBeInTheDocument()
+    expect(navegar).not.toHaveBeenCalled()
   })
 
   it('tras un 429 sin campo inválido el foco vuelve al correo', async () => {
