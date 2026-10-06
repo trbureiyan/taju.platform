@@ -103,9 +103,6 @@ export function esFestivo(fecha: string): boolean {
 // plazo en horas de atencion para escribirle al cliente despues de una solicitud
 export const PLAZO_CONTACTO_HORAS = 2
 
-// minutos en que el taller suele escribirle al cliente tras una solicitud; el tope es PLAZO_CONTACTO_HORAS
-export const CONTACTO_USUAL_MINUTOS = 30
-
 // domicilio: valor en pesos que paga quien pide. `hasta` cuando depende del lugar. Fuera de esas zonas el valor se
 // confirma por WhatsApp; a Bogota suele ser DOMICILIO_BOGOTA_USUAL (orientativo, no una tarifa fija)
 export const TARIFAS_DOMICILIO: readonly { zona: string; desde: number; hasta?: number }[] = [

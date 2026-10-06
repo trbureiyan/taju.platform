@@ -2,7 +2,6 @@ import { horaEnPalabras } from '../../lib/horario'
 import { formatearPesos } from '../../lib/precio'
 import {
   ANTICIPO_PORCENTAJE,
-  CONTACTO_USUAL_MINUTOS,
   DOMICILIO_BOGOTA_USUAL,
   HORARIO_SEMANAL,
   PLAZO_CONTACTO_HORAS,
@@ -13,7 +12,9 @@ import { RESPONSABLE } from '../../lib/politicaDatos'
 // fuente única del texto de /preguntas-frecuentes, como components/vitrina/contenido.ts: la página solo lo pinta.
 // Los números salen de lib/politicas.ts y los datos de contacto de lib/politicaDatos.ts, nunca se repiten aquí.
 // [!] Solo va lo que el taller confirmó. El tiempo de producción NO se afirma: no lo confirmó, y la voz de marca
-// prohíbe prometer plazos que el taller no pueda cumplir (.docs/branding/03-voz-de-marca.md).
+// prohíbe prometer plazos que el taller no pueda cumplir (.docs/branding/03-voz-de-marca.md). Los 30 minutos a 2 horas
+// que tarda en promedio elaborar una pieza son una medida interna: hay más pedidos en cola y cada uno tiene su fecha
+// de entrega, así que no se publican como si fueran el plazo del cliente.
 
 export interface PreguntaFrecuente {
   id: string
@@ -70,7 +71,15 @@ export const GRUPOS_FAQ: GrupoFaq[] = [
         id: 'tiempo-respuesta',
         pregunta: '¿Cuánto tardan en escribirme?',
         respuesta: [
-          `Normalmente te escribimos por WhatsApp entre ${CONTACTO_USUAL_MINUTOS} minutos y ${PLAZO_CONTACTO_HORAS} horas de atención. Si envías tu solicitud fuera de horario, te escribimos cuando abramos.`,
+          `Te escribimos por WhatsApp dentro de ${PLAZO_CONTACTO_HORAS} horas de atención. Si envías tu solicitud fuera de horario, te escribimos cuando abramos.`,
+        ],
+      },
+      {
+        id: 'tiempo-pedido',
+        pregunta: '¿Cuánto tarda mi pedido?',
+        respuesta: [
+          'Depende del trabajo que tengamos en cola y de la fecha que necesites. Enviar tu solicitud no significa que tu pedido esté listo ese mismo día.',
+          'Acordamos contigo la fecha de entrega por WhatsApp antes de empezar a producir.',
         ],
       },
       {
@@ -109,8 +118,8 @@ export const GRUPOS_FAQ: GrupoFaq[] = [
         id: 'pago',
         pregunta: '¿Cómo se paga?',
         respuesta: [
-          `Para empezar a producir pedimos un anticipo, normalmente del ${ANTICIPO_PORCENTAJE} % del valor acordado. Aceptamos pagos en Efectivo, Nequi, Bancolombia y Bre-B.`,
-          'La plataforma no cobra: el taller registra tu anticipo y te indica por WhatsApp cómo pagar.',
+          `Para empezar a producir pedimos un anticipo, normalmente del ${ANTICIPO_PORCENTAJE} % del valor acordado. Aceptamos pagos en Efectivo, Nequi, Bancolombia, Daviplata y Bre-B.`,
+          'La plataforma no cobra: el taller registra tu anticipo y te da por WhatsApp los datos para pagar, así que no los publicamos aquí.',
         ],
       },
       {

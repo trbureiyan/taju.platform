@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { GRUPOS_FAQ } from './contenido'
 import { formatearPesos } from '../../lib/precio'
-import { ANTICIPO_PORCENTAJE, DOMICILIO_BOGOTA_USUAL, TARIFAS_DOMICILIO } from '../../lib/politicas'
+import { ANTICIPO_PORCENTAJE, DOMICILIO_BOGOTA_USUAL, PLAZO_CONTACTO_HORAS, TARIFAS_DOMICILIO } from '../../lib/politicas'
 
 const todas = GRUPOS_FAQ.flatMap((g) => g.preguntas)
 const texto = (id: string) => {
@@ -27,9 +27,19 @@ describe('contenido de las preguntas frecuentes', () => {
     for (const p of todas) expect(`${p.pregunta} ${p.respuesta.join(' ')}`).not.toMatch(VOSEO)
   })
 
-  it('el tiempo de respuesta es de 30 minutos a 2 horas de atención', () => {
-    expect(texto('tiempo-respuesta')).toMatch(/30 minutos/)
-    expect(texto('tiempo-respuesta')).toMatch(/2 horas/)
+  it('el tiempo para escribirte es el plazo de contacto de la política (2 horas de atención)', () => {
+    const t = texto('tiempo-respuesta')
+    expect(t).toContain(`${PLAZO_CONTACTO_HORAS} horas`)
+    // los 30 minutos a 2 horas son el tiempo medio de elaborar una pieza (medida interna), no el de respuesta
+    expect(t).not.toMatch(/30 minutos/)
+  })
+
+  it('aclara que enviar el pedido no lo deja listo al instante: la fecha se acuerda según el trabajo y la fecha pedida', () => {
+    const t = texto('tiempo-pedido')
+    expect(t).toMatch(/fecha de entrega/)
+    expect(t).toMatch(/acordamos/i)
+    expect(t).toMatch(/no significa/)
+    expect(t).not.toMatch(/30 minutos|2 horas/)
   })
 
   it('el horario sale de la tabla del taller e incluye que los domingos no hay servicio', () => {
@@ -41,9 +51,14 @@ describe('contenido de las preguntas frecuentes', () => {
 
   it('el pago lista los medios confirmados y el anticipo sale de la política', () => {
     const t = texto('pago')
-    for (const medio of ['Efectivo', 'Nequi', 'Bancolombia', 'Bre-B']) expect(t).toContain(medio)
+    for (const medio of ['Efectivo', 'Nequi', 'Bancolombia', 'Daviplata', 'Bre-B']) expect(t).toContain(medio)
     expect(t).toContain(`${ANTICIPO_PORCENTAJE} %`)
     expect(t).toMatch(/no cobra/i)
+  })
+
+  it('no publica números de cuenta: se dan por WhatsApp al pagar', () => {
+    for (const p of todas) expect(`${p.pregunta} ${p.respuesta.join(' ')}`).not.toMatch(/\d{9,}/)
+    expect(texto('pago')).toMatch(/WhatsApp/)
   })
 
   it('dice sin rodeos que no hay reembolsos ni devoluciones, y qué hacer si algo llega distinto', () => {
