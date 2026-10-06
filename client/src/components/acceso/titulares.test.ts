@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { titularDeAcceso } from './titulares'
 
+//  de JS no ve á/é como letra: se usa una mirada negativa Unicode
+const VOSEO = /[!¡]|(Creá|Ingresá|Esperá|Registrate|tenés|querés|podés)(?![\p{L}])/u
+
+describe('filtro de voseo', () => {
+  it.each(['Creá tu cuenta', 'Ingresá a tu cuenta', 'Registrate'])('marca %j', (t) => expect(t).toMatch(VOSEO))
+  it('no marca español con tuteo', () => expect('Crea tu cuenta').not.toMatch(VOSEO))
+  it('el regex anterior no marcaba tildes', () => expect('Creá tu cuenta').not.toMatch(/\b(Creá)\b/))
+})
+
 describe('titularDeAcceso', () => {
   it('registro desde un pedido explica el motivo', () => {
     const t = titularDeAcceso('registro', 'pedido')

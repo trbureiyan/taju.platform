@@ -2,7 +2,7 @@ import type { MotivoDeAcceso } from '../../lib/retorno'
 
 type Modo = 'registro' | 'ingreso'
 
-const TEXTOS: Record<Modo, Record<'pedido' | 'mis-pedidos' | 'general', { titulo: string; apoyo: string }>> = {
+const TEXTOS: Record<Modo, Record<Exclude<MotivoDeAcceso, null> | 'general', { titulo: string; apoyo: string }>> = {
   registro: {
     pedido: {
       titulo: 'Antes de enviar tu solicitud, crea tu cuenta',
