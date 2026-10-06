@@ -1,6 +1,7 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { RUTA_INICIO_POR_ROL, type Rol } from '../../types'
+import { conRetorno } from '../../lib/retorno'
 
 /**
  * Props del guardia de ruta autenticada.
@@ -16,9 +17,10 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, rol }: ProtectedRouteProps) {
   const { autenticado, usuario } = useAuth()
+  const { pathname } = useLocation()
 
-  // sin ?redirect= aqui - a diferencia de ProductoDetailPage, esta redireccion no vuelve a la ruta original
-  if (!autenticado) return <Navigate to="/login" replace />
+  // [DECISION] solo el pathname: ?paso= de la solicitud no se puede saltar por URL y el estado del formulario vive en memoria
+  if (!autenticado) return <Navigate to={conRetorno('/login', pathname)} replace />
   // logueado pero sin el rol que pide la ruta (ej cliente entrando al panel de admin) - lo mandamos a SU
   // propio inicio, no al catalogo: un administrador nunca deberia terminar en una pagina de cliente
   if (rol && usuario && usuario.rol !== rol) {
