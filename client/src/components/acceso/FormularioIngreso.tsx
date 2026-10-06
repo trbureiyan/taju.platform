@@ -36,7 +36,11 @@ export function FormularioIngreso({ alIngresar, alCambiarCorreo }: FormularioIng
   // el foco va al primer campo inválido tras un intento fallido; un aviso nuevo por intento se anuncia de nuevo (key)
   useEffect(() => {
     if (fallos === 0) return
-    formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+    // sin campo inválido (401, red, 429) el foco vuelve al correo: el botón estuvo deshabilitado y el foco caería al body
+    const destino =
+      formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+      formulario.current?.querySelector<HTMLElement>('input[type="email"]')
+    destino?.focus()
   }, [fallos])
 
   async function alEnviar(e: FormEvent) {
@@ -74,6 +78,7 @@ export function FormularioIngreso({ alIngresar, alCambiarCorreo }: FormularioIng
         value={correo}
         onChange={(e) => {
           setCorreo(e.target.value)
+          setAviso(null)
           alCambiarCorreo?.(e.target.value)
         }}
         onBlur={() => setTocados((t) => ({ ...t, correo: true }))}
@@ -86,7 +91,10 @@ export function FormularioIngreso({ alIngresar, alCambiarCorreo }: FormularioIng
         type={verContrasena ? 'text' : 'password'}
         autoComplete="current-password"
         value={contrasena}
-        onChange={(e) => setContrasena(e.target.value)}
+        onChange={(e) => {
+          setContrasena(e.target.value)
+          setAviso(null)
+        }}
         onBlur={() => setTocados((t) => ({ ...t, contrasena: true }))}
         error={errorContrasena ?? undefined}
         anunciarError={false}

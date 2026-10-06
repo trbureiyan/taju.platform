@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { RegistrarPage } from './RegistrarPage'
@@ -159,6 +159,42 @@ describe('RegistrarPage', () => {
     vista.unmount()
     await vi.advanceTimersByTimeAsync(700)
     expect(screen.queryByText(/destino pedido/)).not.toBeInTheDocument()
+  })
+
+  it('tras un 429 sin campo inválido el foco vuelve al correo', async () => {
+    registrar.mockRejectedValueOnce(new ErrorApi('Demasiados intentos', 429))
+    montar('/registrar')
+    await llenar()
+    await enviar()
+    await screen.findByText(/Espera unos minutos/)
+    await waitFor(() => expect(screen.getByLabelText('Correo')).toHaveFocus())
+  })
+
+  it('tras una caída de red el foco vuelve al correo', async () => {
+    registrar.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    montar('/registrar')
+    await llenar()
+    await enviar()
+    await screen.findByText(/Tus datos siguen aquí/)
+    await waitFor(() => expect(screen.getByLabelText('Correo')).toHaveFocus())
+  })
+
+  it('el aviso de revisión desaparece al editar un campo', async () => {
+    montar('/registrar')
+    await enviar()
+    expect(screen.getByText(/Revisa los campos marcados/)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Nombre'), 'A')
+    expect(screen.queryByText(/Revisa los campos marcados/)).not.toBeInTheDocument()
+  })
+
+  it('dos envíos seguidos del formulario registran una sola vez', async () => {
+    registrar.mockReturnValueOnce(new Promise<Usuario>(() => {}))
+    const { container } = montar('/registrar')
+    await llenar()
+    const form = container.querySelector('form') as HTMLFormElement
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    expect(registrar).toHaveBeenCalledTimes(1)
   })
 
   it('429 va al snackbar sin el texto del servidor', async () => {

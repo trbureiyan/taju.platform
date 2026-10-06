@@ -53,7 +53,11 @@ export function RegistrarPage() {
   }, [])
   useEffect(() => {
     if (fallos === 0) return
-    formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+    // sin campo inválido (401, red, 429) el foco vuelve al correo: el botón estuvo deshabilitado y el foco caería al body
+    const destino =
+      formulario.current?.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+      formulario.current?.querySelector<HTMLElement>('input[type="email"]')
+    destino?.focus()
   }, [fallos])
 
   const errores = {
@@ -113,7 +117,10 @@ export function RegistrarPage() {
           label="Nombre"
           autoComplete="name"
           value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
+          onChange={(e) => {
+            setNombre(e.target.value)
+            setAviso(null)
+          }}
           onBlur={marcar('nombre')}
           error={errores.nombre ?? undefined}
           anunciarError={false}
@@ -127,6 +134,7 @@ export function RegistrarPage() {
           onChange={(e) => {
             setCorreo(e.target.value)
             setErrorServidor(null)
+            setAviso(null)
           }}
           onBlur={marcar('correo')}
           error={errores.correo ?? undefined}
@@ -147,7 +155,10 @@ export function RegistrarPage() {
           autoComplete="new-password"
           hint={`Mínimo ${CONTRASENA_MIN} caracteres`}
           value={contrasena}
-          onChange={(e) => setContrasena(e.target.value)}
+          onChange={(e) => {
+            setContrasena(e.target.value)
+            setAviso(null)
+          }}
           onBlur={marcar('contrasena')}
           error={errores.contrasena ?? undefined}
           anunciarError={false}
@@ -156,7 +167,10 @@ export function RegistrarPage() {
         />
         <Casilla
           checked={acepta}
-          onChange={(e) => setAcepta(e.target.checked)}
+          onChange={(e) => {
+            setAcepta(e.target.checked)
+            setAviso(null)
+          }}
           onBlur={marcar('acepta')}
           error={errores.acepta ?? undefined}
           anunciarError={false}

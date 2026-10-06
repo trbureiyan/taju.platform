@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { FormularioIngreso } from './FormularioIngreso'
@@ -110,5 +110,40 @@ describe('FormularioIngreso', () => {
     montar({ alCambiarCorreo })
     await userEvent.type(screen.getByLabelText('Correo'), 'a')
     expect(alCambiarCorreo).toHaveBeenLastCalledWith('a')
+  })
+
+  it('tras un 401 sin campo inválido el foco vuelve al correo', async () => {
+    login.mockRejectedValueOnce(new ErrorApi('Credenciales incorrectas', 401))
+    montar()
+    await escribirYEnviar()
+    await screen.findAllByRole('alert')
+    await waitFor(() => expect(screen.getByLabelText('Correo')).toHaveFocus())
+  })
+
+  it('tras una caída de red el foco vuelve al correo', async () => {
+    login.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    montar()
+    await escribirYEnviar()
+    await screen.findByText(/Tus datos siguen aquí/)
+    await waitFor(() => expect(screen.getByLabelText('Correo')).toHaveFocus())
+  })
+
+  it('el aviso de revisión desaparece al editar un campo', async () => {
+    montar()
+    await userEvent.click(screen.getByRole('button', { name: 'Ingresar' }))
+    expect(screen.getByText(/Revisa los campos marcados/)).toBeInTheDocument()
+    await userEvent.type(screen.getByLabelText('Correo'), 'a')
+    expect(screen.queryByText(/Revisa los campos marcados/)).not.toBeInTheDocument()
+  })
+
+  it('dos envíos seguidos del formulario llaman a login una sola vez', async () => {
+    login.mockReturnValueOnce(new Promise<Usuario>(() => {}))
+    montar()
+    await userEvent.type(screen.getByLabelText('Correo'), 'ana@taju.co')
+    await userEvent.type(screen.getByLabelText('Contraseña'), 'clave-segura-123')
+    const form = screen.getByLabelText('Correo').closest('form')!
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+    expect(login).toHaveBeenCalledTimes(1)
   })
 })
