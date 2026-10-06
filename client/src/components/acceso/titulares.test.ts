@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { titularDeAcceso } from './titulares'
 
-//  de JS no ve á/é como letra: se usa una mirada negativa Unicode
+// \b de JS no trata á/é como letra: se usa un lookahead Unicode
 const VOSEO = /[!¡]|(Creá|Ingresá|Esperá|Registrate|tenés|querés|podés)(?![\p{L}])/u
 
 describe('filtro de voseo', () => {
@@ -30,7 +30,7 @@ describe('titularDeAcceso', () => {
   it.each(['registro', 'ingreso'] as const)('ningún texto de %s usa voseo ni exclamaciones', (modo) => {
     for (const motivo of ['pedido', 'mis-pedidos', null] as const) {
       const { titulo, apoyo } = titularDeAcceso(modo, motivo)
-      expect(`${titulo} ${apoyo}`).not.toMatch(/[!¡]|\b(Creá|Ingresá|tenés|Registrate|Esperá)\b/)
+      expect(`${titulo} ${apoyo}`).not.toMatch(VOSEO)
     }
   })
 })
