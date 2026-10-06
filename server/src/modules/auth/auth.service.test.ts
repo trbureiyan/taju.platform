@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest'
 import bcrypt from 'bcryptjs'
-import { registrar, iniciarSesion } from './auth.service.js'
+import { registrar, iniciarSesion, VERSION_POLITICA_DATOS } from './auth.service.js'
 import { Usuario } from '../../models/Usuario.js'
 import { verifyToken } from '../../lib/jwt.js'
 import { AppError } from '../../lib/errors.js'
@@ -14,8 +14,19 @@ afterEach(async () => {
 })
 
 describe('registrar', () => {
+  it('sella la autorización con la versión del servidor y la fecha del servidor', async () => {
+    const antes = Date.now()
+    await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
+
+    const guardado = await Usuario.findOne({ email: 'ana@taju.co' }).lean()
+    expect(guardado!.autorizacionDatos?.version).toBe(VERSION_POLITICA_DATOS)
+    const fecha = guardado!.autorizacionDatos!.aceptadaEn.getTime()
+    expect(fecha).toBeGreaterThanOrEqual(antes)
+    expect(fecha).toBeLessThanOrEqual(Date.now())
+  })
+
   it('guarda el password hasheado, nunca en texto plano', async () => {
-    await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
 
     const guardado = await Usuario.findOne({ email: 'ana@taju.co' }).select('+password').lean()
     expect(guardado).not.toBeNull()
@@ -24,7 +35,7 @@ describe('registrar', () => {
   })
 
   it('retorna token valido y usuario sin el campo password', async () => {
-    const { token, usuario } = await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    const { token, usuario } = await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
 
     expect(usuario).not.toHaveProperty('password')
     expect(usuario).toMatchObject({ nombre: 'Ana', email: 'ana@taju.co', rol: 'cliente' })
@@ -34,9 +45,9 @@ describe('registrar', () => {
   })
 
   it('lanza AppError(409) si el email ya existe', async () => {
-    await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
 
-    const intento = registrar('Otra Ana', 'ana@taju.co', 'otra-clave-456')
+    const intento = registrar('Otra Ana', 'ana@taju.co', 'otra-clave-456', true)
     await expect(intento).rejects.toBeInstanceOf(AppError)
     await expect(intento).rejects.toMatchObject({ status: 409 })
   })
@@ -47,12 +58,20 @@ describe('registrar', () => {
     // findOne devuelve una Query (thenable); null alcanza porque el service solo hace await sobre ella
     vi.spyOn(Usuario, 'findOne').mockReturnValueOnce(null as never)
 
-    const intento = registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    const intento = registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
     await expect(intento).rejects.toMatchObject({ status: 409, message: 'El correo ya está registrado' })
   })
 })
 
 describe('iniciarSesion', () => {
+  it('una cuenta anterior sin autorizacionDatos sigue ingresando', async () => {
+    const hash = await bcrypt.hash('clave-segura-123', 4)
+    await Usuario.create({ nombre: 'Vieja', email: 'vieja@taju.co', password: hash })
+
+    const { usuario } = await iniciarSesion('vieja@taju.co', 'clave-segura-123')
+    expect(usuario.email).toBe('vieja@taju.co')
+  })
+
   it('llama a bcrypt.compare aunque el email no exista — previene timing oracle', async () => {
     const spy = vi.spyOn(bcrypt, 'compare')
     await iniciarSesion('fantasma@taju.co', 'cualquier-clave').catch(() => {})
@@ -60,7 +79,7 @@ describe('iniciarSesion', () => {
   })
 
   it('retorna un token valido con credenciales correctas', async () => {
-    await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
 
     const { token, usuario } = await iniciarSesion('ana@taju.co', 'clave-segura-123')
 
@@ -69,7 +88,7 @@ describe('iniciarSesion', () => {
   })
 
   it('da el mismo 401 si el email no existe o si la clave es incorrecta', async () => {
-    await registrar('Ana', 'ana@taju.co', 'clave-segura-123')
+    await registrar('Ana', 'ana@taju.co', 'clave-segura-123', true)
 
     const sinUsuario = await iniciarSesion('nadie@taju.co', 'clave-segura-123').catch((e: unknown) => e)
     const claveMala = await iniciarSesion('ana@taju.co', 'clave-equivocada').catch((e: unknown) => e)
