@@ -6,6 +6,10 @@ import { AppError } from '../../lib/errors.js'
 // 12 es el estandar actual para bcrypt, suficiente costo sin volver el login lento
 const SALT_ROUNDS = 12
 
+// versión del texto de /datos que el cliente mostró al aceptar; subirla (y la espejada en client/src/lib/politicaDatos.ts)
+// cuando el texto cambie de fondo
+export const VERSION_POLITICA_DATOS = '2026-10-06'
+
 // ─── Registro ─────────────────────────────────────────────────────────────────
 
 /**
@@ -13,17 +17,26 @@ const SALT_ROUNDS = 12
  * @param nombre - Nombre visible del usuario.
  * @param email - Correo único; lanza AppError(409) si ya está registrado.
  * @param password - Contraseña en texto plano; se hashea con bcrypt antes de persistir.
+ * @param aceptaDatos - Autorización de tratamiento de datos; el tipo literal obliga al llamador a haberla validado.
+ *        El servidor sella versión y fecha, nunca las toma del cliente.
  * @returns Token JWT y datos públicos del usuario recién creado.
  * @throws AppError(409) si el correo ya existe (findOne previo o race condition E11000).
+ * @throws AppError(400) si aceptaDatos no es true (defensa en profundidad, el controlador ya lo valida).
  */
-export async function registrar(nombre: string, email: string, password: string) {
+export async function registrar(nombre: string, email: string, password: string, aceptaDatos: true) {
+  if (!aceptaDatos) throw new AppError(400, 'Datos inválidos')
   const existe = await Usuario.findOne({ email })
   if (existe) throw new AppError(409, 'El correo ya está registrado')
 
   const hash = await bcrypt.hash(password, SALT_ROUNDS)
   let usuario
   try {
-    usuario = await Usuario.create({ nombre, email, password: hash })
+    usuario = await Usuario.create({
+      nombre,
+      email,
+      password: hash,
+      autorizacionDatos: { version: VERSION_POLITICA_DATOS, aceptadaEn: new Date() },
+    })
   } catch (err: unknown) {
     // race condition: dos requests simultáneos pasaron el findOne antes de que alguno insertara
     // MongoDB lanza code 11000 (duplicate key) por el índice único en email

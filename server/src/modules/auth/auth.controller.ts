@@ -3,11 +3,14 @@ import { z } from 'zod'
 import * as authService from './auth.service.js'
 import { AppError } from '../../lib/errors.js'
 
-// min(8) en registro, min(1) en login - login no valida fuerza de clave, solo que venga algo
+// min(8) en registro, min(1) en login - login no valida fuerza de clave, solo que venga algo;
+// el registro exige aceptaDatos: true (Ley 1581)
 const registrarSchema = z.object({
   nombre: z.string().min(2).max(120),
   email: z.string().email(),
   password: z.string().min(8),
+  // literal true: ni ausente, ni "true", ni 1; la versión y la fecha las sella el servidor
+  aceptaDatos: z.literal(true),
 })
 
 const loginSchema = z.object({
@@ -28,7 +31,12 @@ export async function registrar(req: Request, res: Response, next: NextFunction)
     return
   }
   try {
-    const result = await authService.registrar(parsed.data.nombre, parsed.data.email, parsed.data.password)
+    const result = await authService.registrar(
+      parsed.data.nombre,
+      parsed.data.email,
+      parsed.data.password,
+      parsed.data.aceptaDatos,
+    )
     res.status(201).json(result)
   } catch (err) {
     if (err instanceof AppError) {
