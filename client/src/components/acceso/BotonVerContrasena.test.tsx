@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { BotonVerContrasena } from './BotonVerContrasena'
 
 describe('BotonVerContrasena', () => {
-  it('oculta: ofrece mostrar y avisa que no está presionado', () => {
+  it('oculta: ofrece mostrar, sin aria-pressed', () => {
     render(<BotonVerContrasena visible={false} alAlternar={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Mostrar contraseña' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByRole('button', { name: 'Mostrar contraseña' })).not.toHaveAttribute('aria-pressed')
   })
-  it('visible: ofrece ocultar y está presionado', () => {
+  it('visible: ofrece ocultar, sin aria-pressed', () => {
     render(<BotonVerContrasena visible alAlternar={() => {}} />)
-    expect(screen.getByRole('button', { name: 'Ocultar contraseña' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Ocultar contraseña' })).not.toHaveAttribute('aria-pressed')
   })
   it('llama a alAlternar con un clic', async () => {
     const alternar = vi.fn()
@@ -21,7 +21,7 @@ describe('BotonVerContrasena', () => {
   it('mide al menos el objetivo táctil y no envía el formulario', () => {
     render(<BotonVerContrasena visible={false} alAlternar={() => {}} />)
     const boton = screen.getByRole('button')
-    expect(boton).toHaveClass('min-h-boton')
+    expect(boton).toHaveClass('min-h-boton', 'min-w-boton')
     expect(boton).toHaveAttribute('type', 'button')
   })
 })

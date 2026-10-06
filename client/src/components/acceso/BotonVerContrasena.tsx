@@ -6,9 +6,8 @@ export function BotonVerContrasena({ visible, alAlternar }: { visible: boolean; 
     <button
       type="button"
       onClick={alAlternar}
-      aria-pressed={visible}
       aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-      className="inline-flex aspect-square min-h-boton items-center justify-center rounded-campo text-texto-secundario outline-none transition-transform duration-normal ease-estandar hover:text-texto-principal focus-visible:shadow-foco active:scale-97"
+      className="inline-flex aspect-square min-h-boton min-w-boton items-center justify-center rounded-campo text-texto-secundario outline-none transition-transform duration-normal ease-estandar hover:text-texto-principal focus-visible:shadow-foco active:scale-97"
     >
       {visible ? <EyeOff aria-hidden="true" size={20} /> : <Eye aria-hidden="true" size={20} />}
     </button>
