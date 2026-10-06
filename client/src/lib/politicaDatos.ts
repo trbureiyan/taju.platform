@@ -26,7 +26,7 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   {
     titulo: 'Qué datos guardamos',
     parrafos: [
-      'Tu nombre, tu correo y tu contraseña (esta última cifrada: nadie puede leerla). Al pedir, también tu celular, la dirección de entrega, las imágenes de referencia que subas y el texto de personalización que escribas.',
+      'Tu nombre, tu correo y tu contraseña (esta última guardada de forma que nadie puede leerla). Al pedir, también tu celular, la dirección de entrega, las imágenes de referencia que subas y el texto de personalización que escribas.',
     ],
   },
   {
@@ -44,7 +44,7 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   {
     titulo: 'Tus derechos',
     parrafos: [
-      'Puedes conocer, actualizar y rectificar tus datos, pedir prueba de tu autorización, revocarla, pedir que borremos tus datos y acceder a ellos gratis. Escríbenos al correo de arriba: respondemos las consultas en máximo 10 días hábiles.',
+      'Puedes conocer, actualizar y rectificar tus datos, pedir prueba de tu autorización, revocarla, pedir que borremos tus datos y acceder a ellos gratis. Escríbenos al correo del responsable: respondemos las consultas en máximo 10 días hábiles.',
     ],
   },
   {
@@ -55,9 +55,15 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   },
 ]
 
-/** Textos que aún llevan el marcador `[PENDIENTE]`. Sin argumento revisa el responsable y todas las secciones. */
-export function marcadoresPendientes(
-  textos: string[] = [...Object.values(RESPONSABLE), ...TEXTOS_POLITICA.flatMap((s) => [s.titulo, ...s.parrafos])],
-): string[] {
-  return textos.filter((t) => t.includes('[PENDIENTE]'))
+// cubre las formas comunes de dejar algo por completar; sin la palabra suelta "todo" para no marcar prosa normal
+const MARCADOR_PENDIENTE = /\[(?:pendiente|por confirmar|confirmar|todo)\]|\bpendiente\b|\btodo:/i
+
+/** Lista exacta que la compuerta revisa por defecto: responsable, títulos y párrafos. Sirve para que nadie la reduzca sin que una prueba lo note. */
+export function textosDeLaPolitica(): string[] {
+  return [...Object.values(RESPONSABLE), ...TEXTOS_POLITICA.flatMap((s) => [s.titulo, ...s.parrafos])]
+}
+
+/** Textos que aún llevan un marcador de pendiente (`[PENDIENTE]`, `[POR CONFIRMAR]`, `TODO:`...), sin distinguir mayúsculas. */
+export function marcadoresPendientes(textos: string[] = textosDeLaPolitica()): string[] {
+  return textos.filter((t) => MARCADOR_PENDIENTE.test(t))
 }
