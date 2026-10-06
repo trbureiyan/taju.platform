@@ -15,10 +15,12 @@ describe('validarNombre', () => {
 })
 
 describe('validarCorreo', () => {
-  it.each([[''], ['ana'], ['ana@'], ['ana@taju'], ['ana @taju.co'], ['@taju.co']])('rechaza %j', (v) =>
+  it.each([[''], ['ana'], ['ana@'], ['ana@taju'], ['ana @taju.co'], ['@taju.co'],
+    ['ana..x@taju.co'], ['ana.@taju.co'], ['.ana@taju.co'], ['ana@taju.c'], ['ana@taju.co.'], ['ana@-taju.co'],
+    ['ana@taju.123'], ['ana@taju_x.co'], ['año@taju.co']])('rechaza %j', (v) =>
     expect(validarCorreo(v)).not.toBeNull(),
   )
-  it.each([['ana@taju.co'], ['  ana@taju.co  '], ['ana.perez+pedidos@taju.com.co']])('acepta %j', (v) =>
+  it.each([['ana@taju.co'], ['  ana@taju.co  '], ['ana.perez+pedidos@taju.com.co'], ['a@b.co']])('acepta %j', (v) =>
     expect(validarCorreo(v)).toBeNull(),
   )
 })
@@ -54,6 +56,7 @@ describe('errorDeAcceso', () => {
     const e = errorDeAcceso(new ErrorApi('Datos inválidos', 400), 'registro')
     expect(e.destino).toBe('aviso')
     expect(e.mensaje).not.toMatch(/Datos inválidos/)
+    expect(e.mensaje).toBe('No pudimos aceptar algunos datos. Revisa los campos marcados y vuelve a intentarlo.')
   })
   it.each([[new TypeError('Failed to fetch')], [new ErrorApi('boom', 500)], [new ErrorApi('x', 401)], ['texto']])(
     'red, 5xx y lo desconocido van al snackbar con el mensaje propio (%j)',
