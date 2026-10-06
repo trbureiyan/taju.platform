@@ -34,11 +34,14 @@ describe('politicaDatos', () => {
     }
   })
 
-  it('identifica al responsable con su teléfono público y deja pendiente lo que no está confirmado', () => {
+  it('identifica al responsable con nombre, dirección, teléfono y correo, sin pendientes', () => {
+    expect(RESPONSABLE.nombre).toContain('Jennifer Tatiana Barrero Bustos')
     expect(RESPONSABLE.nombre).toContain('TaJú Neiva')
+    expect(RESPONSABLE.direccion).toContain('Pastrana')
     expect(RESPONSABLE.direccion).toContain('Neiva')
     expect(RESPONSABLE.telefono).toMatch(/^\d{3} \d{3} \d{4}$/)
-    expect(marcadoresPendientes(Object.values(RESPONSABLE)).length).toBeGreaterThan(0)
+    expect(RESPONSABLE.correo).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)
+    expect(marcadoresPendientes(Object.values(RESPONSABLE))).toEqual([])
   })
 
   it('no publica números de documento ni de identificación tributaria', () => {

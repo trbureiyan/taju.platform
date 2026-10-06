@@ -2,13 +2,13 @@
 export const VERSION_POLITICA_DATOS = '2026-10-06'
 
 // [DECISION] solo se publica lo necesario: el art. 12 de la Ley 1581 pide identificar al responsable, una dirección
-// (física o electrónica) y un teléfono. El teléfono ya es público (es el WhatsApp del sitio); lo demás queda con
-// [PENDIENTE] hasta que TaJú confirme qué se publica. Una prueba bloquea el paso a main mientras quede alguno.
+// (física o electrónica) y un teléfono. TaJú confirmó publicar estos datos. Una prueba bloquea el paso a main si vuelve
+// a quedar algo con [PENDIENTE].
 export const RESPONSABLE = {
-  nombre: 'TaJú Neiva [PENDIENTE: confirmar si se publica el nombre completo de la titular]',
-  direccion: 'Neiva (Huila) [PENDIENTE: confirmar qué dirección se publica]',
+  nombre: 'Jennifer Tatiana Barrero Bustos, titular de TaJú Neiva',
+  direccion: 'Cra 49 A # 19-19, barrio Pastrana, Neiva (Huila)',
   telefono: '319 245 2842',
-  correo: '[PENDIENTE] correo para consultas y reclamos',
+  correo: 'tajubyjuancrack@gmail.com',
 } as const
 
 export interface SeccionPolitica {
