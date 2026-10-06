@@ -10,6 +10,11 @@ export const CONTRASENA_MIN = 8
 const REGEX_CORREO =
   /^(?:[A-Za-z0-9_'+-]+\.)*[A-Za-z0-9_'+-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
 
+/**
+ * Valida el nombre del registro.
+ * @param valor - Nombre tal como se escribió; se recorta antes de medirlo (2 a 120 caracteres).
+ * @returns El mensaje de error, o null si el nombre es válido.
+ */
 export function validarNombre(valor: string): string | null {
   const nombre = valor.trim()
   if (nombre.length < NOMBRE_MIN) return 'Escribe tu nombre: así sabemos quién envía cada solicitud.'
@@ -17,6 +22,11 @@ export function validarNombre(valor: string): string | null {
   return null
 }
 
+/**
+ * Valida el correo con la misma forma que acepta el servidor.
+ * @param valor - Correo tal como se escribió; se recorta antes de validarlo.
+ * @returns El mensaje de error, o null si el correo es válido.
+ */
 export function validarCorreo(valor: string): string | null {
   const correo = valor.trim()
   if (!correo) return 'Escribe tu correo: es con lo que ingresas a tu cuenta.'
@@ -24,6 +34,11 @@ export function validarCorreo(valor: string): string | null {
   return null
 }
 
+/**
+ * Valida la contraseña al registrarse. No se recorta: los espacios cuentan.
+ * @param valor - Contraseña escrita; mínimo `CONTRASENA_MIN` caracteres.
+ * @returns El mensaje de error, o null si es válida.
+ */
 export function validarContrasena(valor: string): string | null {
   if (valor.length === 0) return 'Elige una contraseña: protege tu cuenta y tus pedidos.'
   if (valor.length < CONTRASENA_MIN) {
@@ -32,7 +47,11 @@ export function validarContrasena(valor: string): string | null {
   return null
 }
 
-// el servidor no valida la fuerza al ingresar, solo que venga algo
+/**
+ * Valida la contraseña al ingresar: el servidor no mide su fuerza, solo exige que venga algo.
+ * @param valor - Contraseña escrita.
+ * @returns El mensaje de error, o null si no está vacía.
+ */
 export function validarContrasenaIngreso(valor: string): string | null {
   return valor.length === 0 ? 'Escribe tu contraseña para ingresar.' : null
 }
@@ -50,6 +69,9 @@ const MENSAJES = {
 
 /**
  * Traduce un fallo del servidor a un mensaje propio y dice dónde mostrarlo.
+ * @param err - Lo que lanzó la petición: un `ErrorApi` con el código HTTP, o cualquier otro error (red caída, etc.).
+ * @param contexto - Vista que hizo la petición; el mismo código significa cosas distintas en registro e ingreso.
+ * @returns El destino del mensaje (`correo`, `aviso` o `snackbar`) y el texto propio a mostrar.
  * [DECISION] se decide por código HTTP y nunca se muestra el texto del servidor: así no hay que tocar auth para cambiar
  * la voz, y un mensaje en voseo o con lógica interna no llega al cliente. Costo: un código nuevo cae en el mensaje de respaldo.
  */

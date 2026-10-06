@@ -88,7 +88,11 @@ export function textosDeLaPolitica(): string[] {
   return [...Object.values(RESPONSABLE), ...TEXTOS_POLITICA.flatMap((s) => [s.titulo, ...s.parrafos])]
 }
 
-/** Textos que aún llevan un marcador de pendiente (`[PENDIENTE]`, `[POR CONFIRMAR]`, `TODO:`...), sin distinguir mayúsculas. */
+/**
+ * Textos que aún llevan un marcador de pendiente (`[PENDIENTE]`, `[POR CONFIRMAR]`, `TODO:`...), sin distinguir mayúsculas.
+ * @param textos - Lista a revisar; si se pasa, reemplaza el resultado de `textosDeLaPolitica()`, que es el valor por defecto.
+ * @returns Los textos de la lista que contienen un marcador; vacío cuando no queda nada pendiente.
+ */
 export function marcadoresPendientes(textos: string[] = textosDeLaPolitica()): string[] {
   return textos.filter((t) => MARCADOR_PENDIENTE.test(t))
 }

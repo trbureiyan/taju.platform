@@ -27,6 +27,22 @@ describe('conRetorno', () => {
   })
 })
 
+describe('motivoDeRetorno | con consulta o ancla', () => {
+  it.each([
+    ['/pedido?paso=2', 'pedido'],
+    ['/pedido/abc?paso=2', 'pedido'],
+    ['/mis-pedidos?x=1', 'mis-pedidos'],
+    ['/mis-pedidos/9#detalle', 'mis-pedidos'],
+  ])('clasifica %s', (ruta, esperado) => {
+    expect(motivoDeRetorno(ruta)).toBe(esperado)
+  })
+
+  it('no confunde rutas que solo empiezan parecido', () => {
+    expect(motivoDeRetorno('/pedido-algo?x=1')).toBeNull()
+    expect(motivoDeRetorno('/mis-pedidosx')).toBeNull()
+  })
+})
+
 describe('motivoDeRetorno', () => {
   it('clasifica pedido, mis pedidos y el resto', () => {
     expect(motivoDeRetorno('/pedido/abc')).toBe('pedido')
