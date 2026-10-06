@@ -8,7 +8,7 @@ export const CONTRASENA_MIN = 8
 // [DECISION] más estricto que "algo@algo.algo": se acerca al z.string().email() de Zod v4 del servidor para que un correo
 // mal escrito falle en el campo y no como aviso vago. Costo: si Zod cambia su regla, se ajusta aquí.
 const REGEX_CORREO =
-  /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
+  /^(?:[A-Za-z0-9_'+-]+\.)*[A-Za-z0-9_'+-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/
 
 export function validarNombre(valor: string): string | null {
   const nombre = valor.trim()

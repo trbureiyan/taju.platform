@@ -17,10 +17,12 @@ describe('validarNombre', () => {
 describe('validarCorreo', () => {
   it.each([[''], ['ana'], ['ana@'], ['ana@taju'], ['ana @taju.co'], ['@taju.co'],
     ['ana..x@taju.co'], ['ana.@taju.co'], ['.ana@taju.co'], ['ana@taju.c'], ['ana@taju.co.'], ['ana@-taju.co'],
-    ['ana@taju.123'], ['ana@taju_x.co'], ['año@taju.co']])('rechaza %j', (v) =>
+    ['ana@taju.123'], ['ana@taju_x.co'], ['año@taju.co'],
+    ['a!b@taju.co'], ['ana#1@taju.co'], ['ana$@taju.co'], ['ana/x@taju.co'], ['ana=@taju.co'], ['ana~@taju.co'],
+    ["ana'@taju.co"], ["o'brien'@taju.co"]])('rechaza %j', (v) =>
     expect(validarCorreo(v)).not.toBeNull(),
   )
-  it.each([['ana@taju.co'], ['  ana@taju.co  '], ['ana.perez+pedidos@taju.com.co'], ['a@b.co']])('acepta %j', (v) =>
+  it.each([['ana@taju.co'], ['  ana@taju.co  '], ['ana.perez+pedidos@taju.com.co'], ['a@b.co'], ["o'brien@taju.co"], ['ana_x-y@taju.co']])('acepta %j', (v) =>
     expect(validarCorreo(v)).toBeNull(),
   )
 })
