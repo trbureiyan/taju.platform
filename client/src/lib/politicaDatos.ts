@@ -11,6 +11,13 @@ export const RESPONSABLE = {
   correo: 'tajubyjuancrack@gmail.com',
 } as const
 
+// [!] ANALÍTICA, COOKIES Y TRACKING: hoy la plataforma no los usa (el token vive en memoria, sin cookies propias ni
+// analítica), y por eso este texto no habla de ellos. Si algún día se agrega analítica, un píxel de publicidad o
+// cualquier cosa que guarde cookies o identificadores, antes de activarla hay que: (1) pedir consentimiento previo y
+// expreso (art. 9 de la Ley 1581), sin cargar la herramienta hasta que la persona acepte; (2) agregar aquí qué datos
+// recoge, para qué y con quién se comparten; (3) subir VERSION_POLITICA_DATOS aquí y en el servidor; (4) escribir una
+// política de cookies si corresponde. Lo mismo vale para cualquier contenido de terceros embebido (el mapa del pie
+// carga contenido de Google). Pendientes de términos y condiciones y de este tema: issue #98 del repositorio.
 export interface SeccionPolitica {
   titulo: string
   parrafos: string[]
@@ -45,6 +52,24 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
     titulo: 'Tus derechos',
     parrafos: [
       'Puedes conocer, actualizar y rectificar tus datos, pedir prueba de tu autorización, revocarla, pedir que borremos tus datos y acceder a ellos gratis. Escríbenos al correo del responsable: respondemos las consultas en máximo 10 días hábiles.',
+    ],
+  },
+  {
+    titulo: 'Datos de menores de edad',
+    parrafos: [
+      'Esta plataforma es para personas mayores de edad. Si tu pedido lleva datos de una persona menor de edad, como su nombre o su edad en un topper, los incluyes tú como mayor de edad responsable, y los usamos solo para elaborar el pedido.',
+    ],
+  },
+  {
+    titulo: 'Si no estás conforme',
+    parrafos: [
+      'Si crees que no atendimos bien una consulta o un reclamo sobre tus datos, puedes acudir a la Superintendencia de Industria y Comercio, la autoridad de protección de datos personales en Colombia.',
+    ],
+  },
+  {
+    titulo: 'Cambios a este texto',
+    parrafos: [
+      'Si cambiamos este texto, publicamos aquí la nueva versión con su fecha. Guardamos con tu cuenta la versión que aceptaste.',
     ],
   },
   {

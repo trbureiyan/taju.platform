@@ -49,6 +49,20 @@ describe('politicaDatos', () => {
     expect(textosDeLaPolitica().join(' ')).not.toMatch(/\bNIT\b|cédula|\d{9,}/i)
   })
 
+  it('explica el tratamiento de datos de menores, la vía de queja y los cambios del texto', () => {
+    const porTitulo = (t: string) => TEXTOS_POLITICA.find((s) => s.titulo === t)?.parrafos.join(' ') ?? ''
+    expect(porTitulo('Datos de menores de edad')).toMatch(/mayor de edad/)
+    expect(porTitulo('Datos de menores de edad')).toMatch(/solo para elaborar el pedido/)
+    expect(porTitulo('Si no estás conforme')).toContain('Superintendencia de Industria y Comercio')
+    expect(porTitulo('Cambios a este texto')).toContain('versión')
+  })
+
+  it('no promete plazos propios: los únicos plazos son los que fija la ley', () => {
+    const todo = textosDeLaPolitica().join(' ')
+    const plazos = todo.match(/\d+\s+días/g) ?? []
+    expect(plazos).toEqual(['10 días'])
+  })
+
   it('nombra los proveedores que reciben datos y avisa que pueden estar fuera de Colombia', () => {
     const proveedores = TEXTOS_POLITICA.find((s) => s.titulo === 'Con quién los compartimos')!.parrafos.join(' ')
     for (const nombre of ['MongoDB Atlas', 'Cloudinary', 'Render', 'Vercel', 'WhatsApp']) expect(proveedores).toContain(nombre)
