@@ -45,7 +45,7 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   {
     titulo: 'Con quién los compartimos',
     parrafos: [
-      'Con los servicios que hacen funcionar la plataforma: MongoDB Atlas (base de datos), Cloudinary (imágenes), Render y Vercel (alojamiento), y WhatsApp, el canal por el que te escribimos. Solo reciben lo necesario para prestarnos el servicio y pueden guardar la información en servidores fuera de Colombia.',
+      'Con los servicios que hacen funcionar la plataforma: MongoDB Atlas (base de datos), Cloudinary (imágenes), Render y Vercel (alojamiento), Google Maps (el mapa de nuestra ubicación en el pie de página) y WhatsApp, el canal por el que te escribimos. Solo reciben lo necesario para prestarnos el servicio y pueden guardar la información en servidores fuera de Colombia.',
     ],
   },
   {

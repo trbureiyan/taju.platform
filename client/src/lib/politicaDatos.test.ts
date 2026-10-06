@@ -65,7 +65,7 @@ describe('politicaDatos', () => {
 
   it('nombra los proveedores que reciben datos y avisa que pueden estar fuera de Colombia', () => {
     const proveedores = TEXTOS_POLITICA.find((s) => s.titulo === 'Con quién los compartimos')!.parrafos.join(' ')
-    for (const nombre of ['MongoDB Atlas', 'Cloudinary', 'Render', 'Vercel', 'WhatsApp']) expect(proveedores).toContain(nombre)
+    for (const nombre of ['MongoDB Atlas', 'Cloudinary', 'Render', 'Vercel', 'WhatsApp', 'Google Maps']) expect(proveedores).toContain(nombre)
     expect(proveedores).toContain('fuera de Colombia')
   })
 
