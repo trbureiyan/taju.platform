@@ -13,6 +13,7 @@ import { MasDeFamilia } from '../components/producto/MasDeFamilia'
 import { BarraPedidoMovil } from '../components/producto/BarraPedidoMovil'
 import { ETIQUETAS_FAMILIA } from '../types'
 import type { Producto } from '../types'
+import { conRetorno } from '../lib/retorno'
 import { rutaFamilia } from '../components/vitrina/contenido'
 
 // key por id: pasar de un producto a otro ("Mas toppers") reinicia el estado sin setState dentro de un efecto
@@ -66,7 +67,7 @@ function DetalleProducto({ id, inicial }: { id: string; inicial?: Producto }) {
   const familia = producto.categoria.familia
   // LoginPage lee ?redirect= y vuelve exactamente al pedido despues de ingresar
   function alPedir() {
-    navigate(autenticado ? `/pedido/${producto!._id}` : `/login?redirect=/pedido/${producto!._id}`)
+    navigate(autenticado ? `/pedido/${producto!._id}` : conRetorno('/login', `/pedido/${producto!._id}`))
   }
 
   return (

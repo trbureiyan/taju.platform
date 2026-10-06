@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
  * @prop titulo - Titular: explica el motivo de la cuenta.
  * @prop apoyo - Frase de apoyo bajo el titular.
  * @prop constancia - La constancia (franja u hoja según el ancho).
+ * @prop children - El formulario de la vista (registro o ingreso).
  */
 interface PantallaAccesoProps {
   titulo: string
@@ -22,7 +23,7 @@ export function PantallaAcceso({ titulo, apoyo, constancia, children }: Pantalla
         <p className="text-base text-texto-secundario">{apoyo}</p>
       </header>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12">
-        <aside className="min-w-0">{constancia}</aside>
+        <div className="min-w-0">{constancia}</div>
         <div className="min-w-0">{children}</div>
       </div>
     </div>

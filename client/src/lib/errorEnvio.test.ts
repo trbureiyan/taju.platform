@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { ErrorApi } from './api'
-import { mensajeDeErrorDeEnvio, MENSAJE_ERROR_ENVIO } from './errorEnvio'
+import { mensajeDeErrorDeEnvio, MENSAJE_ERROR_ENVIO, MENSAJE_SESION_VENCIDA } from './errorEnvio'
 import { MENSAJE_FALTA_FECHA, MENSAJE_FALTA_REFERENCIA, MENSAJE_FECHA_PASADA, mensajeCantidadMinima } from './requisitos'
 
 const error = (estado: number, mensaje: string) => new ErrorApi(mensaje, estado)
@@ -10,6 +10,12 @@ describe('mensajeDeErrorDeEnvio', () => {
     expect(mensajeDeErrorDeEnvio(error(409, 'Ya recibimos este mismo pedido hace un momento.'))).toBe(
       'Ya recibimos este mismo pedido hace un momento.',
     )
+  })
+
+  it('un 401 dice que la sesión venció y que los datos siguen', () => {
+    expect(mensajeDeErrorDeEnvio(error(401, 'Token inválido'))).toBe(MENSAJE_SESION_VENCIDA)
+    expect(MENSAJE_SESION_VENCIDA).toMatch(/Tu sesión venció/)
+    expect(MENSAJE_SESION_VENCIDA).toMatch(/tus datos siguen aquí/)
   })
 
   it.each([

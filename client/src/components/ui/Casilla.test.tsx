@@ -30,6 +30,20 @@ describe('Casilla', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('conserva el aria-describedby de quien la usa y le suma el del error', () => {
+    render(<Casilla etiqueta="x" error="Falta" aria-describedby="ayuda-externa" />)
+    const casilla = screen.getByRole('checkbox')
+    const ids = (casilla.getAttribute('aria-describedby') ?? '').split(' ')
+    expect(ids).toContain('ayuda-externa')
+    expect(ids.length).toBe(2)
+    expect(casilla).toHaveAccessibleDescription(/Falta/)
+  })
+
+  it('sin error deja solo el aria-describedby de quien la usa', () => {
+    render(<Casilla etiqueta="x" aria-describedby="ayuda-externa" />)
+    expect(screen.getByRole('checkbox')).toHaveAttribute('aria-describedby', 'ayuda-externa')
+  })
+
   it('la etiqueta mide al menos el objetivo táctil', () => {
     render(<Casilla etiqueta="x" />)
     expect(screen.getByText('x').closest('label')).toHaveClass('min-h-boton')

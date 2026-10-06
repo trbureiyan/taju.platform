@@ -1,6 +1,10 @@
 import { Eye, EyeOff } from 'lucide-react'
 
-/** Alterna la contraseña entre oculta y visible. Se pasa como `accion` del `Input`. */
+/**
+ * Alterna la contraseña entre oculta y visible. Se pasa como `accion` del `Input`.
+ * @prop visible - Si la contraseña se está mostrando; define el nombre accesible ("Mostrar" u "Ocultar contraseña").
+ * @prop alAlternar - Se llama al pulsar el botón; quien lo usa cambia el tipo del campo.
+ */
 export function BotonVerContrasena({ visible, alAlternar }: { visible: boolean; alAlternar: () => void }) {
   return (
     <button

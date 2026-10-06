@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { rutaDeRetorno, conRetorno, motivoDeRetorno } from './retorno'
 
 describe('rutaDeRetorno', () => {
-  it.each(['/pedido/abc', '/mis-pedidos', '/mis-pedidos/123'])('acepta %s', (ruta) => {
+  it.each(['/pedido/abc', '/mis-pedidos', '/mis-pedidos/123', '/login-algo', '/registrar-no'])('acepta %s', (ruta) => {
     expect(rutaDeRetorno(ruta)).toBe(ruta)
   })
 
-  it.each([[''], [null], [undefined], ['//otro.com'], ['https://otro.com'], ['pedido/abc'], ['/\\otro.com'], ['/ruta\nsalto'], ['/ruta\tcon-tab']])(
+  it.each([[''], [null], [undefined], ['//otro.com'], ['https://otro.com'], ['pedido/abc'], ['/\\otro.com'], ['/ruta\nsalto'], ['/ruta\tcon-tab'],
+    ['/login'], ['/registrar'], ['/datos'], ['/registrar?x=1'], ['/login#a'], ['/datos?x=1#y']])(
     'rechaza %j',
     (valor) => {
       expect(rutaDeRetorno(valor as string | null | undefined)).toBeNull()
@@ -23,6 +24,22 @@ describe('conRetorno', () => {
   })
   it.each([[null], [undefined], ['//otro.com'], ['https://otro.com']])('sin destino válido (%j) deja la ruta sola', (d) => {
     expect(conRetorno('/login', d as string | null | undefined)).toBe('/login')
+  })
+})
+
+describe('motivoDeRetorno | con consulta o ancla', () => {
+  it.each([
+    ['/pedido?paso=2', 'pedido'],
+    ['/pedido/abc?paso=2', 'pedido'],
+    ['/mis-pedidos?x=1', 'mis-pedidos'],
+    ['/mis-pedidos/9#detalle', 'mis-pedidos'],
+  ])('clasifica %s', (ruta, esperado) => {
+    expect(motivoDeRetorno(ruta)).toBe(esperado)
+  })
+
+  it('no confunde rutas que solo empiezan parecido', () => {
+    expect(motivoDeRetorno('/pedido-algo?x=1')).toBeNull()
+    expect(motivoDeRetorno('/mis-pedidosx')).toBeNull()
   })
 })
 

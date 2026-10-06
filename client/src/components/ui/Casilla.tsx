@@ -12,7 +12,15 @@ interface CasillaProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type
   anunciarError?: boolean
 }
 
-export function Casilla({ etiqueta, error, anunciarError = true, id, className = '', ...props }: CasillaProps) {
+export function Casilla({
+  etiqueta,
+  error,
+  anunciarError = true,
+  id,
+  className = '',
+  'aria-describedby': describedByExterno,
+  ...props
+}: CasillaProps) {
   const idGenerado = useId()
   const casillaId = id ?? idGenerado
   const errorId = error ? `${casillaId}-error` : undefined
@@ -24,7 +32,8 @@ export function Casilla({ etiqueta, error, anunciarError = true, id, className =
           id={casillaId}
           type="checkbox"
           aria-invalid={error ? true : undefined}
-          aria-describedby={errorId}
+          // suma el aviso externo y el error: un lector de pantalla lee los dos, y ninguno pisa al otro
+          aria-describedby={[describedByExterno, errorId].filter(Boolean).join(' ') || undefined}
           className={[
             'mt-1 h-6 w-6 shrink-0 cursor-pointer rounded-campo accent-accion outline-none focus-visible:shadow-foco',
             className,

@@ -12,8 +12,8 @@ describe('politicaDatos', () => {
 
   it('el detector encuentra los marcadores mientras existan (siempre corre)', () => {
     // mientras el texto sea borrador, hay pendientes; esta prueba no es la compuerta, solo prueba el detector
-    const conMarcador = marcadoresPendientes(['NIT: [PENDIENTE]', 'listo'])
-    expect(conMarcador).toEqual(['NIT: [PENDIENTE]'])
+    const conMarcador = marcadoresPendientes(['Teléfono: [PENDIENTE]', 'listo'])
+    expect(conMarcador).toEqual(['Teléfono: [PENDIENTE]'])
     expect(marcadoresPendientes(['todo confirmado'])).toEqual([])
   })
 
@@ -32,6 +32,41 @@ describe('politicaDatos', () => {
       expect(textos).toContain(s.titulo)
       for (const p of s.parrafos) expect(textos).toContain(p)
     }
+  })
+
+  it('identifica al responsable con nombre, dirección, teléfono y correo, sin pendientes', () => {
+    expect(RESPONSABLE.nombre).toContain('Jennifer Tatiana Barrero Bustos')
+    expect(RESPONSABLE.nombre).toContain('TaJú Neiva')
+    expect(RESPONSABLE.direccion).toContain('Pastrana')
+    expect(RESPONSABLE.direccion).toContain('Neiva')
+    expect(RESPONSABLE.telefono).toMatch(/^\d{3} \d{3} \d{4}$/)
+    expect(RESPONSABLE.correo).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)
+    expect(marcadoresPendientes(Object.values(RESPONSABLE))).toEqual([])
+  })
+
+  it('no publica números de documento ni de identificación tributaria', () => {
+    expect(Object.keys(RESPONSABLE)).not.toContain('nit')
+    expect(textosDeLaPolitica().join(' ')).not.toMatch(/\bNIT\b|cédula|\d{9,}/i)
+  })
+
+  it('explica el tratamiento de datos de menores, la vía de queja y los cambios del texto', () => {
+    const porTitulo = (t: string) => TEXTOS_POLITICA.find((s) => s.titulo === t)?.parrafos.join(' ') ?? ''
+    expect(porTitulo('Datos de menores de edad')).toMatch(/mayor de edad/)
+    expect(porTitulo('Datos de menores de edad')).toMatch(/solo para elaborar el pedido/)
+    expect(porTitulo('Si no estás conforme')).toContain('Superintendencia de Industria y Comercio')
+    expect(porTitulo('Cambios a este texto')).toContain('versión')
+  })
+
+  it('no promete plazos propios: los únicos plazos son los que fija la ley', () => {
+    const todo = textosDeLaPolitica().join(' ')
+    const plazos = todo.match(/\d+\s+días/g) ?? []
+    expect(plazos).toEqual(['10 días'])
+  })
+
+  it('nombra los proveedores que reciben datos y avisa que pueden estar fuera de Colombia', () => {
+    const proveedores = TEXTOS_POLITICA.find((s) => s.titulo === 'Con quién los compartimos')!.parrafos.join(' ')
+    for (const nombre of ['MongoDB Atlas', 'Cloudinary', 'Render', 'Vercel', 'WhatsApp']) expect(proveedores).toContain(nombre)
+    expect(proveedores).toContain('fuera de Colombia')
   })
 
   it('los textos no remiten a "arriba" ni dicen "cifrada"', () => {

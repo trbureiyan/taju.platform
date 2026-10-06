@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api } from '../lib/api'
+import { api, ErrorApi } from '../lib/api'
 import { mensajeDeErrorDeEnvio } from '../lib/errorEnvio'
 import { normalizarCelular } from '../lib/requisitos'
 import {
@@ -42,6 +42,8 @@ export function useSolicitud(producto: Producto | null) {
   const [enviando, setEnviando] = useState(false)
   const enviandoRef = useRef(false)
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
+  // un 401 al enviar: la pagina abre el ingreso en un dialogo, sin tocar lo escrito
+  const [sesionVencida, setSesionVencida] = useState(false)
   const [fallos, setFallos] = useState(0)
   // una imagen de referencia a medio preparar (ZonaReferencias) todavia no esta en archivos: no se avanza ni envia
   const [procesando, setProcesando] = useState(false)
@@ -116,12 +118,19 @@ export function useSolicitud(producto: Producto | null) {
       // armar la solicitud va dentro del try: si algo aqui lanza, el finally igual libera el formulario
       return await api.postForm<Pedido>('/pedidos', armarSolicitud(producto))
     } catch (err) {
+      if (err instanceof ErrorApi && err.estado === 401) setSesionVencida(true)
       setErrorEnvio(mensajeDeErrorDeEnvio(err))
       return null
     } finally {
       enviandoRef.current = false
       setEnviando(false)
     }
+  }
+
+  // cierra el dialogo de ingreso y retira el aviso de sesion vencida, con o sin haber ingresado
+  function cerrarSesionVencida() {
+    setSesionVencida(false)
+    setErrorEnvio(null)
   }
 
   // FormData porque van archivos - api.post normal serializa a JSON y no sirve aqui
@@ -167,6 +176,8 @@ export function useSolicitud(producto: Producto | null) {
     enviar,
     enviando,
     errorEnvio,
+    sesionVencida,
+    cerrarSesionVencida,
     fallos,
     procesando,
     marcarProcesando: setProcesando,

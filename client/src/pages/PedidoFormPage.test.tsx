@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { PedidoFormPage } from './PedidoFormPage'
@@ -7,7 +7,9 @@ import { api, ErrorApi } from '../lib/api'
 import { esDiaConServicio, fechaEnPalabras } from '../lib/horario'
 import { codigoPedido } from '../lib/pedido'
 import { MENSAJE_CELULAR, MENSAJE_FALTA_REFERENCIA } from '../lib/requisitos'
-import { MENSAJE_ERROR_ENVIO } from '../lib/errorEnvio'
+import { MENSAJE_ERROR_ENVIO, MENSAJE_SESION_VENCIDA } from '../lib/errorEnvio'
+import { useAuth } from '../contexts/AuthContext'
+import { SnackbarProvider } from '../components/ui/Snackbar'
 import { comprimirImagen } from '../lib/comprimirImagen'
 import { pedido } from '../test/pedidos'
 import type { Pedido, Producto } from '../types'
@@ -17,6 +19,9 @@ vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: { get: vi.fn(), postForm: vi.fn() },
 }))
+// el ingreso del dialogo de sesion vencida usa useAuth; aqui solo importa que login se llame
+vi.mock('../contexts/AuthContext', () => ({ useAuth: vi.fn() }))
+const login = vi.fn()
 // la compresion real se prueba en su modulo; aqui pasa la imagen tal cual salvo el caso que la deja a medias
 vi.mock('../lib/comprimirImagen', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/comprimirImagen')>()),
@@ -81,14 +86,16 @@ function SaltoAlRepaso() {
 
 function montar(ruta: string) {
   return render(
-    <MemoryRouter initialEntries={[ruta]}>
-      <Routes>
-        <Route path="/pedido/:productoId" element={<PedidoFormPage />} />
-        <Route path="/catalogo" element={<p>catalogo</p>} />
-      </Routes>
-      <Ubicacion />
-      <SaltoAlRepaso />
-    </MemoryRouter>,
+    <SnackbarProvider>
+      <MemoryRouter initialEntries={[ruta]}>
+        <Routes>
+          <Route path="/pedido/:productoId" element={<PedidoFormPage />} />
+          <Route path="/catalogo" element={<p>catalogo</p>} />
+        </Routes>
+        <Ubicacion />
+        <SaltoAlRepaso />
+      </MemoryRouter>
+    </SnackbarProvider>,
   )
 }
 
@@ -149,6 +156,8 @@ function camposEnviados() {
 }
 
 beforeEach(() => {
+  login.mockReset()
+  vi.mocked(useAuth).mockReturnValue({ usuario: null, autenticado: true, login, registrar: vi.fn(), logout: vi.fn() })
   vi.mocked(api.get).mockReset().mockResolvedValue(producto)
   vi.mocked(api.postForm).mockReset().mockResolvedValue(pedido({ _id: 'pedido-1abcdef', nombre: producto.nombre }))
   vi.mocked(comprimirImagen).mockReset().mockImplementation(async (f) => f)
@@ -516,6 +525,46 @@ describe('PedidoFormPage | envio', () => {
   it('el 409 muestra el texto del servidor', async () => {
     const alerta = await enviarCon(new ErrorApi('Ya recibimos este mismo pedido hace un momento.', 409))
     expect(alerta).toHaveTextContent('Ya recibimos este mismo pedido hace un momento.')
+  })
+
+  it('un 401 abre el ingreso en un diálogo y, al ingresar, conserva lo escrito y permite reenviar', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(new ErrorApi('Token inválido', 401))
+    login.mockResolvedValueOnce({ _id: 'u1', nombre: 'Ana', email: 'ana@taju.co', rol: 'cliente' })
+    await llegarAlRepaso()
+    await enviar()
+
+    const dialogo = await screen.findByRole('dialog', { name: 'Tu sesión venció' })
+    expect(dialogo).toHaveTextContent(/tus datos siguen aquí/)
+    expect(screen.getByRole('region', { name: 'Tu solicitud' })).toHaveTextContent('319 245 2842')
+
+    await userEvent.type(within(dialogo).getByLabelText('Correo'), 'ana@taju.co')
+    await userEvent.type(within(dialogo).getByLabelText('Contraseña'), 'clave-segura-123')
+    await userEvent.click(within(dialogo).getByRole('button', { name: 'Ingresar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.queryByText(MENSAJE_SESION_VENCIDA)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Repaso' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Tu solicitud' })).toHaveTextContent('319 245 2842')
+
+    await enviar()
+    expect(await screen.findByRole('heading', { name: 'Recibimos tu solicitud' })).toBeInTheDocument()
+    expect(api.postForm).toHaveBeenCalledTimes(2)
+  })
+
+  it('cerrar el diálogo con Escape no pierde lo escrito ni deja el aviso viejo', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(new ErrorApi('Token inválido', 401))
+    await llegarAlRepaso()
+    await enviar()
+    await screen.findByRole('dialog', { name: 'Tu sesión venció' })
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.queryByText(MENSAJE_SESION_VENCIDA)).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Tu solicitud' })).toHaveTextContent('319 245 2842')
+  })
+
+  it('otros errores no abren el diálogo', async () => {
+    await enviarCon(new ErrorApi('boom', 500))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('un 400 de multer muestra el mensaje de respaldo, no el texto crudo', async () => {
