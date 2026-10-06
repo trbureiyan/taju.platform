@@ -1,13 +1,13 @@
 // espejo de VERSION_POLITICA_DATOS en server/src/modules/auth/auth.service.ts: se suben juntas cuando el texto cambia de fondo
-export const VERSION_POLITICA_DATOS = '2026-10-05'
+export const VERSION_POLITICA_DATOS = '2026-10-06'
 
-// [DECISION] los datos del responsable viven aquí y no en la página: un solo lugar para completar y una prueba que
-// bloquea el paso a main mientras falten. Costo: el texto de /datos es un borrador hasta entonces.
+// [DECISION] solo se publica lo necesario: el art. 12 de la Ley 1581 pide identificar al responsable, una dirección
+// (física o electrónica) y un teléfono. El teléfono ya es público (es el WhatsApp del sitio); lo demás queda con
+// [PENDIENTE] hasta que TaJú confirme qué se publica. Una prueba bloquea el paso a main mientras quede alguno.
 export const RESPONSABLE = {
-  nombre: '[PENDIENTE] nombre o razón social del taller',
-  nit: '[PENDIENTE] NIT o documento',
-  direccion: '[PENDIENTE] dirección del taller en Neiva',
-  telefono: '[PENDIENTE] teléfono',
+  nombre: 'TaJú Neiva [PENDIENTE: confirmar si se publica el nombre completo de la titular]',
+  direccion: 'Neiva (Huila) [PENDIENTE: confirmar qué dirección se publica]',
+  telefono: '319 245 2842',
   correo: '[PENDIENTE] correo para consultas y reclamos',
 } as const
 
@@ -20,7 +20,7 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   {
     titulo: 'Quién es el responsable',
     parrafos: [
-      `${RESPONSABLE.nombre}, ${RESPONSABLE.nit}. Dirección: ${RESPONSABLE.direccion}. Teléfono: ${RESPONSABLE.telefono}. Correo: ${RESPONSABLE.correo}.`,
+      `${RESPONSABLE.nombre}. Dirección: ${RESPONSABLE.direccion}. Teléfono: ${RESPONSABLE.telefono}. Correo: ${RESPONSABLE.correo}.`,
     ],
   },
   {
@@ -38,7 +38,7 @@ export const TEXTOS_POLITICA: SeccionPolitica[] = [
   {
     titulo: 'Con quién los compartimos',
     parrafos: [
-      'Con los servicios que hacen funcionar la plataforma (alojamiento, base de datos y almacenamiento de imágenes). Solo reciben lo necesario para prestarnos el servicio.',
+      'Con los servicios que hacen funcionar la plataforma: MongoDB Atlas (base de datos), Cloudinary (imágenes), Render y Vercel (alojamiento), y WhatsApp, el canal por el que te escribimos. Solo reciben lo necesario para prestarnos el servicio y pueden guardar la información en servidores fuera de Colombia.',
     ],
   },
   {

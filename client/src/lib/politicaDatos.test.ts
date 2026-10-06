@@ -12,8 +12,8 @@ describe('politicaDatos', () => {
 
   it('el detector encuentra los marcadores mientras existan (siempre corre)', () => {
     // mientras el texto sea borrador, hay pendientes; esta prueba no es la compuerta, solo prueba el detector
-    const conMarcador = marcadoresPendientes(['NIT: [PENDIENTE]', 'listo'])
-    expect(conMarcador).toEqual(['NIT: [PENDIENTE]'])
+    const conMarcador = marcadoresPendientes(['Teléfono: [PENDIENTE]', 'listo'])
+    expect(conMarcador).toEqual(['Teléfono: [PENDIENTE]'])
     expect(marcadoresPendientes(['todo confirmado'])).toEqual([])
   })
 
@@ -32,6 +32,24 @@ describe('politicaDatos', () => {
       expect(textos).toContain(s.titulo)
       for (const p of s.parrafos) expect(textos).toContain(p)
     }
+  })
+
+  it('identifica al responsable con su teléfono público y deja pendiente lo que no está confirmado', () => {
+    expect(RESPONSABLE.nombre).toContain('TaJú Neiva')
+    expect(RESPONSABLE.direccion).toContain('Neiva')
+    expect(RESPONSABLE.telefono).toMatch(/^\d{3} \d{3} \d{4}$/)
+    expect(marcadoresPendientes(Object.values(RESPONSABLE)).length).toBeGreaterThan(0)
+  })
+
+  it('no publica números de documento ni de identificación tributaria', () => {
+    expect(Object.keys(RESPONSABLE)).not.toContain('nit')
+    expect(textosDeLaPolitica().join(' ')).not.toMatch(/\bNIT\b|cédula|\d{9,}/i)
+  })
+
+  it('nombra los proveedores que reciben datos y avisa que pueden estar fuera de Colombia', () => {
+    const proveedores = TEXTOS_POLITICA.find((s) => s.titulo === 'Con quién los compartimos')!.parrafos.join(' ')
+    for (const nombre of ['MongoDB Atlas', 'Cloudinary', 'Render', 'Vercel', 'WhatsApp']) expect(proveedores).toContain(nombre)
+    expect(proveedores).toContain('fuera de Colombia')
   })
 
   it('los textos no remiten a "arriba" ni dicen "cifrada"', () => {
