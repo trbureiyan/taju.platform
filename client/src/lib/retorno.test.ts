@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { rutaDeRetorno, conRetorno, motivoDeRetorno } from './retorno'
 
 describe('rutaDeRetorno', () => {
-  it.each(['/pedido/abc', '/mis-pedidos', '/mis-pedidos/123'])('acepta %s', (ruta) => {
+  it.each(['/pedido/abc', '/mis-pedidos', '/mis-pedidos/123', '/login-algo', '/registrar-no'])('acepta %s', (ruta) => {
     expect(rutaDeRetorno(ruta)).toBe(ruta)
   })
 
-  it.each([[''], [null], [undefined], ['//otro.com'], ['https://otro.com'], ['pedido/abc'], ['/\\otro.com'], ['/ruta\nsalto'], ['/ruta\tcon-tab']])(
+  it.each([[''], [null], [undefined], ['//otro.com'], ['https://otro.com'], ['pedido/abc'], ['/\\otro.com'], ['/ruta\nsalto'], ['/ruta\tcon-tab'],
+    ['/login'], ['/registrar'], ['/datos'], ['/registrar?x=1'], ['/login#a'], ['/datos?x=1#y']])(
     'rechaza %j',
     (valor) => {
       expect(rutaDeRetorno(valor as string | null | undefined)).toBeNull()

@@ -9,6 +9,8 @@ export function rutaDeRetorno(valor: string | null | undefined): string | null {
   if (valor.startsWith('//') || valor.startsWith('/\\')) return null
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(valor)) return null
+  // volver a las propias pantallas de acceso dejaría a la persona dando vueltas (o el botón de registro en espera)
+  if (/^\/(?:login|registrar|datos)(?:[?#]|$)/.test(valor)) return null
   return valor
 }
 
