@@ -26,6 +26,16 @@ describe('PantallaAcceso', () => {
     expect(constancia.compareDocumentPosition(formulario) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
+  it('la constancia no crea una región complementaria vacía para lectores de pantalla', () => {
+    render(
+      <PantallaAcceso titulo="t" apoyo="a" constancia={<p aria-hidden="true">c</p>}>
+        <p>f</p>
+      </PantallaAcceso>,
+    )
+    expect(screen.queryByRole('complementary')).toBeNull()
+  })
+
+  // solo guarda que no se quiten las clases: jsdom no calcula layout, así que el desborde real no se puede probar aquí
   it('las dos columnas pueden encogerse (min-w-0) para que un correo largo no desborde', () => {
     const { container } = render(
       <PantallaAcceso titulo="t" apoyo="a" constancia={<p>c</p>}>

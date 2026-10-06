@@ -22,7 +22,7 @@ export function PantallaAcceso({ titulo, apoyo, constancia, children }: Pantalla
         <p className="text-base text-texto-secundario">{apoyo}</p>
       </header>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12">
-        <aside className="min-w-0">{constancia}</aside>
+        <div className="min-w-0">{constancia}</div>
         <div className="min-w-0">{children}</div>
       </div>
     </div>
