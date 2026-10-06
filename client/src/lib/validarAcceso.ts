@@ -2,8 +2,8 @@ import { ErrorApi } from './api'
 
 // espejo de server/src/modules/auth/auth.controller.ts: nombre 2 a 120, correo válido, contraseña de 8 o más.
 // Si el servidor cambia una regla, cambiarla aquí o el formulario acepta lo que el servidor rechaza.
-export const NOMBRE_MIN = 2
-export const NOMBRE_MAX = 120
+const NOMBRE_MIN = 2
+const NOMBRE_MAX = 120
 export const CONTRASENA_MIN = 8
 // [DECISION] más estricto que "algo@algo.algo": se acerca al z.string().email() de Zod v4 del servidor para que un correo
 // mal escrito falle en el campo y no como aviso vago. Costo: si Zod cambia su regla, se ajusta aquí.

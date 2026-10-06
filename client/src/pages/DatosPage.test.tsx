@@ -15,6 +15,6 @@ describe('DatosPage', () => {
   })
   it('ofrece volver a crear la cuenta', () => {
     render(<MemoryRouter><DatosPage /></MemoryRouter>)
-    expect(screen.getByRole('link', { name: 'Volver al registro' })).toHaveAttribute('href', '/registrar')
+    expect(screen.getByRole('link', { name: 'Volver a crear mi cuenta' })).toHaveAttribute('href', '/registrar')
   })
 })

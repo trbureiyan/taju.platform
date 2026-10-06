@@ -17,8 +17,8 @@ export function DatosPage() {
           ))}
         </section>
       ))}
-      <Link to="/registrar" className="text-sm font-medium text-texto-principal hover:underline">
-        Volver al registro
+      <Link to="/registrar" className="inline-flex min-h-boton items-center text-sm font-medium text-texto-principal hover:underline">
+        Volver a crear mi cuenta
       </Link>
     </article>
   )
