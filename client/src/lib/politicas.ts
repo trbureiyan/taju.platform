@@ -103,6 +103,16 @@ export function esFestivo(fecha: string): boolean {
 // plazo en horas de atencion para escribirle al cliente despues de una solicitud
 export const PLAZO_CONTACTO_HORAS = 2
 
+// domicilio: valor en pesos que paga quien pide. `hasta` cuando depende del lugar. Fuera de esas zonas el valor se
+// confirma por WhatsApp; a Bogota suele ser DOMICILIO_BOGOTA_USUAL (orientativo, no una tarifa fija)
+export const TARIFAS_DOMICILIO: readonly { zona: string; desde: number; hasta?: number }[] = [
+  { zona: 'Centro de Neiva', desde: 6000 },
+  { zona: 'Norte de Neiva', desde: 7000 },
+  { zona: 'Sur de Neiva y norte lejano', desde: 8000 },
+  { zona: 'Fuera de Neiva', desde: 9000, hasta: 10000 },
+]
+export const DOMICILIO_BOGOTA_USUAL = 12000
+
 // anticipo habitual sobre el valor acordado; solo orienta al taller, la plataforma no cobra
 export const ANTICIPO_PORCENTAJE = 50
 

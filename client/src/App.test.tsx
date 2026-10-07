@@ -38,6 +38,12 @@ describe('App | rutas', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Cómo tratamos tus datos' })).toBeInTheDocument()
   })
 
+  it('la ruta /preguntas-frecuentes es publica y muestra las preguntas', async () => {
+    window.history.pushState({}, '', '/preguntas-frecuentes')
+    render(<App />)
+    expect(await screen.findByRole('heading', { level: 1, name: 'Preguntas frecuentes' })).toBeInTheDocument()
+  })
+
   it('una ruta que no existe muestra "No encontramos esta página" y el menu sigue visible', async () => {
     window.history.pushState({}, '', '/ruta-que-no-existe')
     render(<App />)

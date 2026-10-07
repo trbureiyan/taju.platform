@@ -8,7 +8,7 @@ const SALT_ROUNDS = 12
 
 // versión del texto de /datos que el cliente mostró al aceptar; subirla (y la espejada en client/src/lib/politicaDatos.ts)
 // cuando el texto cambie de fondo
-export const VERSION_POLITICA_DATOS = '2026-10-06'
+export const VERSION_POLITICA_DATOS = '2026-10-06.2'
 
 // ─── Registro ─────────────────────────────────────────────────────────────────
 

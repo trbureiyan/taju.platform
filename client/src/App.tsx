@@ -12,6 +12,7 @@ import { CatalogoPage } from './pages/CatalogoPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegistrarPage } from './pages/RegistrarPage'
 import { DatosPage } from './pages/DatosPage'
+import { PreguntasFrecuentesPage } from './pages/PreguntasFrecuentesPage'
 import { ProductoDetailPage } from './pages/ProductoDetailPage'
 import { PedidoFormPage } from './pages/PedidoFormPage'
 import { MisPedidosPage } from './pages/MisPedidosPage'
@@ -65,6 +66,7 @@ export default function App() {
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/registrar" element={<RegistrarPage />} />
                   <Route path="/datos" element={<DatosPage />} />
+                  <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentesPage />} />
 
                   {/* ─── Cliente autenticado ─── */}
                   <Route

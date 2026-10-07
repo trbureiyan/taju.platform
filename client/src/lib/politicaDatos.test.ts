@@ -6,7 +6,7 @@ declare const process: { env: Record<string, string | undefined> }
 
 describe('politicaDatos', () => {
   it('tiene versión y secciones', () => {
-    expect(VERSION_POLITICA_DATOS).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(VERSION_POLITICA_DATOS).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/)
     expect(TEXTOS_POLITICA.length).toBeGreaterThan(3)
   })
 
@@ -61,6 +61,14 @@ describe('politicaDatos', () => {
     const todo = textosDeLaPolitica().join(' ')
     const plazos = todo.match(/\d+\s+días/g) ?? []
     expect(plazos).toEqual(['10 días'])
+  })
+
+  it('dice cuánto tiempo se guardan los datos sin prometer un borrado automático que no existe', () => {
+    const t = TEXTOS_POLITICA.find((s) => s.titulo === 'Cuánto tiempo guardamos tus datos')?.parrafos.join(' ') ?? ''
+    expect(t).toContain('mientras tu cuenta exista')
+    expect(t).toContain('no los borramos automáticamente')
+    expect(t).toMatch(/escríbenos/i)
+    expect(t).toMatch(/por ley|obligación legal|obligaciones legales/)
   })
 
   it('nombra los proveedores que reciben datos y avisa que pueden estar fuera de Colombia', () => {
