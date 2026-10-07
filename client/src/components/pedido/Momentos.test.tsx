@@ -116,15 +116,25 @@ describe('MomentoComo', () => {
 })
 
 describe('MomentoCuando', () => {
+  it('el domicilio no se limita a Neiva: la opción lo dice y el campo pide la ciudad si es fuera', async () => {
+    const { rerender } = render(<MomentoCuando {...props({ campos: { entregaMetodo: 'domicilio' } })} />)
+    expect(screen.getByRole('radio', { name: 'A domicilio' })).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /en Neiva/ })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Ciudad, barrio o dirección')).toBeInTheDocument()
+    expect(screen.getByText(/fuera de Neiva, escribe también la ciudad/)).toBeInTheDocument()
+    rerender(<MomentoCuando {...props({ campos: { entregaMetodo: 'recoger' } })} />)
+    expect(screen.queryByLabelText('Ciudad, barrio o dirección')).not.toBeInTheDocument()
+  })
+
   it('ofrece recoger o domicilio como tarjetas y pide la direccion solo a domicilio', async () => {
     const p = props()
     const { rerender } = render(<MomentoCuando {...p} />)
     expect(screen.getByRole('heading', { name: 'Cuándo y dónde' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Barrio o dirección')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Ciudad, barrio o dirección')).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('radio', { name: /A domicilio/ }))
     expect(p.set).toHaveBeenCalledWith('entregaMetodo', 'domicilio')
     rerender(<MomentoCuando {...props({ campos: { entregaMetodo: 'domicilio' } })} />)
-    expect(screen.getByLabelText('Barrio o dirección')).toHaveAttribute('maxlength', '200')
+    expect(screen.getByLabelText('Ciudad, barrio o dirección')).toHaveAttribute('maxlength', '200')
   })
 
   it('las horas dependen del dia elegido: el sabado termina a las 3 p. m. y sin dia no hay horas', () => {
