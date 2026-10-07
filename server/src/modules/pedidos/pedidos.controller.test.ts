@@ -70,3 +70,16 @@ describe('POST /api/pedidos: entrega', () => {
     expect(body.detalles.fieldErrors.entregaDetalle[0]).toMatch(/200 caracteres/)
   })
 })
+
+describe('GET /api/pedidos/mis-pedidos: orden de rutas', () => {
+  // si '/:id' se declarara antes, express tomaria "mis-pedidos" por un id y responderia 400 o 404 en vez de la lista
+  it('con sesion de cliente devuelve su lista y no se confunde con /:id', async () => {
+    const { cliente } = await crearCatalogoYCliente('papeleria')
+    const token = signToken({ sub: cliente.id, email: cliente.email, rol: 'cliente' })
+
+    const res = await fetch(`${baseUrl}/api/pedidos/mis-pedidos`, { headers: { authorization: `Bearer ${token}` } })
+
+    expect(res.status).toBe(200)
+    expect(Array.isArray(await res.json())).toBe(true)
+  })
+})

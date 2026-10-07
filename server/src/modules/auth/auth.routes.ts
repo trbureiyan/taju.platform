@@ -1,7 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
 import * as authController from './auth.controller.js'
-import { requireAuth } from '../../middleware/auth.js'
 
 // 10 intentos por ventana de 15 min — suficiente para un uso legítimo, costoso para fuerza bruta
 const limiteAuth = rateLimit({
@@ -17,9 +16,8 @@ const limiteAuth = rateLimit({
 
 const router = Router()
 
-// registrar y login son publicas por definicion, solo /me exige sesion activa
+// registrar y login son publicas por definicion; no hay /me: el token vive en memoria y el cliente no confirma la sesion al recargar
 router.post('/registrar', limiteAuth, authController.registrar)
 router.post('/login', limiteAuth, authController.login)
-router.get('/me', requireAuth, authController.me) // para que el front confirme sesion al recargar
 
 export default router

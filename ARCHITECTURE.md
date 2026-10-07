@@ -119,7 +119,6 @@ La API organiza sus rutas bajo el prefijo `/api`:
 - **Módulo Auth** (`/api/auth`):
   - `POST /registrar`: Registro de nuevos clientes con hash bcrypt y emisión de JWT.
   - `POST /login`: Autenticación por email/password y retorno de JWT + datos de usuario.
-  - `GET /me`: Consulta del perfil autenticado (`requireAuth`).
 - **Módulo Catálogo y Categorías** (`/api/categorias` y `/api/productos`):
   - `GET /api/categorias`: Listado de categorías activas (o todas si es administrador).
   - `GET /api/categorias/:id`: Detalle de categoría.

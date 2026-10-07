@@ -68,10 +68,3 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     next(err)
   }
 }
-
-/**
- * Retorna los datos del usuario autenticado a partir de su token JWT.
- */
-export function me(req: Request, res: Response): void {
-  res.json({ usuario: req.usuario })
-}
