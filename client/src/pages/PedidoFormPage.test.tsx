@@ -474,9 +474,9 @@ describe('PedidoFormPage | celular y entrega', () => {
 
   it('pide la direccion solo a domicilio y la envia', async () => {
     await hastaMomento3()
-    expect(screen.queryByLabelText('Barrio o dirección')).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('radio', { name: /A domicilio en Neiva/ }))
-    await userEvent.type(screen.getByLabelText('Barrio o dirección'), 'Cra 5 # 10-20')
+    expect(screen.queryByLabelText('Ciudad, barrio o dirección')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('radio', { name: /A domicilio/ }))
+    await userEvent.type(screen.getByLabelText('Ciudad, barrio o dirección'), 'Cra 5 # 10-20')
     await completarMomento3()
     await siguiente()
     await screen.findByRole('heading', { name: 'Repaso' })
@@ -490,10 +490,10 @@ describe('PedidoFormPage | celular y entrega', () => {
 
   it('si vuelve a recoger no envia la direccion que habia escrito', async () => {
     await hastaMomento3()
-    await userEvent.click(screen.getByRole('radio', { name: /A domicilio en Neiva/ }))
-    await userEvent.type(screen.getByLabelText('Barrio o dirección'), 'Cra 5 # 10-20')
+    await userEvent.click(screen.getByRole('radio', { name: /A domicilio/ }))
+    await userEvent.type(screen.getByLabelText('Ciudad, barrio o dirección'), 'Cra 5 # 10-20')
     await userEvent.click(screen.getByRole('radio', { name: /Lo recojo en el taller/ }))
-    expect(screen.queryByLabelText('Barrio o dirección')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Ciudad, barrio o dirección')).not.toBeInTheDocument()
     await completarMomento3()
     await siguiente()
     await screen.findByRole('heading', { name: 'Repaso' })
@@ -712,8 +712,8 @@ describe('PedidoFormPage | Pedir de nuevo (?desde=)', () => {
 
     await screen.findByRole('heading', { name: 'Cuándo y dónde' })
     expect(screen.getByLabelText('Tu celular')).toHaveValue('3001234567')
-    expect(screen.getByRole('radio', { name: /A domicilio en Neiva/ })).toBeChecked()
-    expect(screen.getByLabelText('Barrio o dirección')).toHaveValue('Cra 5 # 10-20')
+    expect(screen.getByRole('radio', { name: /A domicilio/ })).toBeChecked()
+    expect(screen.getByLabelText('Ciudad, barrio o dirección')).toHaveValue('Cra 5 # 10-20')
     expect(screen.queryByRole('radio', { name: /, \d+ de /, checked: true })).not.toBeInTheDocument()
   })
 

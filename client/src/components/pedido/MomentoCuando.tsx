@@ -43,16 +43,16 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef, inten
             value="domicilio"
             checked={campos.entregaMetodo === 'domicilio'}
             onChange={(v) => set('entregaMetodo', v)}
-            titulo="A domicilio en Neiva"
+            titulo="A domicilio"
           />
         </div>
         {campos.entregaMetodo === 'domicilio' && (
           <Input
-            label="Barrio o dirección"
+            label="Ciudad, barrio o dirección"
             type="text"
             autoComplete="street-address"
             maxLength={200}
-            hint="Puedes dejarlo para después: la dirección exacta la confirmamos contigo antes de fijar la fecha."
+            hint="Si es fuera de Neiva, escribe también la ciudad. Puedes dejarlo para después: la dirección exacta y el valor del domicilio los confirmamos contigo antes de fijar la fecha."
             value={campos.entregaDetalle}
             onChange={(e) => set('entregaDetalle', e.target.value)}
             anunciarError={false}
