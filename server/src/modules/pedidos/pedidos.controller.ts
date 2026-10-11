@@ -20,8 +20,8 @@ const crearPedidoSchema = z.object({
   dimensionValor: z.coerce.number().positive('El valor de dimensión debe ser mayor a 0'),
   esDimensionPersonalizada: booleanoTexto,
   cantidad: z.coerce.number().int().min(1, 'La cantidad mínima es 1'),
-  colores: z.string().min(1, 'Indica los colores que quieres'),
-  materiales: z.string().min(1, 'Indica el material o para qué lo usarás'),
+  colores: z.string().min(1, 'Indica los colores que quieres').max(200, 'Los colores admiten hasta 200 caracteres.'),
+  materiales: z.string().min(1, 'Indica el material o para qué lo usarás').max(200, 'El material admite hasta 200 caracteres.'),
   telefono: z
     .string()
     .trim()
