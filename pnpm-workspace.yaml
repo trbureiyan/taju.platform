@@ -3,6 +3,7 @@ packages:
   - server
 overrides:
   qs: "6.16.0"
+  source-map-js: "1.2.2"
 allowBuilds:
   esbuild: false
   mongodb-memory-server: true
