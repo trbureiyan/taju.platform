@@ -9,6 +9,19 @@ function secret(): string {
   return s
 }
 
+/**
+ * Comprueba el secreto al arrancar el servidor (index.ts). Sin esto el error aparece recien en el primer login, como 500 sin explicacion;
+ * asi el deploy falla con el motivo en el log y Render conserva la version anterior.
+ * @throws Error con el motivo si JWT_SECRET falta o es corta en produccion.
+ */
+export function verificarSecretoJwt(): void {
+  const s = secret()
+  // un secreto corto se rompe por fuerza bruta offline con un solo token capturado
+  if (process.env.NODE_ENV === 'production' && s.length < 32) {
+    throw new Error('JWT_SECRET demasiado corta: en produccion necesita al menos 32 caracteres. Genera una con: openssl rand -hex 48')
+  }
+}
+
 // 8h cubre un turno de trabajo del taller sin forzar re-login a media tarde
 /**
  * Firma un nuevo token JWT válido por 8 horas.
@@ -16,7 +29,7 @@ function secret(): string {
  * @returns Cadena JWT firmada.
  */
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, secret(), { expiresIn: '8h', issuer: 'taju-server', audience: 'taju-client' })
+  return jwt.sign(payload, secret(), { algorithm: 'HS256', expiresIn: '8h', issuer: 'taju-server', audience: 'taju-client' })
 }
 
 // jwt.verify solo garantiza la firma, no la forma del payload - un token viejo o
@@ -38,7 +51,7 @@ function esJwtPayload(payload: unknown): payload is JwtPayload {
  * @throws Error si el token es inválido, expiró, o el payload no cumple JwtPayload.
  */
 export function verifyToken(token: string): JwtPayload {
-  const decoded = jwt.verify(token, secret(), { issuer: 'taju-server', audience: 'taju-client' })
+  const decoded = jwt.verify(token, secret(), { algorithms: ['HS256'], issuer: 'taju-server', audience: 'taju-client' })
   if (!esJwtPayload(decoded)) throw new Error('Token con payload invalido')
   return decoded
 }

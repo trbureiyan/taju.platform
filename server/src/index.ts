@@ -3,6 +3,10 @@
 import 'dotenv/config'
 import { connectDb } from './lib/db.js'
 import { crearApp } from './app.js'
+import { verificarSecretoJwt } from './lib/jwt.js'
+
+// antes de todo: si el secreto falta o es corto el deploy cae aqui con el motivo en el log, no en el primer login
+verificarSecretoJwt()
 
 const app = crearApp()
 const PORT = process.env.PORT ?? 3001
