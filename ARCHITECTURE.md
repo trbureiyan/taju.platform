@@ -321,6 +321,7 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 | Testing Suite | Sin E2E ni cobertura mínima exigida | Vitest cubre unidades e integración (server con mongodb-memory-server, client con jsdom + Testing Library) y corre en CI; no hay pruebas de navegador real | Definir umbral de cobertura y evaluar E2E cuando el flujo de pedidos se estabilice |
 | Pedidos | Ventana breve de imagen huérfana en carreras simultáneas | `crearPedido` sube a Cloudinary antes de la transacción; si dos envíos idénticos llegan a la vez, el perdedor recibe 409 y `eliminarImagen` borra sus imágenes en el catch (best-effort, `Promise.allSettled`) | Mitigado: el chequeo previo corta reintentos secuenciales y el catch limpia el caso simultáneo. Si el borrado en Cloudinary falla, queda huérfana igual — sin reintento ni job de barrido |
 | Infraestructura | Cold start del free tier de Render | El servidor duerme tras ~15 min sin tráfico; el primer request tras eso puede tardar 30-60s+ o dar timeout del lado del cliente | Mitigado con `keep-alive.yml` (ping cada 10 min). Tradeoff aceptado: consume horas gratis de Render más rápido; definitivo solo con plan pago (sin spin-down) |
+| Base de datos | Sin respaldos administrados en Atlas M0 (QS-11) | Una pérdida de datos solo se recupera con un volcado manual previo | Riesgo aceptado con respaldo manual de `mongodump`; ver `.docs/Tecnico/06-respaldo-y-recuperacion.md` |
 
 ---
 
