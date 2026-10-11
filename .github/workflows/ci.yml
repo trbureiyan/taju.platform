@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+# el token del workflow solo lee: ningun job escribe en el repo
+permissions:
+  contents: read
+
 # dos jobs separados porque client tiene build y server (por ahora) no
 jobs:
   client:
