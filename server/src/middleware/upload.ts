@@ -9,7 +9,9 @@ const MAX_FILES = 3 // suficiente para dar contexto visual sin volver pesado el 
 // memoryStorage porque el buffer se sube directo a Cloudinary, nunca toca disco local
 const _multer = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_SIZE, files: MAX_FILES },
+  // express.json no cubre multipart: sin fields/fieldSize/parts un usuario con cuenta podia mandar miles de campos de 1 MB en memoria.
+  // el formulario manda ~12 campos de texto; el margen no toca ningun pedido legitimo
+  limits: { fileSize: MAX_SIZE, files: MAX_FILES, fields: 30, fieldSize: 16 * 1024, parts: 40 },
   fileFilter(_req, file, cb) {
     if ((TIPOS_IMAGEN as readonly string[]).includes(file.mimetype)) {
       cb(null, true)
