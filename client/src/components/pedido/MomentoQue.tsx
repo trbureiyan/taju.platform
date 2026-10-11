@@ -90,6 +90,7 @@ export function MomentoQue({ producto, campos, errores, set, tituloRef, intento 
         placeholder="Ej: dorado y blanco"
         hint="Indica los colores principales que quieres"
         value={campos.colores}
+        maxLength={200}
         onChange={(e) => set('colores', e.target.value)}
         error={errores.colores}
         anunciarError={false}
@@ -100,6 +101,7 @@ export function MomentoQue({ producto, campos, errores, set, tituloRef, intento 
         placeholder="Ej: acrílico 3mm, madera terciada"
         hint="Si no sabes qué material, describe el uso y te asesoramos"
         value={campos.materiales}
+        maxLength={200}
         onChange={(e) => set('materiales', e.target.value)}
         error={errores.materiales}
         anunciarError={false}

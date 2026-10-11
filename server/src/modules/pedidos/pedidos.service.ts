@@ -128,7 +128,7 @@ export async function crearPedido(input: CrearPedidoInput) {
     input.archivos.map(async (file) => {
       const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
       // upload.ts ya verifico tipo y firma
-      return { nombreOriginal: file.originalname, mimeType: file.mimetype as TipoImagen, tamano: file.size, url, publicId }
+      return { nombreOriginal: file.originalname.slice(0, 120), mimeType: file.mimetype as TipoImagen, tamano: file.size, url, publicId }
     }),
   )
   const subidasExitosas = resultadosSubida
