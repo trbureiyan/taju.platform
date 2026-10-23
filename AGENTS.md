@@ -4,7 +4,7 @@
 > **Directiva de Interacción:** El agente debe responder siempre al inicio de cada interacción dirigiéndose directamente al usuario como **TaJú** (ej. "Hola TaJú," o "TaJú:"), tratando al usuario como la persona/entidad principal del taller.
 
 taju.platform | Plataforma web MERN para TaJú, taller de corte y grabado láser en Neiva (Huila) que produce papelería y objetos personalizados para celebraciones y eventos.
-React 18 + TypeScript + Tailwind (client), Node.js 20 LTS + Express.js + TypeScript (server), MongoDB Atlas + Mongoose, Cloudinary, JWT en memoria.
+React 18 + TypeScript + Tailwind (client), Node.js 24 LTS + Express.js + TypeScript (server), MongoDB Atlas + Mongoose, Cloudinary, JWT en memoria.
 
 ---
 
@@ -36,7 +36,7 @@ taju.platform/
 │       ├── hooks/                   # un archivo por concern (useDespertarServidor.ts, useMedia.ts, etc.)
 │       ├── lib/                     # utilidades del cliente (api.ts, catalogo.ts, precio.ts, movimiento.ts, politicas.ts, horario.ts, retorno.ts, validarAcceso.ts, politicaDatos.ts, etc.)
 │       └── types/                   # tipos compartidos (pedido.types.ts, etc.)
-├── server/                          # Node.js 20 LTS + Express + TypeScript
+├── server/                          # Node.js 24 LTS + Express + TypeScript
 │   ├── tsconfig.json                # CommonJS, typecheck incluye los *.test.ts
 │   ├── tsconfig.build.json          # build a dist/, excluye tests y src/test/
 │   ├── vitest.config.mts            # entorno node, JWT_SECRET fijo de prueba

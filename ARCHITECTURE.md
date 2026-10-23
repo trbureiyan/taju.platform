@@ -46,7 +46,7 @@ El proyecto se enmarca dentro del Proyecto Integrador II (PI-II), implementando 
 
 ```mermaid
 graph TD
-    Browser["Navegador / Cliente React 18"] -->|"HTTPS / REST API"| Server["Servidor Express (Node.js 20)"]
+    Browser["Navegador / Cliente React 18"] -->|"HTTPS / REST API"| Server["Servidor Express (Node.js 24)"]
 
     subgraph Client ["client/ (SPA Vite)"]
         UI["Componentes UI & Páginas\n(Catálogo, Pedidos, Admin)"]
