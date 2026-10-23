@@ -19,13 +19,13 @@ Proyecto Integrador II | Ingeniería de Software, Universidad Surcolombiana.
 |-------------------|-------------------------------------------------------------------------|
 | Frontend          | React 18, TypeScript, Vite, Tailwind CSS 4, React Router               |
 | Movimiento        | `motion` (springs M3 Expressive), `lucide-react`                       |
-| Backend           | Node.js 20 LTS, TypeScript, Express.js                                 |
+| Backend           | Node.js 24 LTS, TypeScript, Express.js                                 |
 | Base de datos     | MongoDB Atlas, Mongoose ODM                                             |
 | Almacenamiento    | Cloudinary                                                              |
 | Autenticación     | JWT en memoria del cliente (sin localStorage)                          |
 | Seguridad         | bcrypt, Zod, validación de entradas en servidor                        |
 | Analítica         | Vercel Web Analytics                                                    |
-| Package manager   | pnpm 11, workspaces monorepo                                            |
+| Package manager   | pnpm 12, workspaces monorepo                                            |
 | Testing           | Vitest, Supertest, mongodb-memory-server, React Testing Library        |
 
 ---
