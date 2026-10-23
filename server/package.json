@@ -20,7 +20,7 @@
     "express-rate-limit": "8.7.1",
     "helmet": "8.3.0",
     "jsonwebtoken": "9.0.3",
-    "mongoose": "8.24.4",
+    "mongoose": "8.24.6",
     "multer": "2.5.0",
     "zod": "4.6.7"
   },
@@ -32,7 +32,7 @@
     "@types/express": "4.17.21",
     "@types/jsonwebtoken": "9.0.10",
     "@types/multer": "2.3.0",
-    "@types/node": "26.6.4",
+    "@types/node": "26.6.5",
     "@types/supertest": "7.2.1",
     "@vitest/coverage-v8": "5.0.5",
     "autocannon": "8.0.0",
