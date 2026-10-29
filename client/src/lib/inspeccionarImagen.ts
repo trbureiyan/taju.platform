@@ -34,12 +34,16 @@ export class ErrorImagen extends Error {
   }
 }
 
+export const MENSAJE_FORMATO_IMAGEN =
+  'Solo aceptamos imágenes en JPG, PNG o WebP. Si tu referencia está en otro formato, conviértela o envíanosla por WhatsApp.'
+export const MENSAJE_IMAGEN_ILEGIBLE = 'No pudimos leer esa imagen. Usa una en JPG, PNG o WebP, o envíanosla por WhatsApp.'
+
 const MENSAJES: Record<RazonRechazo, string> = {
-  formato: 'Solo aceptamos imágenes en JPG, PNG o WebP. Si tu referencia está en otro formato, conviértela o envíanosla por WhatsApp.',
+  formato: MENSAJE_FORMATO_IMAGEN,
   heic: 'Esa foto está en formato HEIC, el que usa el iPhone por defecto, y aún no lo leemos. Elige otra en JPG, PNG o WebP o envíanosla por WhatsApp.',
   peso: 'Esa imagen pesa más de 25 MB. Elige una más liviana o envíanosla por WhatsApp.',
   pixeles: 'Esa imagen es enorme y tu celular podría quedarse sin memoria al prepararla. Elige otra o envíanosla por WhatsApp.',
-  ilegible: 'No pudimos leer esa imagen. Usa una en JPG, PNG o WebP, o envíanosla por WhatsApp.',
+  ilegible: MENSAJE_IMAGEN_ILEGIBLE,
   exceso: 'Caben hasta 3 imágenes. Quita alguna si quieres cambiarla.',
 }
 
