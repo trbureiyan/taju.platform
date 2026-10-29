@@ -43,6 +43,15 @@ function aBlob(canvas: HTMLCanvasElement, tipo: string): Promise<Blob | null> {
 }
 
 /**
+ * [DECISION] el tipo del archivo que sale es el que dicen sus bytes, no File.type - multer del servidor rechaza por el tipo que
+ * declara la parte del formulario antes de mirar los bytes, y iOS entrega a veces tipo vacio o un nombre .jpg sobre otro formato.
+ * Sin esto, una foto valida y liviana llegaria al servidor como application/octet-stream y se rechazaria como "formato".
+ */
+function conTipoReal(archivo: File, tipo: InspeccionImagen['tipo']): File {
+  return archivo.type === tipo ? archivo : new File([archivo], archivo.name, { type: tipo })
+}
+
+/**
  * Decodifica la imagen. Si su lado mayor al mostrarse pasa de 2000 px, pide al navegador que la entregue ya reducida
  * para no pagar el bitmap completo (una foto de 48 MP son ~192 MB).
  * [DECISION] se pasa un solo lado (resizeWidth o resizeHeight) y el navegador calcula el otro: asi no se deforma una foto
@@ -80,7 +89,8 @@ async function decodificar(archivo: File, info: InspeccionImagen): Promise<Image
  */
 export async function comprimirImagen(archivo: File): Promise<File> {
   const info = await inspeccionarArchivo(archivo)
-  if (archivo.size <= UMBRAL_SIN_COMPRIMIR && Math.max(info.ancho, info.alto) <= LADO_MAXIMO) return archivo
+  const ladoMayor = Math.max(info.ancho, info.alto)
+  if (archivo.size <= UMBRAL_SIN_COMPRIMIR && ladoMayor <= LADO_MAXIMO) return conTipoReal(archivo, info.tipo)
 
   const bitmap = await decodificar(archivo, info)
 
@@ -98,8 +108,9 @@ export async function comprimirImagen(archivo: File): Promise<File> {
   }
   if (!blob) throw new ErrorImagen(MENSAJE_IMAGEN_ILEGIBLE, 'ilegible')
 
-  let resultado = archivo
-  if (blob.size < archivo.size) {
+  // se conserva el original solo si ya cabe en 2000 px: uno de 8000 px, aunque pese poco, el servidor lo rechazaria por pixeles
+  let resultado = conTipoReal(archivo, info.tipo)
+  if (blob.size < archivo.size || ladoMayor > LADO_MAXIMO) {
     const base = archivo.name.replace(/\.[^.]+$/, '')
     resultado = new File([blob], `${base}${blob.type === 'image/webp' ? '.webp' : '.jpg'}`, { type: blob.type })
   }

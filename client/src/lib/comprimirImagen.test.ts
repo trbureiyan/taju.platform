@@ -137,10 +137,48 @@ describe('comprimirImagen', () => {
     expect(crearBitmap).toHaveBeenCalledWith(expect.anything(), { imageOrientation: 'from-image' })
   })
 
-  it('conserva el original si la version comprimida no es mas liviana', async () => {
-    simularNavegador({ resultado: () => ({ bytes: 4 * MB, tipo: 'image/webp' }) })
-    const original = archivoDe(3 * MB)
+  it('conserva el original si la version comprimida no es mas liviana y el original ya cabe en 2000 px', async () => {
+    simularNavegador({ ancho: 1600, alto: 1200, resultado: () => ({ bytes: 4 * MB, tipo: 'image/webp' }) })
+    const original = archivoDe(3 * MB, 'foto.jpg', 'image/jpeg', 1600, 1200)
     expect(await comprimirImagen(original)).toBe(original)
+  })
+
+  // sin esto el servidor recibiria 8000 px y los rechazaria como "demasiados pixeles" aunque la foto sea valida
+  it('usa la version reducida aunque pese mas, si el original mide mas de 2000 px', async () => {
+    const { dibujados } = simularNavegador({ ancho: 8000, alto: 6000, resultado: () => ({ bytes: 1.2 * MB, tipo: 'image/webp' }) })
+    const original = archivoDe(1 * MB, 'panoramica.jpg', 'image/jpeg', 8000, 6000)
+
+    const resultado = await comprimirImagen(original)
+
+    expect(resultado).not.toBe(original)
+    expect(resultado.type).toBe('image/webp')
+    expect(dibujados[0]).toEqual({ ancho: 2000, alto: 1500 })
+  })
+
+  // multer del servidor rechaza por el tipo que declara la parte del formulario antes de mirar los bytes
+  it('una imagen liviana con File.type vacío sale con el tipo real que dicen sus bytes', async () => {
+    const sinTipo = archivoDe(0.3 * MB, 'IMG_0007', '', 1600, 1200)
+
+    const resultado = await comprimirImagen(sinTipo)
+
+    expect(resultado.type).toBe('image/jpeg')
+    expect(resultado.name).toBe('IMG_0007')
+    expect(resultado.size).toBe(sinTipo.size)
+  })
+
+  it('un PNG que se llama .jpg y declara image/jpeg sale como image/png', async () => {
+    const bytes = new Uint8Array(64)
+    bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    bytes.set([0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 2, 0x80, 0, 0, 1, 0xe0], 8)
+    const engañoso = new File([bytes], 'foto.jpg', { type: 'image/jpeg' })
+
+    expect((await comprimirImagen(engañoso)).type).toBe('image/png')
+  })
+
+  it('una imagen grande que se conserva por pesar menos que su reducida también sale con el tipo real', async () => {
+    simularNavegador({ ancho: 1600, alto: 1200, resultado: () => ({ bytes: 4 * MB, tipo: 'image/webp' }) })
+    const resultado = await comprimirImagen(archivoDe(3 * MB, 'foto', 'application/octet-stream', 1600, 1200))
+    expect(resultado.type).toBe('image/jpeg')
   })
 
   it('si el navegador no exporta WebP, cae a JPEG', async () => {
