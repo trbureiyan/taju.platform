@@ -106,7 +106,7 @@ export const GRUPOS_FAQ: GrupoFaq[] = [
         id: 'referencias',
         pregunta: '¿Qué imágenes de referencia puedo subir?',
         respuesta: [
-          'Hasta 3 imágenes en JPG, PNG o WebP, de máximo 25 MB cada una. En los cake toppers la imagen de referencia es obligatoria: nos ayuda a entender qué tienes en mente.',
+          'Con una foto nos alcanza, y puedes agregar hasta 3 en JPG, PNG o WebP, de máximo 25 MB cada una. Si usas iPhone y tu foto sale en formato HEIC, cámbialo en Ajustes > Cámara > Formatos > Más compatible. En los cake toppers la foto de referencia es obligatoria: nos ayuda a entender qué tienes en mente.',
         ],
       },
     ],

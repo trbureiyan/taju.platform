@@ -111,7 +111,7 @@ describe('MomentoComo', () => {
 
   it('el error de referencia queda enlazado a la zona', () => {
     render(<MomentoComo {...props({ errores: { archivos: 'Adjunta una imagen de referencia. Sin verla no podemos cotizar tu pedido.' } })} archivos={[]} cambiarArchivos={vi.fn()} />)
-    expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAccessibleDescription(/Adjunta una imagen/)
+    expect(screen.getByLabelText(/Elige una foto de referencia/i)).toHaveAccessibleDescription(/Adjunta una imagen/)
   })
 })
 

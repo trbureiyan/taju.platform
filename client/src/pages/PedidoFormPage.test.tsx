@@ -109,7 +109,7 @@ const siguiente = () => userEvent.click(screen.getByRole('button', { name: 'Sigu
 const enviar = () => userEvent.click(screen.getByRole('button', { name: 'Enviar mi pedido' }))
 
 async function subirReferencia() {
-  await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), jpg())
+  await userEvent.upload(screen.getByLabelText(/Elige una foto de referencia/i), jpg())
   await screen.findByText('ref.jpg')
 }
 async function completarMomento1() {
@@ -290,7 +290,7 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
 
     expect(screen.getByRole('heading', { name: 'Cómo lo imaginas' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAccessibleDescription(MENSAJE_FALTA_REFERENCIA)
+    expect(screen.getByLabelText(/Elige una foto de referencia/i)).toHaveAccessibleDescription(MENSAJE_FALTA_REFERENCIA)
   })
 
   it('mientras se prepara la imagen, Siguiente espera y dice por que; al terminar avanza con ella', async () => {
@@ -301,7 +301,7 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
     await screen.findByRole('heading', { name: 'Cómo lo imaginas' })
     await userEvent.type(screen.getByLabelText('Descripción del pedido'), 'Feliz 15 Valentina')
-    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), jpg())
+    await userEvent.upload(screen.getByLabelText(/Elige una foto de referencia/i), jpg())
 
     const boton = screen.getByRole('button', { name: 'Siguiente' })
     await waitFor(() => expect(boton).toBeDisabled())
