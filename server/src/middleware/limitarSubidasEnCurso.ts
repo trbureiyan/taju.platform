@@ -4,6 +4,8 @@ interface OpcionesLimite {
   max?: number
   maxPorUsuario?: number
   inactividadMs?: number
+  minBytesPorRevision?: number
+  plazoSubidaMs?: number
   skip?: () => boolean
 }
 
@@ -13,8 +15,12 @@ interface OpcionesLimite {
  * acota es la memoria del proceso: 4 peticiones x 3 fotos x 5 MB = 60 MB en el peor caso. Solo con el tope global, una
  * cuenta con subidas a gotas podria ocupar los 4 cupos y dejar fuera a todos; por cuenta (1) necesita 4 cuentas.
  * El limitador por IP de pedidos.routes.ts frena abuso en el tiempo; este frena la concurrencia.
- * @param opciones - `max` en total (4), `maxPorUsuario` (1), `inactividadMs` sin recibir bytes antes de cortar (20 s)
- *                   y `skip` para saltar el limite (en test por defecto).
+ * [DECISION] corte por ancho de banda minimo y por plazo, no solo por "sin bytes" - un cliente que manda un byte cada pocos
+ * segundos mueve bytesRead y nunca parece estancado; con 4 cuentas podria ocupar los 4 cupos hasta el timeout total (120 s).
+ * El piso (10 KB por revision de 10 s, ~1 KB/s) deja pasar cualquier conexion movil real; el plazo (60 s) acota el cupo.
+ * @param opciones - `max` en total (4), `maxPorUsuario` (1), `inactividadMs` ventana de dos revisiones (20 s),
+ *                   `minBytesPorRevision` que debe llegar entre revisiones (10 KB), `plazoSubidaMs` para terminar de recibir
+ *                   el cuerpo (60 s) y `skip` para saltar el limite (en test por defecto).
  * @returns Middleware: 503 con Retry-After si ya hay `max` en curso, 429 si la cuenta ya tiene `maxPorUsuario`. El cupo se
  *          libera al terminar la respuesta o al cortarse la conexion. Va despues de requireAuth.
  */
@@ -22,6 +28,8 @@ export function limitarSubidasEnCurso({
   max = 4,
   maxPorUsuario = 1,
   inactividadMs = 20_000,
+  minBytesPorRevision = 10_000,
+  plazoSubidaMs = 60_000,
   skip = () => process.env.NODE_ENV === 'test',
 }: OpcionesLimite = {}): RequestHandler {
   let enCurso = 0
@@ -45,13 +53,17 @@ export function limitarSubidasEnCurso({
     enCurso += 1
     if (usuario) porUsuario.set(usuario, (porUsuario.get(usuario) ?? 0) + 1)
 
-    // sin bytes nuevos entre dos revisiones el cliente esta estancado: se corta para no retener el cupo hasta el timeout total.
+    // se corta al cliente que no llega al piso de bytes entre dos revisiones o que pasa del plazo para terminar de enviar:
+    // no retiene el cupo hasta el timeout total. Termina de vigilar cuando el cuerpo ya llego completo (req.complete): lo que
+    // sigue, subir a Cloudinary, depende del servidor y no del cliente.
     // Se mira socket.bytesRead y no req.on('data'): enganchar 'data' aqui pondria el stream en modo fluido antes de que multer lo lea
+    const inicio = Date.now()
     let leidos = req.socket.bytesRead
     const vigilante = setInterval(() => {
       if (req.complete) return clearInterval(vigilante)
-      if (req.socket.bytesRead === leidos) return void req.destroy()
+      const llegaron = req.socket.bytesRead - leidos
       leidos = req.socket.bytesRead
+      if (llegaron < minBytesPorRevision || Date.now() - inicio >= plazoSubidaMs) req.destroy()
     }, inactividadMs / 2)
     vigilante.unref()
 

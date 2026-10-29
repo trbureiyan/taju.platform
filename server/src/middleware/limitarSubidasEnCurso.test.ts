@@ -22,6 +22,11 @@ async function levantar(opciones?: Parameters<typeof limitarSubidasEnCurso>[0]):
   app.post('/subir', (_req, res) => {
     colgadas.push(res)
   })
+  // lee el cuerpo como lo hace multer: sin esto el socket se pausa por contrapresion y bytesRead deja de moverse
+  app.post('/consumir', (req, res) => {
+    req.resume()
+    colgadas.push(res)
+  })
   app.get('/lento', (_req, res) => {
     colgadas.push(res)
   })
@@ -122,6 +127,60 @@ describe('limitarSubidasEnCurso', () => {
 
     expect(cortada).toMatch(/socket hang up|ECONNRESET|respuesta/)
     await esperarHasta(async () => (await fetch(`${base}/rapido`)).status === 200)
+  })
+
+  // manda el cuerpo por goteo y devuelve si el servidor corto la conexion antes de `limiteMs`
+  function gotear(
+    port: string,
+    { bytes, cada, limiteMs, ruta = '/subir' }: { bytes: number; cada: number; limiteMs: number; ruta?: string },
+  ): Promise<'cortada' | 'sigue'> {
+    return new Promise((resolve) => {
+      const req = http.request({ port, method: 'POST', path: ruta, headers: { 'content-length': '104857600' } })
+      const goteo = setInterval(() => req.write(Buffer.alloc(bytes, 1)), cada)
+      const terminar = (resultado: 'cortada' | 'sigue') => {
+        clearInterval(goteo)
+        clearTimeout(limite)
+        req.destroy()
+        resolve(resultado)
+      }
+      const limite = setTimeout(() => terminar('sigue'), limiteMs)
+      req.on('error', () => terminar('cortada'))
+      req.on('response', () => terminar('cortada'))
+      req.on('close', () => terminar('cortada'))
+    })
+  }
+
+  it('corta una subida a gotas: un byte cada tanto mueve bytesRead pero no llega al mínimo de ancho de banda', async () => {
+    const base = await levantar({ max: 1, inactividadMs: 200, minBytesPorRevision: 1000, skip: () => false })
+
+    const resultado = await gotear(new URL(base).port, { bytes: 1, cada: 30, limiteMs: 2000 })
+
+    expect(resultado).toBe('cortada')
+    await esperarHasta(async () => (await fetch(`${base}/rapido`)).status === 200)
+  })
+
+  it('corta una subida que sí avanza pero pasa del plazo máximo de la subida', async () => {
+    const base = await levantar({ max: 1, inactividadMs: 100, minBytesPorRevision: 1, plazoSubidaMs: 400, skip: () => false })
+
+    const resultado = await gotear(new URL(base).port, { bytes: 20_000, cada: 20, limiteMs: 3000, ruta: '/consumir' })
+
+    expect(resultado).toBe('cortada')
+  })
+
+  it('no corta una subida completa aunque el controlador tarde más que el plazo (ya no se está recibiendo nada)', async () => {
+    const base = await levantar({ max: 1, inactividadMs: 100, plazoSubidaMs: 200, skip: () => false })
+    const { port } = new URL(base)
+
+    const respuesta = new Promise<number>((resolve, reject) => {
+      const req = http.request({ port, method: 'POST', path: '/subir', headers: { 'content-length': '1' } }, (res) => resolve(res.statusCode ?? 0))
+      req.on('error', reject)
+      req.end('x')
+    })
+    await esperarHasta(() => colgadas.length === 1)
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    colgadas[0].end()
+
+    expect(await respuesta).toBe(200)
   })
 
   it('por defecto se salta en NODE_ENV test, como el limitador de pedidos', async () => {
