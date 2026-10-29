@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import express from 'express'
+import http from 'node:http'
 import type { Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { Response } from 'express'
@@ -11,7 +12,16 @@ const colgadas: Response[] = []
 // servidor real y no supertest: hacen falta peticiones que sigan abiertas mientras llegan otras
 async function levantar(opciones?: Parameters<typeof limitarSubidasEnCurso>[0]): Promise<string> {
   const app = express()
+  // sustituye a requireAuth: la identidad llega en una cabecera de prueba
+  app.use((req, _res, next) => {
+    const usuario = req.headers['x-usuario']
+    if (typeof usuario === 'string') req.usuario = { sub: usuario, email: `${usuario}@taju.test`, rol: 'cliente' }
+    next()
+  })
   app.use(limitarSubidasEnCurso(opciones))
+  app.post('/subir', (_req, res) => {
+    colgadas.push(res)
+  })
   app.get('/lento', (_req, res) => {
     colgadas.push(res)
   })
@@ -70,6 +80,47 @@ describe('limitarSubidasEnCurso', () => {
 
     corte.abort()
 
+    await esperarHasta(async () => (await fetch(`${base}/rapido`)).status === 200)
+  })
+
+  it('una misma cuenta no puede ocupar más de maxPorUsuario cupos: la segunda recibe 429 y otra cuenta sigue pasando', async () => {
+    const base = await levantar({ max: 4, maxPorUsuario: 1, skip: () => false })
+    void fetch(`${base}/lento`, { headers: { 'x-usuario': 'ana' } }).catch(() => undefined)
+    await esperarHasta(() => colgadas.length === 1)
+
+    const repetida = await fetch(`${base}/rapido`, { headers: { 'x-usuario': 'ana' } })
+    const otra = await fetch(`${base}/rapido`, { headers: { 'x-usuario': 'beto' } })
+
+    expect(repetida.status).toBe(429)
+    expect(repetida.headers.get('retry-after')).toBe('10')
+    expect(((await repetida.json()) as { error: string }).error).toBe('Ya estamos recibiendo las fotos de tu pedido. Espera unos segundos antes de volver a enviarlo.')
+    expect(otra.status).toBe(200)
+  })
+
+  it('libera el cupo de la cuenta cuando su petición termina', async () => {
+    const base = await levantar({ max: 4, maxPorUsuario: 1, skip: () => false })
+    const primera = fetch(`${base}/lento`, { headers: { 'x-usuario': 'ana' } })
+    await esperarHasta(() => colgadas.length === 1)
+
+    colgadas[0].end()
+    await primera
+
+    await esperarHasta(async () => (await fetch(`${base}/rapido`, { headers: { 'x-usuario': 'ana' } })).status === 200)
+  })
+
+  it('corta una subida que deja de enviar bytes y libera su cupo', async () => {
+    const base = await levantar({ max: 1, inactividadMs: 100, skip: () => false })
+    const { port } = new URL(base)
+
+    // declara 1 MB, manda un byte y se queda callado: sin corte por inactividad ocuparia el cupo hasta el timeout total
+    const cortada = await new Promise<string>((resolve) => {
+      const req = http.request({ port, method: 'POST', path: '/subir', headers: { 'content-length': '1048576' } })
+      req.on('error', (err) => resolve(err.message))
+      req.on('response', () => resolve('respuesta'))
+      req.write('x')
+    })
+
+    expect(cortada).toMatch(/socket hang up|ECONNRESET|respuesta/)
     await esperarHasta(async () => (await fetch(`${base}/rapido`)).status === 200)
   })
 
