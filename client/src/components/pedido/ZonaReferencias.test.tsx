@@ -112,7 +112,7 @@ describe('ZonaReferencias', () => {
     vi.mocked(comprimirImagen).mockRejectedValueOnce(new Error('boom'))
     render(<Contenedor />)
     await userEvent.upload(screen.getByLabelText(CAMPO), img('rara.jpg'))
-    expect(await screen.findByRole('dialog')).toHaveTextContent(/No pudimos leer rara\.jpg/)
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/rara\.jpg: no pudimos leerla/)
   })
 
   it('con 3 imagenes ya no caben mas: la zona se desactiva y dice por que', async () => {

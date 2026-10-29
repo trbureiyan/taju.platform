@@ -1,12 +1,9 @@
 import { Button } from '../ui/Button'
 import { Dialog } from '../ui/Dialog'
 import { enlaceWhatsApp } from '../../lib/whatsapp'
-import type { RazonRechazo } from '../../lib/inspeccionarImagen'
+import type { RazonRechazo, RechazoImagen } from '../../lib/inspeccionarImagen'
 
-export interface RechazoImagen {
-  nombre: string
-  razon: RazonRechazo
-}
+export type { RechazoImagen }
 
 // que paso, por que importa y que hacer; nunca culpa a quien eligio la foto. El peso no lleva cifra fija: sirve igual para
 // "mas de 25 MB" que para "sigue pesando mucho aun reducida"
@@ -17,7 +14,7 @@ const TEXTOS: Record<RazonRechazo, (nombre: string) => string> = {
   peso: (n) => `${n} pesa demasiado, incluso si la reducimos. Elige una versión más liviana o envíanosla por WhatsApp.`,
   pixeles: (n) =>
     `${n} es una imagen enorme y tu celular podría quedarse sin memoria al prepararla. Elige otra o envíanosla por WhatsApp.`,
-  ilegible: (n) => `No pudimos leer ${n}. Prueba con otra o envíanosla por WhatsApp.`,
+  ilegible: (n) => `${n}: no pudimos leerla. Prueba con otra o envíanosla por WhatsApp.`,
   exceso: (n) => `Caben hasta 3 fotos. ${n} quedó fuera: quita alguna si quieres cambiarla.`,
 }
 

@@ -527,6 +527,22 @@ describe('PedidoFormPage | envio', () => {
     expect(alerta).toHaveTextContent('Ya recibimos este mismo pedido hace un momento.')
   })
 
+  it('un 400 de imagen del servidor abre el aviso de fotos y los datos siguen', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(
+      new ErrorApi('No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.', 400),
+    )
+    await llegarAlRepaso()
+    await enviar()
+
+    const aviso = await screen.findByRole('dialog', { name: 'No pudimos agregar tu foto' })
+    expect(aviso).toHaveTextContent(/Una de tus fotos: no pudimos leerla/)
+    expect(screen.getByRole('region', { name: 'Tu solicitud' })).toHaveTextContent('319 245 2842')
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Volver a mis fotos' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Repaso' })).toBeInTheDocument()
+  })
+
   it('un 401 abre el ingreso en un diálogo y, al ingresar, conserva lo escrito y permite reenviar', async () => {
     vi.mocked(api.postForm).mockRejectedValueOnce(new ErrorApi('Token inválido', 401))
     login.mockResolvedValueOnce({ _id: 'u1', nombre: 'Ana', email: 'ana@taju.co', rol: 'cliente' })

@@ -5,6 +5,12 @@
 
 export type RazonRechazo = 'formato' | 'heic' | 'peso' | 'pixeles' | 'ilegible' | 'exceso'
 
+/** Una imagen que no se pudo agregar y por que; `nombre` es el del archivo, o un generico cuando el rechazo vino del servidor. */
+export interface RechazoImagen {
+  nombre: string
+  razon: RazonRechazo
+}
+
 export interface InspeccionImagen {
   tipo: 'image/jpeg' | 'image/png' | 'image/webp'
   ancho: number
