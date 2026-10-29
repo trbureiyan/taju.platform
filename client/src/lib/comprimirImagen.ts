@@ -1,5 +1,6 @@
-// las fotos de un celular pesan 3 a 8 MB y el limite del servidor es 5 MB: se reducen aqui, en el navegador,
-// antes de subirlas. El servidor sigue verificando tipo, firma y peso; esto solo evita rechazos evitables.
+// las fotos de un celular pesan 3 a 25 MB y el servidor recibe hasta 5 MB: se reducen aqui, en el navegador,
+// antes de subirlas. Se aceptan hasta 25 MB de entrada porque la reduccion cubre la diferencia. El servidor sigue
+// verificando tipo, firma y peso; esto solo evita rechazos evitables.
 
 export const TIPOS_IMAGEN_ACEPTADOS: readonly string[] = ['image/jpeg', 'image/png', 'image/webp']
 export const MAX_BYTES_IMAGEN = 5 * 1024 * 1024
@@ -52,6 +53,8 @@ export async function comprimirImagen(archivo: File): Promise<File> {
 
   let bitmap: ImageBitmap
   try {
+    // [!] decodifica la foto completa: una de 48 MP ocupa ~190 MB de RAM. En celulares viejos puede fallar aqui;
+    // probar con una foto real de 20 MB o mas en iPhone y Android antes de dar por cerrado el cambio.
     // from-image respeta la orientacion EXIF: una foto vertical no llega girada
     bitmap = await createImageBitmap(archivo, { imageOrientation: 'from-image' })
   } catch {

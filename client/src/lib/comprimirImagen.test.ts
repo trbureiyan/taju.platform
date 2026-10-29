@@ -61,6 +61,13 @@ describe('comprimirImagen', () => {
     expect(comprimida.size).toBe(0.5 * MB)
   })
 
+  it('una foto de celular de 25 MB se reduce a un tamaño que el servidor acepta', async () => {
+    const dibujados = simularNavegador({ resultado: () => ({ bytes: 0.8 * MB, tipo: 'image/webp' }) })
+    const comprimida = await comprimirImagen(archivoDe(25 * MB, 'IMG_0002.jpg'))
+    expect(dibujados[0]).toEqual({ ancho: 2000, alto: 1500 })
+    expect(comprimida.size).toBeLessThanOrEqual(5 * MB)
+  })
+
   it('no agranda una imagen que ya cabe en 2000 px', async () => {
     const dibujados = simularNavegador({ ancho: 1600, alto: 1200, resultado: () => ({ bytes: 1 * MB, tipo: 'image/webp' }) })
     await comprimirImagen(archivoDe(3 * MB))

@@ -106,7 +106,7 @@ export const GRUPOS_FAQ: GrupoFaq[] = [
         id: 'referencias',
         pregunta: '¿Qué imágenes de referencia puedo subir?',
         respuesta: [
-          'Hasta 3 imágenes en JPG, PNG o WebP, de máximo 5 MB cada una. En los cake toppers la imagen de referencia es obligatoria: nos ayuda a entender qué tienes en mente.',
+          'Hasta 3 imágenes en JPG, PNG o WebP, de máximo 25 MB cada una. En los cake toppers la imagen de referencia es obligatoria: nos ayuda a entender qué tienes en mente.',
         ],
       },
     ],
