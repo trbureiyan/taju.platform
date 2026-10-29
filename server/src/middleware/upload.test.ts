@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import express from 'express'
 import request from 'supertest'
+import http from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { uploadImagen } from './upload.js'
 
 // app minima: si uploadImagen llama next(), devolvemos lo que quedo en req.files para inspeccionarlo
@@ -143,6 +145,38 @@ describe('uploadImagen', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.')
+  })
+
+  it('rechaza por Content-Length antes de leer el cuerpo y sin llegar al controlador', async () => {
+    let llegoAlControlador = false
+    const app = express()
+    app.post('/subir', uploadImagen, (_req, res) => {
+      llegoAlControlador = true
+      res.sendStatus(200)
+    })
+    const server = app.listen(0)
+    await new Promise<void>((resolve) => server.once('listening', resolve))
+    const { port } = server.address() as AddressInfo
+
+    // declara 40 MB y manda solo un byte: si el servidor esperara el cuerpo, la respuesta nunca llegaria
+    const respuesta = await new Promise<{ status: number; cuerpo: string }>((resolve, reject) => {
+      const req = http.request(
+        { port, method: 'POST', path: '/subir', headers: { 'content-length': String(40 * 1024 * 1024), 'content-type': 'multipart/form-data; boundary=x' } },
+        (res) => {
+          let cuerpo = ''
+          res.on('data', (parte) => (cuerpo += parte))
+          res.on('end', () => resolve({ status: res.statusCode ?? 0, cuerpo }))
+        },
+      )
+      req.on('error', reject)
+      req.write('x')
+    })
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+
+    expect(respuesta.status).toBe(400)
+    expect(JSON.parse(respuesta.cuerpo).error).toBe('Cada imagen debe pesar menos de 5 MB')
+    expect(llegoAlControlador).toBe(false)
   })
 
   // el mimetype lo declara el cliente; solo los magic bytes prueban que el contenido es JPEG

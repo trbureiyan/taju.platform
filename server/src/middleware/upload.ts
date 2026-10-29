@@ -8,6 +8,8 @@ import { inspeccionarImagen, ImagenInvalidaError } from '../lib/inspeccionarImag
 export const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
 export const MAX_FILES = 3 // suficiente para dar contexto visual sin volver pesado el formulario del pedido
 
+const MARGEN_CAMPOS = 64 * 1024 // los campos de texto y los limites del multipart caben de sobra en 64 KB
+
 // escritos para el cliente: la lista blanca de client/src/lib/errorEnvio.ts los repite letra por letra
 export const MENSAJE_PESO = 'Cada imagen debe pesar menos de 5 MB'
 export const MENSAJE_DIMENSIONES = 'Una de tus imágenes tiene demasiados píxeles. Redúcela o envíanosla por WhatsApp.'
@@ -53,6 +55,15 @@ function firmaCoincide(buffer: Buffer, mimetype: string): boolean {
  * Retorna 400 con un mensaje de error si la validación falla.
  */
 export function uploadImagen(req: Request, res: Response, next: NextFunction): void {
+  // rechazo temprano: un Content-Length mayor a lo que caben 3 fotos mas los campos no merece ni leerse.
+  // Connection: close para que el servidor no se quede drenando un cuerpo que ya se descarto
+  const declarado = Number(req.headers['content-length'])
+  if (declarado > MAX_FILES * MAX_SIZE + MARGEN_CAMPOS) {
+    res.setHeader('Connection', 'close')
+    res.status(400).json({ error: MENSAJE_PESO })
+    return
+  }
+
   _multer(req, res, (err) => {
     if (err instanceof multer.MulterError) {
       // MulterError trae su propio codigo - LIMIT_FILE_SIZE es el unico que traducimos a mensaje amigable,

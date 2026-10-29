@@ -4,6 +4,7 @@ import 'dotenv/config'
 import { connectDb } from './lib/db.js'
 import { crearApp } from './app.js'
 import { verificarSecretoJwt } from './lib/jwt.js'
+import { aplicarTiemposServidor } from './lib/tiemposServidor.js'
 
 // antes de todo: si el secreto falta o es corto el deploy cae aqui con el motivo en el log, no en el primer login
 verificarSecretoJwt()
@@ -15,9 +16,10 @@ const PORT = process.env.PORT ?? 3001
 // no levantamos el server hasta tener la conexion a mongo, para no aceptar requests contra una db muerta
 connectDb()
   .then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`servidor taju en :${PORT}`)
     })
+    aplicarTiemposServidor(server)
   })
   .catch((err) => {
     console.error('Error conectando a MongoDB:', err)

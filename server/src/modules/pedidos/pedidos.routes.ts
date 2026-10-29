@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit'
 import { requireAuth } from '../../middleware/auth.js'
 import { requireRol } from '../../middleware/rbac.js'
 import { uploadImagen } from '../../middleware/upload.js'
+import { limitarSubidasEnCurso } from '../../middleware/limitarSubidasEnCurso.js'
 import * as pedidosController from './pedidos.controller.js'
 
 // 100 por IP en 15 min: sobra para un taller con una sola conexion y frena un script o una cuenta robada.
@@ -32,7 +33,8 @@ export function crearPedidosRouter({ max = 100, skip = () => process.env.NODE_EN
 
   // todo requiere sesion - a diferencia del catalogo, ver pedidos siempre exige estar logueado
   router.get('/', limitePedidos, requireAuth, requireRol('administrador'), pedidosController.getAllPedidos)
-  router.post('/', limitePedidos, requireAuth, uploadImagen, pedidosController.crearPedido)
+  // el tope de subidas en curso va despues de requireAuth: una peticion sin sesion no debe ocupar un cupo
+  router.post('/', limitePedidos, requireAuth, limitarSubidasEnCurso(), uploadImagen, pedidosController.crearPedido)
 
   // '/mis-pedidos' va antes de '/:id' o express la confundiria con un id de pedido
   router.get('/mis-pedidos', limitePedidos, requireAuth, pedidosController.getMisPedidos)
