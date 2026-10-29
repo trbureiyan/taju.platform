@@ -126,7 +126,7 @@ export async function crearPedido(input: CrearPedidoInput) {
   // Con allSettled se sabe cuales terminaron para poder borrarlas antes de propagar el error.
   const resultadosSubida = await Promise.allSettled<ImagenSubida>(
     input.archivos.map(async (file) => {
-      const { url, publicId } = await subirImagen(file.buffer, file.mimetype)
+      const { url, publicId } = await subirImagen(file.buffer)
       // upload.ts ya verifico tipo y firma
       return { nombreOriginal: file.originalname.slice(0, 120), mimeType: file.mimetype as TipoImagen, tamano: file.size, url, publicId }
     }),
