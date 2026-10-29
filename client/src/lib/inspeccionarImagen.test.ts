@@ -51,7 +51,8 @@ function heif(marca: string): Uint8Array {
 }
 
 function archivo(bytes: Uint8Array, nombre = 'foto.jpg', tipo = ''): File {
-  return new File([bytes], nombre, { type: tipo })
+  // copia a un ArrayBuffer propio: el tipo Uint8Array generico incluye SharedArrayBuffer y File no lo acepta
+  return new File([new Uint8Array(bytes)], nombre, { type: tipo })
 }
 
 async function razonDe(f: File): Promise<RazonRechazo> {
