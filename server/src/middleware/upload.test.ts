@@ -13,28 +13,39 @@ function crearApp() {
   return app
 }
 
-// cabecera real de un JPEG (FF D8 FF E0) seguida de relleno
-function jpegValido(bytes = 64): Buffer {
+// JPEG con cabecera real (FF D8 + SOF0 de 1600 x 1200) seguida de relleno: el servidor lee las dimensiones de ahi
+function jpegValido(bytes = 64, ancho = 1600, alto = 1200): Buffer {
   const buf = Buffer.alloc(bytes, 0)
-  buf[0] = 0xff
-  buf[1] = 0xd8
-  buf[2] = 0xff
-  buf[3] = 0xe0
+  Buffer.from([0xff, 0xd8]).copy(buf)
+  buf.writeUInt16BE(0xffc0, 2)
+  buf.writeUInt16BE(17, 4)
+  buf[6] = 8
+  buf.writeUInt16BE(alto, 7)
+  buf.writeUInt16BE(ancho, 9)
+  buf[11] = 3
   return buf
 }
 
-// firma real de un PNG (89 50 4E 47 0D 0A 1A 0A) seguida de relleno
-function pngValido(bytes = 64): Buffer {
+// PNG con firma (89 50 4E 47 0D 0A 1A 0A) e IHDR reales, seguido de relleno
+function pngValido(bytes = 64, ancho = 640, alto = 480): Buffer {
   const buf = Buffer.alloc(bytes, 0)
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf)
+  buf.writeUInt32BE(13, 8)
+  buf.write('IHDR', 12, 'ascii')
+  buf.writeUInt32BE(ancho, 16)
+  buf.writeUInt32BE(alto, 20)
   return buf
 }
 
-// firma real de un WebP: "RIFF" + tamaño de 4 bytes + "WEBP"
+// WebP extendido (VP8X) real: "RIFF" + tamaño + "WEBP" + lienzo de 800 x 600
 function webpValido(bytes = 64): Buffer {
   const buf = Buffer.alloc(bytes, 0)
   buf.write('RIFF', 0, 'ascii')
   buf.write('WEBP', 8, 'ascii')
+  buf.write('VP8X', 12, 'ascii')
+  buf.writeUInt32LE(10, 16)
+  buf.writeUIntLE(799, 24, 3)
+  buf.writeUIntLE(599, 27, 3)
   return buf
 }
 
@@ -106,6 +117,32 @@ describe('uploadImagen', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toBe('Cada imagen debe pesar menos de 5 MB')
+  })
+
+  it('deja pasar un JPEG de 4 MB con cabecera real', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', jpegValido(4 * 1024 * 1024), { filename: 'IMG_0001.jpg', contentType: 'image/jpeg' })
+
+    expect(res.status).toBe(200)
+  })
+
+  it('rechaza un PNG pequeño que declara 30000 x 30000 píxeles', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', pngValido(64, 30000, 30000), { filename: 'bomba.png', contentType: 'image/png' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Una de tus imágenes tiene demasiados píxeles. Redúcela o envíanosla por WhatsApp.')
+  })
+
+  it('rechaza un JPEG con firma real pero cabecera cortada', async () => {
+    const res = await request(crearApp())
+      .post('/subir')
+      .attach('imagenes', Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10]), { filename: 'cortada.jpg', contentType: 'image/jpeg' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.')
   })
 
   // el mimetype lo declara el cliente; solo los magic bytes prueban que el contenido es JPEG

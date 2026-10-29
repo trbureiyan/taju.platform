@@ -20,6 +20,8 @@ describe('mensajeDeErrorDeEnvio', () => {
 
   it.each([
     'Cada imagen debe pesar menos de 5 MB',
+    'Una de tus imágenes tiene demasiados píxeles. Redúcela o envíanosla por WhatsApp.',
+    'No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.',
     'Uno de los archivos no es una imagen JPG, PNG o WebP válida',
     'Solo se aceptan imágenes JPG, PNG o WebP',
     MENSAJE_FALTA_FECHA,

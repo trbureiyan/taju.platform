@@ -1,9 +1,18 @@
 import multer from 'multer'
 import type { Request, Response, NextFunction } from 'express'
 import { TIPOS_IMAGEN } from '../types/index.js'
+import { inspeccionarImagen, ImagenInvalidaError } from '../lib/inspeccionarImagen.js'
 
-const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
-const MAX_FILES = 3 // suficiente para dar contexto visual sin volver pesado el formulario del pedido
+// [DECISION] 5 MB y no los 25 MB que ve la persona - el navegador reduce cada foto antes de subirla (comprimirImagen.ts),
+// asi que el servidor recibe fracciones de MB. Un techo bajo acota la memoria por peticion (memoryStorage) y la superficie de ataque.
+export const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+export const MAX_FILES = 3 // suficiente para dar contexto visual sin volver pesado el formulario del pedido
+
+// escritos para el cliente: la lista blanca de client/src/lib/errorEnvio.ts los repite letra por letra
+export const MENSAJE_PESO = 'Cada imagen debe pesar menos de 5 MB'
+export const MENSAJE_DIMENSIONES = 'Una de tus imágenes tiene demasiados píxeles. Redúcela o envíanosla por WhatsApp.'
+export const MENSAJE_ILEGIBLE = 'No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.'
+const MENSAJE_FIRMA = 'Uno de los archivos no es una imagen JPG, PNG o WebP válida'
 
 // ─── Configuracion base de multer ─────────────────────────────────────────────
 // memoryStorage porque el buffer se sube directo a Cloudinary, nunca toca disco local
@@ -50,7 +59,7 @@ export function uploadImagen(req: Request, res: Response, next: NextFunction): v
       // el resto (demasiados archivos, campo raro) cae al mensaje generico de abajo
       const mensaje =
         err.code === 'LIMIT_FILE_SIZE'
-          ? 'Cada imagen debe pesar menos de 5 MB'
+          ? MENSAJE_PESO
           : `Error al procesar imagen: ${err.message}`
       res.status(400).json({ error: mensaje })
       return
@@ -64,8 +73,21 @@ export function uploadImagen(req: Request, res: Response, next: NextFunction): v
     const archivos = (req.files as Express.Multer.File[]) ?? []
     const archivoInvalido = archivos.find((f) => !firmaCoincide(f.buffer, f.mimetype))
     if (archivoInvalido) {
-      res.status(400).json({ error: 'Uno de los archivos no es una imagen JPG, PNG o WebP válida' })
+      res.status(400).json({ error: MENSAJE_FIRMA })
       return
+    }
+
+    // la firma prueba el tipo; la cabecera prueba que no declare millones de pixeles que Cloudinary tendria que decodificar
+    for (const archivo of archivos) {
+      try {
+        inspeccionarImagen(archivo.buffer)
+      } catch (error) {
+        if (!(error instanceof ImagenInvalidaError)) throw error
+        const mensaje =
+          error.motivo === 'dimensiones' ? MENSAJE_DIMENSIONES : error.motivo === 'firma' ? MENSAJE_FIRMA : MENSAJE_ILEGIBLE
+        res.status(400).json({ error: mensaje })
+        return
+      }
     }
 
     next()
