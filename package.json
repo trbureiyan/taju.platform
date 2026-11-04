@@ -1,7 +1,7 @@
 {
   "name": "taju-platform",
   "private": true,
-  "packageManager": "pnpm@11.20.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "dev:client": "pnpm --filter taju-client dev",
     "dev:server": "pnpm --filter taju-server dev",
@@ -13,8 +13,8 @@
     "prepare": "husky"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "pnpm": ">=11.0.0"
+    "node": ">=24.22.1",
+    "pnpm": ">=12.15.0"
   },
   "overrides": {
     "qs": "6.16.0"

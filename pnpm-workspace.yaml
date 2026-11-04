@@ -4,6 +4,7 @@ packages:
 overrides:
   qs: "6.16.0"
   source-map-js: "1.2.2"
+  follow-redirects: "1.16.1"
 allowBuilds:
   esbuild: false
   mongodb-memory-server: true

@@ -10,13 +10,13 @@ Fuente de verdad completa: `AGENTS.md` (convenciones, riesgos, dominio) y `ARCHI
 |---|---|
 | Frontend | React 18, TypeScript, Vite, Tailwind CSS 4 (`@tailwindcss/vite`), React Router 7 |
 | Movimiento | `motion` (springs Material Design 3 Expressive), `lucide-react` (iconos) |
-| Backend | Node.js 20 LTS, TypeScript, Express 4 |
+| Backend | Node.js 24 LTS, TypeScript, Express 4 |
 | Base de datos | MongoDB Atlas, Mongoose ODM |
 | Almacenamiento | Cloudinary (imágenes de referencia de pedido) |
 | Autenticación | JWT en memoria del cliente, sin `localStorage` ni cookies |
 | Validación | Zod (server), bcryptjs para contraseñas |
 | Analítica | Vercel Web Analytics |
-| Package manager | pnpm 11 (monorepo con workspaces `client`/`server`) |
+| Package manager | pnpm 12 (monorepo con workspaces `client`/`server`) |
 | Testing | Vitest — jsdom + Testing Library (client), mongodb-memory-server como replica set (server) |
 
 ## Arquitectura
