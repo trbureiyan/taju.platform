@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { LazyMotion, MotionConfig } from 'motion/react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { AuthProvider } from './contexts/AuthContext'
 import { SnackbarProvider } from './components/ui/Snackbar'
 import { Layout } from './components/shared/Layout'
@@ -130,6 +131,7 @@ export default function App() {
         </LazyMotion>
       </MotionConfig>
       <Analytics />
+      <SpeedInsights />
     </AuthProvider>
   )
 }
