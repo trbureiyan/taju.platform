@@ -19,4 +19,12 @@ describe('aplicarTiemposServidor', () => {
 
     expect(server.headersTimeout).toBeLessThanOrEqual(server.requestTimeout)
   })
+
+  it('revisa los tiempos cada 5 s: con el intervalo por defecto de Node (30 s) los 20 s de cabeceras tardarían hasta 50 s en cortar', () => {
+    const server = http.createServer()
+
+    aplicarTiemposServidor(server)
+
+    expect((server as http.Server & { connectionsCheckingInterval: number }).connectionsCheckingInterval).toBe(5_000)
+  })
 })
