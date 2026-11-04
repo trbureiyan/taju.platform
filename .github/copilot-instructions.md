@@ -33,7 +33,7 @@ Los documentos normativos viven en `.docs/` (gitignoreado) y `docs/superpowers/`
 
 **Autenticación:** JWT en memoria del módulo cliente (`lib/api.ts`). Al recargar la página se pierde la sesión — es intencional. Dos roles: `cliente` y `administrador`. Rutas de taller exigen `administrador`; acceso no autorizado da `401`/`403`.
 
-**Imágenes de pedido:** JPG, PNG y WebP (firma verificada en `upload.ts`, máximo 5 MB y 3 archivos), validadas por MIME y magic bytes, subidas a Cloudinary.
+**Imágenes de pedido:** JPG, PNG y WebP (firma verificada en `upload.ts`, máximo 5 MB, 3 archivos, 16 MP y 4096 px de lado leídos de la cabecera), validadas por MIME y magic bytes, subidas a Cloudinary.
 
 ## Dominio
 

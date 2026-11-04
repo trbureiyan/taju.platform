@@ -1,16 +1,12 @@
 import { useEffect, useId, useRef, useState, type ChangeEvent, type DragEvent } from 'react'
 import { ImagePlus, Loader2, X } from 'lucide-react'
-import {
-  comprimirImagen,
-  ErrorImagen,
-  MENSAJE_FORMATO_IMAGEN,
-  MENSAJE_IMAGEN_ILEGIBLE,
-  TIPOS_IMAGEN_ACEPTADOS,
-} from '../../lib/comprimirImagen'
+import { comprimirImagen, ErrorImagen, TIPOS_IMAGEN_ACEPTADOS } from '../../lib/comprimirImagen'
+import { AvisoImagenDialog, type RechazoImagen } from './AvisoImagenDialog'
 
 /**
- * Zona para adjuntar las imagenes de referencia. En el celular es un toque que abre galeria o camara; el arrastre
- * es un extra de escritorio. Cada imagen se reduce en el navegador antes de guardarse (ver comprimirImagen).
+ * Zona para adjuntar la foto de referencia. En el celular es un toque que abre galeria o camara; el arrastre
+ * es un extra de escritorio. Cada imagen se reduce en el navegador antes de guardarse (ver comprimirImagen), y lo que no
+ * se puede agregar se avisa en un dialogo (AvisoImagenDialog), no en una linea suelta.
  * @prop archivos - Imagenes ya elegidas (componente controlado).
  * @prop onCambio - Recibe la lista nueva al agregar o quitar.
  * @prop obligatoria - Si la familia del producto exige referencia (topper).
@@ -47,39 +43,50 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
   const id = useId()
   const [arrastrando, setArrastrando] = useState(false)
   const [procesando, setProcesando] = useState(false)
-  const [mensaje, setMensaje] = useState<string | null>(null)
+  const [rechazos, setRechazos] = useState<RechazoImagen[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
+  const huboAviso = useRef(false)
 
   const lleno = archivos.length >= max
   const errorId = error ? `${id}-error` : undefined
-  const mensajeId = mensaje ? `${id}-mensaje` : undefined
+
+  // al cerrar el aviso el foco vuelve al campo (Dialog devuelve el foco a quien lo tenia al abrir, que tras elegir archivos
+  // suele ser el body). Este efecto corre despues de esa limpieza porque el padre va despues del hijo
+  useEffect(() => {
+    if (rechazos.length > 0) huboAviso.current = true
+    else if (huboAviso.current) {
+      huboAviso.current = false
+      inputRef.current?.focus()
+    }
+  }, [rechazos.length])
 
   async function agregar(nuevos: File[]) {
-    const avisos: string[] = []
-    const validos = nuevos.filter((f) => TIPOS_IMAGEN_ACEPTADOS.includes(f.type))
-    if (validos.length < nuevos.length) avisos.push(MENSAJE_FORMATO_IMAGEN)
+    if (nuevos.length === 0) return
+    const avisos: RechazoImagen[] = []
     const lugar = max - archivos.length
-    const aceptados = validos.slice(0, lugar)
-    if (validos.length > lugar) avisos.push(`Caben hasta ${max} imágenes. Quita alguna si quieres cambiarla.`)
-
     const listos: File[] = []
-    if (aceptados.length > 0) {
-      setProcesando(true)
-      // aviso directo y no por efecto: si el momento se desmonta a mitad, el false igual llega al formulario
-      onProcesando?.(true)
-      // en orden y una por una: si una falla, las que ya salieron bien se conservan
-      for (const archivo of aceptados) {
-        try {
-          listos.push(await comprimirImagen(archivo))
-        } catch (err) {
-          avisos.push(err instanceof ErrorImagen ? err.message : MENSAJE_IMAGEN_ILEGIBLE)
-        }
+
+    setProcesando(true)
+    // aviso directo y no por efecto: si el momento se desmonta a mitad, el false igual llega al formulario
+    onProcesando?.(true)
+    // en orden y una por una: si una falla, las que ya salieron bien se conservan. Un rechazado no ocupa lugar:
+    // solo los que se aceptan cuentan contra el cupo, asi un PDF al inicio no deja fuera una foto que si cabia
+    for (const archivo of nuevos) {
+      if (listos.length >= lugar) {
+        avisos.push({ nombre: archivo.name, razon: 'exceso' })
+        continue
       }
-      // mientras se procesa no se puede agregar ni quitar, y el formulario no avanza: archivos sigue vigente
-      if (listos.length > 0) onCambio([...archivos, ...listos])
-      setProcesando(false)
-      onProcesando?.(false)
+      try {
+        listos.push(await comprimirImagen(archivo))
+      } catch (err) {
+        avisos.push({ nombre: archivo.name, razon: err instanceof ErrorImagen ? err.razon : 'ilegible' })
+      }
     }
-    setMensaje(avisos.length > 0 ? avisos.join(' ') : null)
+    // mientras se procesa no se puede agregar ni quitar, y el formulario no avanza: archivos sigue vigente
+    if (listos.length > 0) onCambio([...archivos, ...listos])
+    setProcesando(false)
+    onProcesando?.(false)
+    setRechazos(avisos)
   }
 
   function alElegir(e: ChangeEvent<HTMLInputElement>) {
@@ -96,7 +103,6 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
   }
 
   function quitar(indice: number) {
-    setMensaje(null)
     onCambio(archivos.filter((_, i) => i !== indice))
   }
 
@@ -104,12 +110,12 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
         <span className="text-sm font-medium text-texto-principal">
-          Imágenes de referencia
-          <span className="ml-1 font-normal text-texto-tenue">
-            {obligatoria ? '(obligatoria, hasta 3)' : '(opcional, hasta 3)'}
-          </span>
+          Foto de referencia
+          <span className="ml-1 font-normal text-texto-tenue">{obligatoria ? '(obligatoria)' : '(opcional)'}</span>
         </span>
-        <span className="text-xs text-texto-secundario">Una foto nos ahorra idas y vueltas para entender lo que imaginas.</span>
+        <span className="text-xs text-texto-secundario">
+          Con una foto nos alcanza para entender lo que imaginas. Si quieres, puedes agregar hasta {max}.
+        </span>
       </div>
 
       <label
@@ -127,15 +133,18 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
           arrastrando ? 'border-accion bg-superficie-calida' : error ? 'border-error-borde bg-campo-fondo' : 'border-borde-medio bg-campo-fondo hover:border-borde-fuerte',
         ].join(' ')}
       >
+        {/* [DECISION] accept sin HEIC: con esta lista iOS entrega JPEG al elegir de la galeria (lo reportan varias fuentes; sin
+            datos de iOS 18, probar en un iPhone). Los HEIC que se cuelan por Archivos los explica AvisoImagenDialog */}
         <input
+          ref={inputRef}
           type="file"
           accept={TIPOS_IMAGEN_ACEPTADOS.join(',')}
           multiple
           disabled={lleno || procesando}
           onChange={alElegir}
-          aria-label="Elige imágenes de referencia"
+          aria-label="Elige una foto de referencia"
           aria-invalid={error ? true : undefined}
-          aria-describedby={[errorId, mensajeId].filter(Boolean).join(' ') || undefined}
+          aria-describedby={errorId}
           className="sr-only"
         />
         {procesando ? (
@@ -145,15 +154,17 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
         )}
         <span className="text-base font-medium text-texto-principal">
           {procesando ? (
-            <span role="status">Preparando tu imagen…</span>
+            <span role="status">Preparando tu foto…</span>
           ) : lleno ? (
-            `Ya tienes ${max} imágenes`
+            `Ya tienes ${max} fotos`
+          ) : archivos.length > 0 ? (
+            'Agregar otra foto'
           ) : (
-            'Toca para elegir o arrastra aquí'
+            'Elige una foto'
           )}
         </span>
         <span className="text-xs text-texto-secundario">
-          {lleno ? 'Quita una si quieres cambiarla.' : 'JPG, PNG o WebP. Las reducimos para que suban rápido.'}
+          {lleno ? 'Quita una si quieres cambiarla.' : 'JPG, PNG o WebP. La preparamos para que se envíe rápido.'}
         </span>
       </label>
 
@@ -162,11 +173,8 @@ export function ZonaReferencias({ archivos, onCambio, obligatoria, error, max = 
           {error}
         </p>
       )}
-      {mensaje && (
-        <p id={mensajeId} role="alert" className="text-xs text-error-texto">
-          {mensaje}
-        </p>
-      )}
+
+      <AvisoImagenDialog rechazos={rechazos} onCerrar={() => setRechazos([])} />
 
       {archivos.length > 0 && (
         <ul className="flex flex-col gap-2">

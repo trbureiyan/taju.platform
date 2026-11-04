@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { api, ErrorApi } from '../lib/api'
-import { mensajeDeErrorDeEnvio } from '../lib/errorEnvio'
+import { mensajeDeErrorDeEnvio, razonDeErrorDeImagen } from '../lib/errorEnvio'
+import type { RechazoImagen } from '../lib/inspeccionarImagen'
 import { normalizarCelular } from '../lib/requisitos'
 import {
   CAMPOS_INICIALES,
@@ -44,6 +45,8 @@ export function useSolicitud(producto: Producto | null) {
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null)
   // un 401 al enviar: la pagina abre el ingreso en un dialogo, sin tocar lo escrito
   const [sesionVencida, setSesionVencida] = useState(false)
+  // el servidor rechazo una imagen al enviar: la pagina abre el mismo aviso de fotos que ZonaReferencias, sin tocar lo escrito
+  const [rechazosServidor, setRechazosServidor] = useState<RechazoImagen[]>([])
   const [fallos, setFallos] = useState(0)
   // una imagen de referencia a medio preparar (ZonaReferencias) todavia no esta en archivos: no se avanza ni envia
   const [procesando, setProcesando] = useState(false)
@@ -119,12 +122,22 @@ export function useSolicitud(producto: Producto | null) {
       return await api.postForm<Pedido>('/pedidos', armarSolicitud(producto))
     } catch (err) {
       if (err instanceof ErrorApi && err.estado === 401) setSesionVencida(true)
+      const razonImagen = razonDeErrorDeImagen(err)
+      if (razonImagen) {
+        // el servidor no dice cual de las fotos fue: el aviso la nombra en general
+        setRechazosServidor([{ nombre: 'Una de tus fotos', razon: razonImagen }])
+        return null
+      }
       setErrorEnvio(mensajeDeErrorDeEnvio(err))
       return null
     } finally {
       enviandoRef.current = false
       setEnviando(false)
     }
+  }
+
+  function cerrarRechazosServidor() {
+    setRechazosServidor([])
   }
 
   // cierra el dialogo de ingreso y retira el aviso de sesion vencida, con o sin haber ingresado
@@ -178,6 +191,8 @@ export function useSolicitud(producto: Producto | null) {
     errorEnvio,
     sesionVencida,
     cerrarSesionVencida,
+    rechazosServidor,
+    cerrarRechazosServidor,
     fallos,
     procesando,
     marcarProcesando: setProcesando,

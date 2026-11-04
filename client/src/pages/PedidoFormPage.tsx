@@ -6,6 +6,7 @@ import { AnilloProgreso } from '../components/ui/AnilloProgreso'
 import { Dialog } from '../components/ui/Dialog'
 import { FormularioIngreso } from '../components/acceso/FormularioIngreso'
 import { BotonWhatsApp } from '../components/shared/BotonWhatsApp'
+import { AvisoImagenDialog } from '../components/pedido/AvisoImagenDialog'
 import { HojaResumen } from '../components/pedido/HojaResumen'
 import { BarraAcciones } from '../components/pedido/BarraAcciones'
 import { MomentoQue } from '../components/pedido/MomentoQue'
@@ -291,6 +292,9 @@ export function PedidoFormPage() {
           </p>
           <FormularioIngreso alIngresar={solicitud.cerrarSesionVencida} />
         </Dialog>
+
+        {/* el servidor rechazo una foto al enviar: mismo aviso que ZonaReferencias, y el repaso conserva todo lo escrito */}
+        <AvisoImagenDialog rechazos={solicitud.rechazosServidor} onCerrar={solicitud.cerrarRechazosServidor} />
 
         {/* en el repaso la hoja ya es el contenido: dos hojas a la vez repetirian el resumen */}
         {paso < 4 && (

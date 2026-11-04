@@ -280,4 +280,42 @@ describe('useSolicitud: envio', () => {
     await act(async () => { await r.result.current.s.enviar() })
     expect(r.result.current.s.errorEnvio).toBe('Ya recibimos este mismo pedido hace un momento.')
   })
+
+  it('un 400 de imagen abre el aviso con su motivo, sin errorEnvio, y conserva los datos', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(
+      new ErrorApi('Una de tus imágenes tiene demasiados píxeles. Redúcela o envíanosla por WhatsApp.', 400),
+    )
+    const r = montar()
+    llegarAlRepaso(r)
+    await act(async () => { await r.result.current.s.enviar() })
+
+    expect(r.result.current.s.rechazosServidor).toEqual([{ nombre: 'Una de tus fotos', razon: 'pixeles' }])
+    expect(r.result.current.s.errorEnvio).toBeNull()
+    expect(r.result.current.s.campos.colores).toBe('dorado')
+    expect(r.result.current.s.enviando).toBe(false)
+  })
+
+  it('cerrarRechazosServidor retira el aviso', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(new ErrorApi('Cada imagen debe pesar menos de 5 MB', 400))
+    const r = montar()
+    llegarAlRepaso(r)
+    await act(async () => { await r.result.current.s.enviar() })
+    expect(r.result.current.s.rechazosServidor).toHaveLength(1)
+
+    act(() => r.result.current.s.cerrarRechazosServidor())
+
+    expect(r.result.current.s.rechazosServidor).toEqual([])
+  })
+
+  it('un 503 por subidas simultáneas muestra su texto y conserva los datos', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(
+      new ErrorApi('El taller está recibiendo muchas fotos a la vez. Intenta de nuevo en un minuto.', 503),
+    )
+    const r = montar()
+    llegarAlRepaso(r)
+    await act(async () => { await r.result.current.s.enviar() })
+    expect(r.result.current.s.errorEnvio).toBe('El taller está recibiendo muchas fotos a la vez. Intenta de nuevo en un minuto.')
+    expect(r.result.current.s.rechazosServidor).toEqual([])
+    expect(r.result.current.s.campos.colores).toBe('dorado')
+  })
 })

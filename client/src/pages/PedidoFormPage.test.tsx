@@ -109,7 +109,7 @@ const siguiente = () => userEvent.click(screen.getByRole('button', { name: 'Sigu
 const enviar = () => userEvent.click(screen.getByRole('button', { name: 'Enviar mi pedido' }))
 
 async function subirReferencia() {
-  await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), jpg())
+  await userEvent.upload(screen.getByLabelText(/Elige una foto de referencia/i), jpg())
   await screen.findByText('ref.jpg')
 }
 async function completarMomento1() {
@@ -290,7 +290,7 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
 
     expect(screen.getByRole('heading', { name: 'Cómo lo imaginas' })).toBeInTheDocument()
-    expect(screen.getByLabelText(/Elige imágenes de referencia/i)).toHaveAccessibleDescription(MENSAJE_FALTA_REFERENCIA)
+    expect(screen.getByLabelText(/Elige una foto de referencia/i)).toHaveAccessibleDescription(MENSAJE_FALTA_REFERENCIA)
   })
 
   it('mientras se prepara la imagen, Siguiente espera y dice por que; al terminar avanza con ella', async () => {
@@ -301,7 +301,7 @@ describe('PedidoFormPage | recorrido', () => {
     await siguiente()
     await screen.findByRole('heading', { name: 'Cómo lo imaginas' })
     await userEvent.type(screen.getByLabelText('Descripción del pedido'), 'Feliz 15 Valentina')
-    await userEvent.upload(screen.getByLabelText(/Elige imágenes de referencia/i), jpg())
+    await userEvent.upload(screen.getByLabelText(/Elige una foto de referencia/i), jpg())
 
     const boton = screen.getByRole('button', { name: 'Siguiente' })
     await waitFor(() => expect(boton).toBeDisabled())
@@ -525,6 +525,22 @@ describe('PedidoFormPage | envio', () => {
   it('el 409 muestra el texto del servidor', async () => {
     const alerta = await enviarCon(new ErrorApi('Ya recibimos este mismo pedido hace un momento.', 409))
     expect(alerta).toHaveTextContent('Ya recibimos este mismo pedido hace un momento.')
+  })
+
+  it('un 400 de imagen del servidor abre el aviso de fotos y los datos siguen', async () => {
+    vi.mocked(api.postForm).mockRejectedValueOnce(
+      new ErrorApi('No pudimos leer una de tus imágenes. Prueba con otra en JPG, PNG o WebP.', 400),
+    )
+    await llegarAlRepaso()
+    await enviar()
+
+    const aviso = await screen.findByRole('dialog', { name: 'No pudimos agregar tu foto' })
+    expect(aviso).toHaveTextContent(/Una de tus fotos: no pudimos leerla/)
+    expect(screen.getByRole('region', { name: 'Tu solicitud' })).toHaveTextContent('319 245 2842')
+
+    await userEvent.click(within(aviso).getByRole('button', { name: 'Volver a mis fotos' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Repaso' })).toBeInTheDocument()
   })
 
   it('un 401 abre el ingreso en un diálogo y, al ingresar, conserva lo escrito y permite reenviar', async () => {

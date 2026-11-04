@@ -107,7 +107,7 @@ Ejecuta validaciones transversales antes de invocar la lógica de negocio en los
 2. **`rbac.ts`**:
    - `requireRol(...roles: Rol[])`: Middleware factory de autorización por rol (`cliente` | `administrador`). Verifica que `req.usuario.rol` pertenezca al conjunto admitido; responde `403 Forbidden` en caso contrario.
 3. **`upload.ts`**:
-   - `uploadImagen`: Maneja carga multipart mediante Multer en memoria (`memoryStorage`). Limita hasta 3 archivos de máximo 5 MB cada uno. Ejecuta doble validación: inspección de MIME-type declarado (`image/jpeg`, `image/png` o `image/webp`) e inspección estricta de la firma binaria que corresponde a ese tipo (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF` + `WEBP`), bloqueando payloads falsificados.
+   - `uploadImagen`: Maneja carga multipart mediante Multer en memoria (`memoryStorage`). Limita hasta 3 archivos de máximo 5 MB cada uno (el navegador acepta 25 MB y reduce antes de subir). Lee las dimensiones declaradas en la cabecera (`inspeccionarImagen`) y rechaza más de 16 MP o 4096 px de lado, sin decodificar. Ejecuta doble validación: inspección de MIME-type declarado (`image/jpeg`, `image/png` o `image/webp`) e inspección estricta de la firma binaria que corresponde a ese tipo (JPEG `FF D8 FF`, PNG `89 50 4E 47 0D 0A 1A 0A`, WebP `RIFF` + `WEBP`), bloqueando payloads falsificados.
 4. **`lib/errors.ts`**:
    - `asyncHandler`: Envoltorio para handlers asíncronos de Express 4 que redirige excepciones no capturadas al middleware final.
    - `errorHandler`: Captura instancias de `AppError` retornando el código HTTP explícito y mensaje amigable; cualquier otra excepción no controlada se registra en log y responde `500 Internal Server Error`.
@@ -276,7 +276,9 @@ La subida de archivos en `server/src/middleware/upload.ts` implementa defensa en
 2. Almacenamiento en memoria: No se crean archivos temporales en el disco del servidor.
 3. Validación de cabecera MIME: Filtra peticiones que no declaren `image/jpeg`, `image/png` o `image/webp`.
 4. Inspección binaria de magic bytes: Verifica que el buffer inicie con la firma real del tipo declarado (JPEG, PNG o WebP), de modo que un PNG que declara ser JPEG se rechaza, impidiendo la carga de ejecutables o scripts disfrazados.
-5. Transmisión directa a Cloudinary: Carga mediante data URI base64 en la carpeta aislada `taju/pedidos`.
+5. Topes de píxeles: `inspeccionarImagen` lee ancho y alto declarados en la cabecera sin decodificar y rechaza más de 16 MP o 4096 px de lado (un PNG de 33 bytes que declara 30000 x 30000 no llega a Cloudinary).
+6. Concurrencia y tiempos: `limitarSubidasEnCurso` admite 4 peticiones con fotos a la vez y 1 por cuenta, y corta las subidas que bajan de ~1 KB/s o tardan más de 60 s en llegar; el servidor corta cabeceras a los 20 s y la petición a los 120 s.
+7. Transmisión directa a Cloudinary: Carga por stream (sin copia en base64) en la carpeta aislada `taju/pedidos`, con transformación entrante de 2000 px máximo y calidad automática: lo guardado es la imagen re-codificada, no el archivo original.
 
 ---
 
