@@ -1,4 +1,24 @@
+import { useEffect, useState } from 'react'
 import { Button } from '../ui/Button'
+
+// [DECISION] 4 s - una solicitud con fotos suele tardar 2 a 3 s; pasado eso el cliente empieza a dudar y conviene decirle que sigue en curso
+const MS_ENVIO_LENTO = 4_000
+
+/** Aviso del envio; vive solo mientras se envia, asi el temporizador arranca de cero en cada intento. */
+function AvisoEnvio() {
+  const [lento, setLento] = useState(false)
+  useEffect(() => {
+    const id = setTimeout(() => setLento(true), MS_ENVIO_LENTO)
+    return () => clearTimeout(id)
+  }, [])
+  return (
+    <p className="mb-2 text-center text-sm text-texto-secundario">
+      {lento
+        ? 'Seguimos enviando tu solicitud. Con fotos puede tardar unos segundos más, no cierres esta página.'
+        : 'Estamos enviando tu solicitud. No cierres esta página.'}
+    </p>
+  )
+}
 
 /**
  * Barra de acciones del formulario: fija abajo en el movil, en linea al pie del momento en escritorio.
@@ -21,11 +41,8 @@ export function BarraAcciones({ paso, total = 4, onAtras, enviando, procesando =
   // valor arbitrario a proposito: en el iPhone el indicador de inicio tapa el borde inferior; la escala no tiene env()
   return (
     <div className="fixed inset-x-0 bottom-0 z-encabezado border-t border-borde-sutil bg-superficie-base p-4 pb-[calc(var(--space-4)+env(safe-area-inset-bottom))] lg:static lg:border-0 lg:bg-transparent lg:p-0">
-      {enviando && (
-        <p role="status" className="mb-2 text-center text-xs text-texto-secundario">
-          Estamos enviando tu solicitud. No cierres esta página.
-        </p>
-      )}
+      {/* la region vive siempre en el DOM: una region viva que aparece con el texto ya puesto no se anuncia en varios lectores */}
+      <div role="status">{enviando && <AvisoEnvio />}</div>
       {/* sin role: la zona de referencias ya anuncia "Preparando tu imagen…" */}
       {procesando && !enviando && (
         <p className="mb-2 text-center text-xs text-texto-secundario">Estamos preparando tu imagen…</p>
@@ -38,7 +55,7 @@ export function BarraAcciones({ paso, total = 4, onAtras, enviando, procesando =
         ) : (
           <span />
         )}
-        <Button type="submit" variante="primario" disabled={enviando || procesando} className="min-w-0 flex-1 sm:flex-none">
+        <Button type="submit" variante="primario" cargando={enviando} disabled={procesando} className="min-w-0 flex-1 sm:flex-none">
           {esRepaso ? (enviando ? 'Enviando tu pedido…' : 'Enviar mi pedido') : 'Siguiente'}
         </Button>
       </div>

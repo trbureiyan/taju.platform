@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createRef } from 'react'
+import { createRef, useState } from 'react'
 import { MomentoQue } from './MomentoQue'
 import { MomentoComo } from './MomentoComo'
 import { MomentoCuando } from './MomentoCuando'
@@ -179,6 +179,31 @@ describe('MomentoCuando', () => {
     const celular = screen.getByLabelText('Tu celular')
     expect(celular).toHaveAttribute('inputmode', 'numeric')
     expect(celular).toHaveAttribute('autocomplete', 'tel-national')
+  })
+
+  it('el celular no deja pasar letras ni simbolos al estado', async () => {
+    const p = props()
+    render(<MomentoCuando {...p} />)
+    await userEvent.type(screen.getByLabelText('Tu celular'), 'a')
+    await userEvent.type(screen.getByLabelText('Tu celular'), '*')
+    expect(p.set).toHaveBeenCalledWith('telefono', '')
+    expect(p.set).not.toHaveBeenCalledWith('telefono', 'a')
+    expect(p.set).not.toHaveBeenCalledWith('telefono', '*')
+  })
+
+  it('al filtrar un simbolo en medio del celular el cursor se queda donde estaba', async () => {
+    function Controlado() {
+      const [telefono, setTelefono] = useState('31924528')
+      const base = props({ campos: { telefono } })
+      return <MomentoCuando {...base} set={(campo, valor) => campo === 'telefono' && setTelefono(String(valor))} />
+    }
+    render(<Controlado />)
+    const celular = screen.getByLabelText('Tu celular') as HTMLInputElement
+    celular.focus()
+    celular.setSelectionRange(3, 3)
+    await userEvent.keyboard('-42')
+    // el guion se descarta y 42 entra despues del 319, no al final
+    expect(celular.value).toBe('3194224528')
   })
 })
 

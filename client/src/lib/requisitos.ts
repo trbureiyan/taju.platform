@@ -37,3 +37,11 @@ export function normalizarCelular(texto: string): string {
   const digitos = texto.replace(/\D/g, '')
   return digitos.length === 12 && digitos.startsWith('57') ? digitos.slice(2) : digitos
 }
+
+/**
+ * Filtro para mientras se escribe el celular: deja digitos, espacios y un + solo al inicio (el indicativo).
+ * Letras y simbolos nunca llegan al campo; lo que se pega con guiones se limpia igual al enviar (normalizarCelular).
+ */
+export function soloCaracteresDeCelular(texto: string): string {
+  return texto.replace(/[^\d\s+]/g, '').replace(/(?!^)\+/g, '')
+}

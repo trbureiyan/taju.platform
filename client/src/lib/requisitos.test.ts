@@ -6,6 +6,7 @@ import {
   MENSAJE_FECHA_PASADA,
   normalizarCelular,
   REGEX_CELULAR,
+  soloCaracteresDeCelular,
 } from './requisitos'
 
 // [Review Focus] celular pegado con espacios, guiones o +57
@@ -28,6 +29,19 @@ describe('normalizarCelular', () => {
   it('un fijo o un numero que no empieza en 3 no pasa', () => {
     expect(REGEX_CELULAR.test('6088712345')).toBe(false)
     expect(REGEX_CELULAR.test('3192452842')).toBe(true)
+  })
+})
+
+describe('soloCaracteresDeCelular', () => {
+  it.each([
+    ['319 245 2842', '319 245 2842'],
+    ['+57 319 245 2842', '+57 319 245 2842'],
+    ['abc3192452842', '3192452842'],
+    ['319*245#2842', '3192452842'],
+    ['319+245', '319245'],
+    ['<script>3</script>', '3'],
+  ])('%s -> %s', (entrada, esperado) => {
+    expect(soloCaracteresDeCelular(entrada)).toBe(esperado)
   })
 })
 

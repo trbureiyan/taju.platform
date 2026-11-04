@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BarraAcciones } from './BarraAcciones'
 
@@ -40,5 +40,40 @@ describe('BarraAcciones', () => {
     render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
     expect(screen.getByRole('button', { name: /Enviando tu pedido/ })).toBeDisabled()
     expect(screen.getByText(/Estamos enviando tu solicitud/)).toBeInTheDocument()
+  })
+
+  it('mientras envia el boton muestra el spinner y queda ocupado', () => {
+    render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+    expect(screen.getByRole('button', { name: /Enviando tu pedido/ })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('la region de estado ya esta montada antes de enviar, para que el lector anuncie el aviso', () => {
+    const { rerender } = render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando={false} />)
+    const region = screen.getByRole('status')
+    expect(region).toBeEmptyDOMElement()
+    rerender(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent('Estamos enviando tu solicitud')
+  })
+
+  describe('envio lento', () => {
+    afterEach(() => vi.useRealTimers())
+
+    it('pasados unos segundos el aviso dice que seguimos trabajando', () => {
+      vi.useFakeTimers()
+      render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+      expect(screen.queryByText(/Seguimos enviando/)).not.toBeInTheDocument()
+      act(() => { vi.advanceTimersByTime(4_000) })
+      expect(screen.getByRole('status')).toHaveTextContent('Seguimos enviando tu solicitud')
+    })
+
+    it('si el envio termina, el aviso lento no se queda para el proximo intento', () => {
+      vi.useFakeTimers()
+      const { rerender } = render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+      act(() => { vi.advanceTimersByTime(4_000) })
+      rerender(<BarraAcciones paso={4} onAtras={vi.fn()} enviando={false} />)
+      rerender(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+      expect(screen.getByText(/Estamos enviando tu solicitud/)).toBeInTheDocument()
+    })
   })
 })
