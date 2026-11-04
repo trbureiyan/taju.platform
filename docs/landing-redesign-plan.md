@@ -1,6 +1,6 @@
 # Plan de rediseño de la Vitrina (`/`)
 
-Estado: propuesta, pendiente de aprobación de TaJú. Nada de lo descrito aquí está implementado.
+Estado: aprobado por TaJú el 2026-11-04 con los cambios de la sección 7. Nada está implementado todavía.
 Rama: `claude/determined-galileo-oz8e84`, creada desde `origin/dev` (`e60f184`).
 Fecha de la auditoría: 2026-11-03.
 
@@ -138,13 +138,18 @@ estado del formulario vive en memoria en `useSolicitud` y AGENTS no permite pasa
 `location.state`. Si TaJú lo quiere, la vía es un parámetro de búsqueda en la ruta del pedido, y eso
 toca `useSolicitud` y `PedidoFormPage`: es un PR aparte.
 
+### Fase 2b, producto real (antes del probador; ver sección 7)
+
+| # | Tarea | Archivos | Criterio de aceptación | Esfuerzo |
+|---|---|---|---|---|
+| T12 | Hero en dos columnas con fotos reales (sección 7.2) | `vitrina/HeroMesa.tsx` y su test, fotos en `client/public` o `public/vitrina/` | Sin tarjeta blanca; en 390 x 664 titular, párrafo y los dos botones visibles; fotos con `alt` real, `width`/`height` y `loading` correctos (sin CLS) | 4 h |
+| T11 | Familias en bento, sin pestañas (sección 7.2) | `vitrina/EscenarioFamilias.tsx` (reemplazo, p. ej. `BentoFamilias.tsx`), `contenido.ts`, tests | Las cuatro familias visibles a la vez; una sola acción amarilla en pantalla (las tarjetas usan enlace de texto); foto con `RutaCorte` en el tono 700 o 900 de su familia mediante token semántico | 4 h |
+
 ### Fase 4, con material real (bloqueada)
 
 | # | Tarea | Bloqueo |
 |---|---|---|
-| T11 | Bento de familias con una foto por familia, reemplazando las pestañas | Ítem 1 del material |
-| T12 | Hero con producto real en vez de siluetas | Ítem 1 |
-| T13 | Bloque del taller con foto o video corto, junto al Manifiesto | Ítem 4 |
+| T13 | Video del taller en el espacio reservado junto al Manifiesto | Ítem 4 del material |
 | T14 | Testimonios | Material con consentimiento. Fuera hasta tenerlo |
 
 Esfuerzo total de las fases 1 a 3: unas 23 horas, más una de verificación (typecheck, lint, test,
@@ -168,12 +173,12 @@ build y una pasada de Playwright en los tres contextos).
 - Fuera de alcance por la restricción de la tarea: backend, auth, CSP, `vercel.json`, despliegue y la
   auditoría de seguridad en curso. `seed-dev` (N4) se reporta pero no se toca.
 
-## 5. Preguntas abiertas para TaJú
+## 5. Preguntas resueltas (2026-11-04)
 
-1. La mascota: AGENTS dice que queda fuera de esta versión; la tarea dice "solo poses existentes".
-   ¿Se mantiene fuera? Este plan asume que sí.
-2. ¿El probador debe prellenar el formulario de pedido (PR aparte) o basta con llevar al catálogo?
-3. ¿La lista de blondas adjunta está vigente, incluida "media libra +" de 26 cm?
+1. La mascota se queda fuera.
+2. El probador lleva al catálogo. El prellenado del formulario es un PR aparte, después de la entrega.
+3. La lista de blondas está vigente y validada con el cliente, incluida media libra + de 26 cm. T7 deja
+   de estar pendiente.
 
 ## 6. Material que necesito (primera tanda)
 
@@ -184,3 +189,36 @@ build y una pasada de Playwright en los tres contextos).
 | 3 | Confirmación de la lista de precios de blondas (la que adjuntaste) y su fecha | T7 | `docs/referencias/precios/blondas-mdf.jpg` | Basta la captura |
 | 4 | Foto o video corto (10 a 20 s) de la máquina cortando o de una pieza recién cortada | T13 | `docs/referencias/taller/` | Original; el video sin audio |
 | 5 | Grosores y colores de MDF y acrílico que el taller maneja hoy | Opciones de material del probador (T9) | `docs/referencias/reglas/materiales.md` | Basta texto |
+
+## 7. Cambios aprobados (2026-11-04)
+
+### 7.1 Orden
+
+Fase 1 (T1 a T5) igual. Fase 2 (T6 `RutaCorte`, T7 `medidasTorta`) igual. Fase 2b nueva, antes del
+probador: T12 hero con producto real y T11 familias en bento. Ya hay fotos; mientras llegan los
+originales quedan como marcadores con `alt` real. Fase 3 (probador, T8 a T10) va después.
+
+### 7.2 Dirección visual de la fase 2b (aprobada en boceto)
+
+- **Hero, escritorio.** Dos columnas. Izquierda: eyebrow ("Papelería creativa con corte láser, en
+  Neiva"), titular `display-xl` a 12ch, párrafo, botón amarillo "Ver el catálogo" y secundario con
+  borde "¿Cuánto mide tu torta?" que baja al probador (ancla). Derecha: rejilla 2x2 con una foto alta
+  (ocupa dos filas) y dos cuadradas; cada foto con `RutaCorte` desfasada 8 px alrededor, rotación
+  entre -2 y 2 grados y etiqueta tipo píldora blanca con el material. El único rosa de la página es
+  una pieza pequeña de corazón en trazo punteado en una esquina. Sin tarjeta blanca encajonada.
+- **Hero, móvil.** Titular, párrafo y los dos botones a ancho completo dentro de 390 x 664; debajo una
+  fila de tres fotos cuadradas. Sin imagotipo duplicado.
+- **Familias.** `flex-wrap`. Toppers ocupa doble ancho con foto y texto lado a lado; Superficies,
+  Señalética y Papelería a su lado y debajo. Cada tarjeta con su fondo de familia, foto con
+  `RutaCorte` en el tono 700 o 900 de su color (token semántico nuevo si hace falta, nunca la
+  primitiva en el componente), chips blancos y enlace de texto, no botón amarillo. Se eliminan las
+  pestañas.
+- **Cinta.** Botón de pausa en una ranura fija a la izquierda separada por un trazo punteado vertical;
+  separadores entre palabras como tramo corto de `RutaCorte`; texto en `h3` SemiBold.
+- **Taller.** Frase completa a opacidad 1, `RutaCorte` debajo, y al lado el espacio reservado del
+  video sobre `superficie-invertida` con la etiqueta de pendiente.
+
+Nota sobre tokens: si `RutaCorte` necesita los tonos 700/900 por familia, hay que crear tokens
+semánticos (p. ej. `--familia-toppers-trazo`) en `tokens.css`, `tailwind.config.js` y proponer el
+cambio en `.docs/branding/04-tokens-de-diseno.md`. Los tres deben coincidir; el doc de marca no se
+edita sin confirmación de TaJú.
