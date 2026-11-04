@@ -47,6 +47,15 @@ describe('BarraAcciones', () => {
     expect(screen.getByRole('button', { name: /Enviando tu pedido/ })).toHaveAttribute('aria-busy', 'true')
   })
 
+  it('la region de estado ya esta montada antes de enviar, para que el lector anuncie el aviso', () => {
+    const { rerender } = render(<BarraAcciones paso={4} onAtras={vi.fn()} enviando={false} />)
+    const region = screen.getByRole('status')
+    expect(region).toBeEmptyDOMElement()
+    rerender(<BarraAcciones paso={4} onAtras={vi.fn()} enviando />)
+    expect(screen.getByRole('status')).toBe(region)
+    expect(region).toHaveTextContent('Estamos enviando tu solicitud')
+  })
+
   describe('envio lento', () => {
     afterEach(() => vi.useRealTimers())
 

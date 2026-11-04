@@ -88,7 +88,14 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef, inten
         placeholder="Ej: 319 245 2842"
         hint="Es el número por el que te escribimos para confirmar precio, fecha y anticipo."
         value={campos.telefono}
-        onChange={(e) => set('telefono', soloCaracteresDeCelular(e.target.value))}
+        onChange={(e) => {
+          const campo = e.target
+          const limpio = soloCaracteresDeCelular(campo.value)
+          // al descartar un simbolo en medio del numero React reescribe el valor y el cursor saltaria al final
+          const cursor = soloCaracteresDeCelular(campo.value.slice(0, campo.selectionStart ?? campo.value.length)).length
+          set('telefono', limpio)
+          if (limpio !== campo.value) queueMicrotask(() => campo.setSelectionRange(cursor, cursor))
+        }}
         error={errores.telefono}
         anunciarError={false}
       />
