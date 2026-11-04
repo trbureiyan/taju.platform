@@ -2,9 +2,10 @@ packages:
   - client
   - server
 overrides:
-  qs: "6.16.0"
+  qs: "6.16.1"
   source-map-js: "1.2.2"
-  follow-redirects: "1.16.1"
+  follow-redirects: "1.16.2"
+  ip-address: "10.7.4"
 allowBuilds:
   esbuild: false
   mongodb-memory-server: true
