@@ -17,7 +17,7 @@
     "pnpm": ">=12.15.0"
   },
   "overrides": {
-    "qs": "6.16.0"
+    "qs": "6.16.1"
   },
   "devDependencies": {
     "husky": "9.1.7"
