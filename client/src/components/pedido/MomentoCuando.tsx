@@ -5,6 +5,7 @@ import { BotonWhatsApp } from '../shared/BotonWhatsApp'
 import { AvisoErrores } from './AvisoErrores'
 import { TiraDias } from './TiraDias'
 import { horaEnPalabras, horasDeEntrega } from '../../lib/horario'
+import { soloCaracteresDeCelular } from '../../lib/requisitos'
 import { CLASE_TITULO, type PropsMomento } from './tipos'
 
 export function MomentoCuando({ producto, campos, errores, set, tituloRef, intento }: PropsMomento) {
@@ -87,7 +88,7 @@ export function MomentoCuando({ producto, campos, errores, set, tituloRef, inten
         placeholder="Ej: 319 245 2842"
         hint="Es el número por el que te escribimos para confirmar precio, fecha y anticipo."
         value={campos.telefono}
-        onChange={(e) => set('telefono', e.target.value)}
+        onChange={(e) => set('telefono', soloCaracteresDeCelular(e.target.value))}
         error={errores.telefono}
         anunciarError={false}
       />

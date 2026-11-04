@@ -180,6 +180,16 @@ describe('MomentoCuando', () => {
     expect(celular).toHaveAttribute('inputmode', 'numeric')
     expect(celular).toHaveAttribute('autocomplete', 'tel-national')
   })
+
+  it('el celular no deja pasar letras ni simbolos al estado', async () => {
+    const p = props()
+    render(<MomentoCuando {...p} />)
+    await userEvent.type(screen.getByLabelText('Tu celular'), 'a')
+    await userEvent.type(screen.getByLabelText('Tu celular'), '*')
+    expect(p.set).toHaveBeenCalledWith('telefono', '')
+    expect(p.set).not.toHaveBeenCalledWith('telefono', 'a')
+    expect(p.set).not.toHaveBeenCalledWith('telefono', '*')
+  })
 })
 
 describe('MomentoRepaso', () => {
